@@ -1,0 +1,13 @@
+streamlit
+langchain
+langgraph
+langchain-openai
+yfinance
+ddgs
+sqlalchemy
+pydantic
+python-dotenv
+pandas
+plotly
+beautifulsoup4
+requests
