@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.database.database import SessionLocal
 from src.database.crud import get_valid_cache, save_cache
+from src.agents.nodes.research.prompts import ARTICLE_SUMMARY_PROMPT
 
 def resolve_symbol(symbol: str) -> Dict[str, Any]:
     """
@@ -270,16 +271,9 @@ def summarize_content(content: str, url: str) -> str:
         
     try:
         # print(f"DEBUG: Summarizing content from {url}...")
-        llm = ChatOpenAI(model="gpt-4o")
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
         
-        prompt = f"""
-        Summarize the key financial insights from the following article. 
-        Focus on information relevant to stock analysis, market trends, and economic indicators.
-        Keep the summary concise (2-3 sentences).
-        
-        Article Content:
-        {content[:4000]}
-        """
+        prompt = ARTICLE_SUMMARY_PROMPT.format(content=content[:4000])
         
         messages = [
             SystemMessage(content="You are a helpful financial research assistant."),
