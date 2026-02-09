@@ -2,6 +2,7 @@ from src.agents.nodes.analyst.prompts import ANALYST_PROMPT
 from src.agents.state import AgentState
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from typing import List, Dict, Any
 
 def analyst_node(state: AgentState):
     """
@@ -11,10 +12,29 @@ def analyst_node(state: AgentState):
     research_data = state["research_data"]
     macro_economic_news = research_data["macro_economic_news"]
     
-    print("--- ANALYZING PORTFOLIO ---")
-    
     # Construct prompt
-    macro_news = "\n".join([f"- {n.get('title', 'No Title')}: {n.get('summary')}" for n in macro_economic_news if isinstance(n, dict)])
+    prompt = ANALYST_PROMPT.format(
+        macro_news="\n".join([f"- {n.get('title', 'No Title')}: {n.get('summary')}" for n in macro_economic_news if isinstance(n, dict)]),
+        portfolio=build_portfolio_data_prompt(portfolio, research_data)
+    )
+    
+    messages = [
+        SystemMessage(content="You are a helpful and insightful senior financial investment analyst, your goal is to analyze the user's portfolio and provide actionable recommendations."),
+        HumanMessage(content=prompt)
+    ]
+
+    print(messages)
+    
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    try:
+        response = llm.invoke(messages)
+        return {"analysis_report": response.content}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"analysis_report": f"Error running analysis: {e}"}
+
+def build_portfolio_data_prompt(portfolio: List[Dict[str, Any]], research_data: Dict[str, Any]):
     portfolio_data = ""
     
     for pos in portfolio:
@@ -41,20 +61,4 @@ def analyst_node(state: AgentState):
                 portfolio_data += f"- {n.get('title', 'No Title')}\n"
                 portfolio_data += f"  Summary/Excerpt: {n.get('summary', '')[:500]}...\n"
             
-    prompt = ANALYST_PROMPT.format(macro_news=macro_news, portfolio=portfolio_data)
-
-    print(prompt)
-    
-    messages = [
-        SystemMessage(content="You are a helpful and insightful senior financial investment analyst, your goal is to analyze the user's portfolio and provide actionable recommendations."),
-        HumanMessage(content=prompt)
-    ]
-    
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    try:
-        response = llm.invoke(messages)
-        return {"analysis_report": response.content}
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"analysis_report": f"Error running analysis: {e}"}
+    return portfolio_data

@@ -235,7 +235,7 @@ def fetch_article_content(url: str) -> str:
     """
     try:
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
         }
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
@@ -282,7 +282,6 @@ def summarize_content(content: str, url: str) -> str:
         
         response = llm.invoke(messages)
         summary = response.content.strip()
-        # print(f"DEBUG: Generated summary: {summary[:50]}...")
         return summary
     except Exception as e:
         print(f"Error summarizing content: {e}")

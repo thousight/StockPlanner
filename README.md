@@ -69,3 +69,8 @@ Navigate to `http://localhost:8501` in your browser.
 
 - **Database Caching**: Implemented a `NewsCache` table to store LLM-generated summaries, improving speed and efficiency.
 - **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling. 
+
+## TODO
+
+- [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
+- [ ] Pass in User-Agent string from browser as context to Research Agent, so that 401 and 403 errors from news sites are reduced

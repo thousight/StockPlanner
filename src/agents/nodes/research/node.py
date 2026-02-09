@@ -22,5 +22,4 @@ def research_node(state: AgentState):
 
 def fetch_symbol_data(holding):
     symbol = holding["symbol"]
-    print(f"Fetching data for {symbol}...")
     return (symbol, resolve_symbol(symbol))

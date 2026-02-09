@@ -6,7 +6,6 @@ def cache_maintenance_node(state: AgentState):
     """
     Clean up expired news cache entries.
     """
-    print("--- CACHE MAINTENANCE ---")
     try:
         db = SessionLocal()
         cleanup_expired_cache(db)
