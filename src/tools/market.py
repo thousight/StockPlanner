@@ -1,6 +1,7 @@
 import yfinance as yf
 from ddgs import DDGS
 from typing import Dict, List, Any, Optional
+from concurrent.futures import ThreadPoolExecutor
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -10,20 +11,28 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.database.database import SessionLocal
 from src.database.crud import get_valid_cache, save_cache
 
-def resolve_symbol(symbol: str) -> str:
+def resolve_symbol(symbol: str) -> Dict[str, Any]:
     """
-    Resolve the symbol to its actual ticker.
+    Resolve the symbol to its data: price, change, news, info.
     """
     try:
         stock = yf.Ticker(symbol)
+        current_price = get_current_price(stock)
+        prev_price = get_prev_price(stock)
+        change_percent = 0.0
+        if prev_price:
+            change_percent = ((current_price - prev_price) / prev_price) * 100
+        
         return {
-            "current_price": get_current_price(stock),
+            "current_price": current_price,
+            "prev_price": prev_price,
+            "change_percent": change_percent,
             "news": get_stock_news(stock),
             "info": get_company_info(stock)
         }
     except Exception as e:
         print(f"Error resolving symbol for {symbol}: {e}")
-        return symbol
+        return {"current_price": 0, "prev_price": 0, "change_percent": 0, "news": [], "info": {}}
 
 def get_current_price(stock: yf.Ticker) -> float:
     """
@@ -33,7 +42,18 @@ def get_current_price(stock: yf.Ticker) -> float:
         # fast_info is often faster/more reliable for current price than history
         return stock.fast_info.last_price
     except Exception as e:
-        print(f"Error fetching price for {stock.ticker}: {e}")
+        print(f"Error fetching current price for {stock.ticker}: {e}")
+        return 0.0
+
+def get_prev_price(stock: yf.Ticker) -> float:
+    """
+    Get the latest market price for a ticker.
+    """
+    try:
+        # fast_info is often faster/more reliable for current price than history
+        return stock.fast_info.previous_close
+    except Exception as e:
+        print(f"Error fetching previous price for {stock.ticker}: {e}")
         return 0.0
 
 def get_company_info(stock: yf.Ticker) -> Dict[str, Any]:
@@ -131,68 +151,30 @@ def get_macro_economic_news() -> Dict[str, Any]:
         "metrics": {}
     }
     
-    # 1. Fetch Key Market Indicators (Proxies for Macro Sentiment)
-    # ^GSPC: S&P 500 (General Stock Market)
-    # ^VIX: Volatility Index (Fear Gauge)
-    # ^TNX: 10-Year Treasury Yield (Interest Rates/Inflation view)
-    # DX-Y.NYB: US Dollar Index (Currency Strength)
+    # Market Indicators: ^GSPC (S&P 500), ^VIX (Volatility), ^TNX (10Y Treasury), DX-Y.NYB (USD Index)
     tickers = ["^GSPC", "^VIX", "^TNX", "DX-Y.NYB"]
-    try:
-        for ticker in tickers:
-             try:
-                 t = yf.Ticker(ticker)
-                 # fast_info is reliable for current snapshot
-                 price = t.fast_info.last_price
-                 change = 0.0
-                 try:
-                     prev = t.fast_info.previous_close
-                     if prev:
-                         change = ((price - prev) / prev) * 100
-                 except:
-                     pass
-                 
-                 macro_data["metrics"][ticker] = {
-                     "price": price,
-                     "change_percent": change
-                 }
-             except Exception as fetch_err:
-                 print(f"Error for ticker {ticker}: {fetch_err}")
-    except Exception as e:
-        print(f"Error fetching macro metrics: {e}")
-
-    # 2. Fetch Text News
-    # Hybrid Approach: yfinance for indices, DDGS for specific topics
     
-    seen_urls = set() # Initialize seen_urls here for both sections
-
-    # A. Index News from yfinance
-    # We use the same tickers as metrics
-    for ticker in tickers:
-        try:
-             stock = yf.Ticker(ticker)
-             news_items = stock.news
-             if news_items:
-                 # Get top 1 news item for each index
-                 item = news_items[0]
-                 parsed = _parse_yf_news_item(item)
-                 
-                 if parsed:
-                     link = parsed['link']
-                     title = parsed['title']
-                     summary = "No content fetched."
-                     if link and link not in seen_urls:
-                         summary = get_news_summary(link)
-                        
-                         if summary:
-                             macro_data["news"].append({
-                                 "title": title,
-                                 "link": link,
-                                 "source": f"yfinance ({ticker})",
-                                 "summary": summary
-                             })
-                             seen_urls.add(link)
-        except Exception as e:
-            print(f"Error fetching macro news for {ticker}: {e}")
+    # Fetch all ticker data in parallel using resolve_symbol
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        results = list(executor.map(lambda t: (t, resolve_symbol(t)), tickers))
+    
+    # Aggregate results
+    for ticker, data in results:
+        if data:
+            macro_data["metrics"][ticker] = {
+                "price": data.get("current_price", 0),
+                "change_percent": data.get("change_percent", 0)
+            }
+            # Get top news item if available
+            news_list = data.get("news", [])
+            if news_list and isinstance(news_list, list):
+                for n in news_list:
+                    macro_data["news"].append({
+                        "title": n.get("title", "No Title"),
+                        "link": n["link"],
+                        "source": f"yfinance ({ticker})",
+                        "summary": n.get("summary", "")
+                    })
 
     # B. Specific Topic News via DuckDuckGo
     # Reduced list since we get general market news from indices

@@ -1,5 +1,6 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from concurrent.futures import ThreadPoolExecutor
 from src.agents.state import AgentState
 from src.tools.market import resolve_symbol, get_macro_economic_news
 from src.database.database import SessionLocal
@@ -18,11 +19,12 @@ def research_node(state: AgentState):
 
     research_data["macro_economic_news"] = get_macro_economic_news()
     
-    for pos in portfolio:
-        symbol = pos["symbol"]
-        print(f"Fetching data for {symbol}...")
-        
-        research_data[symbol] = resolve_symbol(symbol)
+    # Fetch portfolio data in parallel
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(fetch_symbol_data, portfolio))
+    
+    for symbol, data in results:
+        research_data[symbol] = data
         
     return {"research_data": research_data}
 
@@ -110,3 +112,8 @@ def cache_maintenance_node(state: AgentState):
         print(f"Error in cache maintenance: {e}")
         
     return state
+
+def fetch_symbol_data(pos):
+    symbol = pos["symbol"]
+    print(f"Fetching data for {symbol}...")
+    return (symbol, resolve_symbol(symbol))
