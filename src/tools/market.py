@@ -17,22 +17,15 @@ def resolve_symbol(symbol: str) -> Dict[str, Any]:
     """
     try:
         stock = yf.Ticker(symbol)
-        current_price = get_current_price(stock)
-        prev_price = get_prev_price(stock)
-        change_percent = 0.0
-        if prev_price:
-            change_percent = ((current_price - prev_price) / prev_price) * 100
         
         return {
-            "current_price": current_price,
-            "prev_price": prev_price,
-            "change_percent": change_percent,
+            "current_price": get_current_price(stock),
             "news": get_stock_news(stock),
             "info": get_company_info(stock)
         }
     except Exception as e:
         print(f"Error resolving symbol for {symbol}: {e}")
-        return {"current_price": 0, "prev_price": 0, "change_percent": 0, "news": [], "info": {}}
+        return {"current_price": 0, "news": [], "info": {}}
 
 def get_current_price(stock: yf.Ticker) -> float:
     """
@@ -43,17 +36,6 @@ def get_current_price(stock: yf.Ticker) -> float:
         return stock.fast_info.last_price
     except Exception as e:
         print(f"Error fetching current price for {stock.ticker}: {e}")
-        return 0.0
-
-def get_prev_price(stock: yf.Ticker) -> float:
-    """
-    Get the latest market price for a ticker.
-    """
-    try:
-        # fast_info is often faster/more reliable for current price than history
-        return stock.fast_info.previous_close
-    except Exception as e:
-        print(f"Error fetching previous price for {stock.ticker}: {e}")
         return 0.0
 
 def get_company_info(stock: yf.Ticker) -> Dict[str, Any]:
@@ -124,100 +106,99 @@ def get_stock_news(stock: yf.Ticker, max_results: int = 3) -> List[Dict[str, Any
             if not parsed:
                 continue
                 
-            title = parsed['title']
-            link = parsed['link']
-            publisher = parsed['publisher']
+            result = get_summary_result(parsed)
             
-            summary = get_news_summary(link)
-
-            if summary:
-                results.append({
-                    "title": title,
-                    "link": link,
-                    "source": publisher,
-                    "summary": summary
-                })
+            if result:
+                results.append(result)
                 
         return results
     except Exception as e:
         print(f"Error fetching news for {stock.ticker}: {e}")
 
-def get_macro_economic_news() -> Dict[str, Any]:
+def get_macro_economic_news() -> List[Dict[str, str]]:
     """
-    Fetch news about macroeconomics of the day and key market indicators.
+    Fetch news about macroeconomics of the day.
+    Returns a list of {title, summary} objects.
     """
-    macro_data = {
-        "news": [],
-        "metrics": {}
-    }
-    
-    # Market Indicators: ^GSPC (S&P 500), ^VIX (Volatility), ^TNX (10Y Treasury), DX-Y.NYB (USD Index)
-    tickers = ["^GSPC", "^VIX", "^TNX", "DX-Y.NYB"]
-    
-    # Fetch all ticker data in parallel using resolve_symbol
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        results = list(executor.map(lambda t: (t, resolve_symbol(t)), tickers))
-    
-    # Aggregate results
-    for ticker, data in results:
-        if data:
-            macro_data["metrics"][ticker] = {
-                "price": data.get("current_price", 0),
-                "change_percent": data.get("change_percent", 0)
-            }
-            # Get top news item if available
-            news_list = data.get("news", [])
-            if news_list and isinstance(news_list, list):
-                for n in news_list:
-                    macro_data["news"].append({
-                        "title": n.get("title", "No Title"),
-                        "link": n["link"],
-                        "source": f"yfinance ({ticker})",
-                        "summary": n.get("summary", "")
-                    })
+    title_and_urls = list()
 
-    # B. Specific Topic News via DuckDuckGo
-    # Reduced list since we get general market news from indices
-    queries = [
-        "macroeconomics news today",
-        "federal reserve interest rates news",
-        "US economy outlook today"
-        "Trump social media today",
-        "US employment report news",
-        "US employment report"
-        "inflation cpi report news",
-        "US inflation report",
-    ]
+    # 1. Collect URLs from yfinance tickers in parallel
+    tickers = ["^GSPC", "^VIX", "^TNX", "DX-Y.NYB"]
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        for result in executor.map(fetch_yfinance_news_urls, tickers):
+            title_and_urls.extend(result)
     
+    # 2. Collect URLs from DuckDuckGo queries in parallel
+    queries = [
+        "Macroeconomics news today",
+        "US economy outlook today",
+        "Trump social media today",
+        "Federal Reserve interest rates news",
+        "US employment report news",
+        "US inflation cpi report news",
+    ]
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        for result in executor.map(fetch_ddgs_urls, queries):
+            title_and_urls.extend(result)
+    
+    # 3. Deduplicate by URL
+    seen_urls = set()
+    unique_candidates = []
+    for item in title_and_urls:
+        if item["link"] not in seen_urls:
+            unique_candidates.append(item)
+            seen_urls.add(item["link"])
+    
+    # 4. Fetch summaries in parallel
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        all_results = list(executor.map(get_summary_result, unique_candidates))
+    
+    # 5. Return results (filter out None items)
+    return [r for r in all_results if r]
+
+def get_summary_result(item):
+    summary = get_summary(item['link'])
+
+    if summary:
+        return {
+            "title": item["title"],
+            "summary": summary
+        }
+    return None
+
+def fetch_yfinance_news_urls(ticker: str) -> list:
+    """Fetch news URLs for a single ticker."""
+    results = []
+    try:
+        stock = yf.Ticker(ticker)
+        news_items = stock.news
+        if news_items:
+            for item in news_items:
+                parsed = _parse_yf_news_item(item)
+                if parsed:
+                    results.append(parsed)
+    except Exception as e:
+        print(f"Error fetching news for {ticker}: {e}")
+    return results
+
+def fetch_ddgs_urls(query: str) -> list:
+    """Fetch news URLs for a single query."""
+    results = []
     try:
         with DDGS() as ddgs:
-            for q in queries:
-                try:
-                    # Limit results per query
-                    results = ddgs.text(q, max_results=1)
-                    # print(f"DEBUG: Found {len(results)} results for query: {q}")
-                    for r in results:
-                        link = r['href']
-                        if link and link not in seen_urls:
-                            # Fetch and summarize
-                            summary = get_news_summary(link)
-                                
-                            if summary:
-                                macro_data["news"].append({
-                                    "title": r['title'],
-                                    "link": link,
-                                    "source": "DuckDuckGo",
-                                    "summary": summary
-                                })
-                            seen_urls.add(link)
-                except Exception as q_err:
-                    print(f"Error for query {q}: {q_err}")
+            items = ddgs.text(query, max_results=2)
+            for r in items:
+                link = r.get('href')
+                if link:
+                    results.append({
+                        "title": r.get('title', 'No Title'),
+                        "link": link,
+                    })
     except Exception as e:
-        print(f"Error fetching macro news: {e}")
-        
-    return macro_data
+        print(f"Error for query {query}: {e}")
+    return results
 
-def get_news_summary(url: str) -> Optional[str]:
+def get_summary(url: str) -> Optional[str]:
     """
     Get news summary from cache or fetch and summarize.
     """
@@ -241,7 +222,7 @@ def get_news_summary(url: str) -> Optional[str]:
                 save_cache(db, url, summary)
                 return summary
     except Exception as e:
-        print(f"Error in get_news_summary: {e}")
+        print(f"Error in get_summary: {e}")
     finally:
         db.close()
         
@@ -331,19 +312,14 @@ def _parse_yf_news_item(item: Dict[str, Any]) -> Optional[Dict[str, str]]:
             if not link and 'canonicalUrl' in content and content['canonicalUrl']:
                 link = content['canonicalUrl'].get('url')
                 
-            publisher = "Yahoo Finance"
-            if 'provider' in content:
-                publisher = content['provider'].get('displayName', "Yahoo Finance")
-                
             if title and link:
-                return {"title": title, "link": link, "publisher": publisher}
+                return {"title": title, "link": link}
                 
         # Fallback to flat structure (old yfinance)
         elif 'title' in item and 'link' in item:
             return {
                 "title": item.get('title'),
                 "link": item.get('link'),
-                "publisher": item.get('publisher', 'Unknown')
             }
             
     except Exception as e:
