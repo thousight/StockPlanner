@@ -39,7 +39,7 @@ def analyst_node(state: AgentState):
     print("--- ANALYZING PORTFOLIO ---")
     
     # Construct prompt
-    macro_news_text = "\n".join([f"- {n.get('title', 'No Title')}: {n.get('summary')}" for n in macro_economic_news.get('news', []) if isinstance(n, dict)])
+    macro_news_text = "\n".join([f"- {n.get('title', 'No Title')}: {n.get('summary')}" for n in macro_economic_news if isinstance(n, dict)])
     
     prompt = f"""You are a senior investment analyst, your goal is to analyze the user's portfolio and provide actionable recommendations.
 
