@@ -118,7 +118,7 @@ def get_stock_news(stock: yf.Ticker, max_results: int = 3) -> List[Dict[str, Any
                     "summary": summary
                 })
                 
-            return results
+        return results
     except Exception as e:
         print(f"Error fetching news for {stock.ticker}: {e}")
 
