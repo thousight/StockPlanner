@@ -1,7 +1,7 @@
+from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from .models import Transaction, Stock, DailySnapshot
-from datetime import datetime
+from .models import Transaction, Stock, NewsCache
+from datetime import datetime, timedelta
 
 def add_stock(db: Session, symbol: str, name: str = None, sector: str = None):
     stock = db.query(Stock).filter(Stock.symbol == symbol).first()
@@ -80,3 +80,24 @@ def get_transactions(db: Session, symbol: str = None):
     if symbol:
         query = query.filter(Transaction.symbol == symbol)
     return query.order_by(Transaction.date.desc()).all()
+
+def get_valid_cache(db: Session, url: str) -> Optional[str]:
+    entry = db.query(NewsCache).filter(NewsCache.url == url).first()
+    if entry and entry.expire_at > datetime.utcnow():
+        return entry.summary
+    return None
+
+def save_cache(db: Session, url: str, summary: str, ttl_hours: int = 24):
+    expire_at = datetime.utcnow() + timedelta(hours=ttl_hours)
+    entry = db.query(NewsCache).filter(NewsCache.url == url).first()
+    if entry:
+        entry.summary = summary
+        entry.expire_at = expire_at
+    else:
+        entry = NewsCache(url=url, summary=summary, expire_at=expire_at)
+        db.add(entry)
+    db.commit()
+
+def cleanup_expired_cache(db: Session):
+    db.query(NewsCache).filter(NewsCache.expire_at < datetime.utcnow()).delete()
+    db.commit()

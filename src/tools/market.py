@@ -1,6 +1,5 @@
 import yfinance as yf
 from ddgs import DDGS
-from datetime import datetime
 from typing import Dict, List, Any, Optional
 import requests
 from bs4 import BeautifulSoup
@@ -8,6 +7,8 @@ import re
 from readability import Document
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.database.database import SessionLocal
+from src.database.crud import get_valid_cache, save_cache
 
 def resolve_symbol(symbol: str) -> str:
     """
@@ -34,48 +35,6 @@ def get_current_price(stock: yf.Ticker) -> float:
     except Exception as e:
         print(f"Error fetching price for {stock.ticker}: {e}")
         return 0.0
-
-def get_stock_news(stock: yf.Ticker, max_results: int = 3) -> List[Dict[str, Any]]:
-    """
-    Search for recent news about the stock using Yahoo Finance and summarize content.
-    """
-    results = []
-    try:
-        print(f"DEBUG: Fetching stock news for {stock.ticker} via yfinance...")
-        news_items = stock.news
-        
-        # Handle case where stock.news returns None or empty
-        if not news_items:
-             print(f"DEBUG: No news found for {stock.ticker}")
-             return []
-
-        for item in news_items[:max_results]:
-            parsed = _parse_yf_news_item(item)
-            if not parsed:
-                continue
-                
-            title = parsed['title']
-            link = parsed['link']
-            publisher = parsed['publisher']
-            
-            summary = "No content fetched."
-            if link:
-                raw_content = fetch_article_content(link)
-                if raw_content:
-                    summary = summarize_content(raw_content, link)
-            
-            results.append({
-                "title": title,
-                "link": link,
-                "source": publisher,
-                "summary": summary,
-                "content": summary   # backward compatibility
-            })
-                
-    except Exception as e:
-        print(f"Error fetching news for {ticker}: {e}")
-             
-    return results
 
 def get_company_info(stock: yf.Ticker) -> Dict[str, Any]:
     """
@@ -126,112 +85,42 @@ def get_company_info(stock: yf.Ticker) -> Dict[str, Any]:
         
     return data
 
-def fetch_article_content(url: str) -> str:
+def get_stock_news(stock: yf.Ticker, max_results: int = 3) -> List[Dict[str, Any]]:
     """
-    Fetch and extract main text content from a URL using readability-lxml.
+    Search for recent news about the stock using Yahoo Finance and summarize content.
     """
+    results = []
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
+        # print(f"DEBUG: Fetching stock news for {stock.ticker} via yfinance...")
+        news_items = stock.news
         
-        # Sanitize text to avoid lxml issues with control characters
-        clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', response.text)
-        
-        doc = Document(clean_html)
-        title = doc.title()
-        html_content = doc.summary()
-        
-        soup = BeautifulSoup(html_content, 'html.parser')
-        text = soup.get_text(separator=' ', strip=True)
-        
-        # Clean up text
-        if text:
-            text = str(text)
-            text = re.sub(r'\s+', ' ', text).strip()
-        else:
-            text = "No readable text found."
-        
-        # print(f"DEBUG: Successfully fetched {len(text)} chars from {url}")
-        return text
-    except Exception as e:
-        print(f"Error fetching content from {url}: {e}")
-        return ""
+        # Handle case where stock.news returns None or empty
+        if not news_items:
+             print(f"DEBUG: No news found for {stock.ticker}")
+             return []
 
-def summarize_content(content: str, url: str) -> str:
-    """
-    Summarize the key financial insights from the article content using an LLM.
-    """
-    if not content or len(content) < 100:
-        return "Not enough content to summarize."
-        
-    try:
-        print(f"DEBUG: Summarizing content from {url}...")
-        llm = ChatOpenAI(model="gpt-4o")
-        
-        prompt = f"""
-        Summarize the key financial insights from the following article. 
-        Focus on information relevant to stock analysis, market trends, and economic indicators.
-        Keep the summary concise (2-3 sentences).
-        
-        Source URL: {url}
-        
-        Article Content:
-        {content[:4000]}  # Truncate to avoid token limits
-        """
-        
-        messages = [
-            SystemMessage(content="You are a helpful financial research assistant."),
-            HumanMessage(content=prompt)
-        ]
-        
-        response = llm.invoke(messages)
-        summary = response.content.strip()
-        # print(f"DEBUG: Generated summary: {summary[:50]}...")
-        return summary
-    except Exception as e:
-        print(f"Error summarizing content: {e}")
-        return "Error generating summary."
+        for item in news_items[:max_results]:
+            parsed = _parse_yf_news_item(item)
+            if not parsed:
+                continue
+                
+            title = parsed['title']
+            link = parsed['link']
+            publisher = parsed['publisher']
+            
+            summary = get_news_summary(link)
 
-def _parse_yf_news_item(item: Dict[str, Any]) -> Optional[Dict[str, str]]:
-    """
-    Parse a yfinance news item which might vary in structure.
-    Returns dict with title, link, publisher, or None if invalid.
-    """
-    try:
-        # Check for nested 'content' structure (new yfinance)
-        if 'content' in item:
-            content = item['content']
-            title = content.get('title')
-            
-            # Try to find link in clickThroughUrl or canonicalUrl
-            link = None
-            if 'clickThroughUrl' in content and content['clickThroughUrl']:
-                link = content['clickThroughUrl'].get('url')
-            if not link and 'canonicalUrl' in content and content['canonicalUrl']:
-                link = content['canonicalUrl'].get('url')
+            if summary:
+                results.append({
+                    "title": title,
+                    "link": link,
+                    "source": publisher,
+                    "summary": summary
+                })
                 
-            publisher = "Yahoo Finance"
-            if 'provider' in content:
-                publisher = content['provider'].get('displayName', "Yahoo Finance")
-                
-            if title and link:
-                return {"title": title, "link": link, "publisher": publisher}
-                
-        # Fallback to flat structure (old yfinance)
-        elif 'title' in item and 'link' in item:
-            return {
-                "title": item.get('title'),
-                "link": item.get('link'),
-                "publisher": item.get('publisher', 'Unknown')
-            }
-            
+            return results
     except Exception as e:
-        print(f"Error parsing news item: {e}")
-        
-    return None
+        print(f"Error fetching news for {stock.ticker}: {e}")
 
 def get_macro_economic_news() -> Dict[str, Any]:
     """
@@ -290,20 +179,18 @@ def get_macro_economic_news() -> Dict[str, Any]:
                  if parsed:
                      link = parsed['link']
                      title = parsed['title']
-                     
                      summary = "No content fetched."
                      if link and link not in seen_urls:
-                         raw_content = fetch_article_content(link)
-                         if raw_content:
-                             summary = summarize_content(raw_content, link)
-                         
-                         macro_data["news"].append({
-                             "title": title,
-                             "link": link,
-                             "source": f"yfinance ({ticker})",
-                             "snippet": summary # Use summary as snippet
-                         })
-                         seen_urls.add(link)
+                         summary = get_news_summary(link)
+                        
+                         if summary:
+                             macro_data["news"].append({
+                                 "title": title,
+                                 "link": link,
+                                 "source": f"yfinance ({ticker})",
+                                 "summary": summary
+                             })
+                             seen_urls.add(link)
         except Exception as e:
             print(f"Error fetching macro news for {ticker}: {e}")
 
@@ -329,19 +216,17 @@ def get_macro_economic_news() -> Dict[str, Any]:
                     # print(f"DEBUG: Found {len(results)} results for query: {q}")
                     for r in results:
                         link = r['href']
-                        if link not in seen_urls:
+                        if link and link not in seen_urls:
                             # Fetch and summarize
-                            summary = r['body'] # fallback
-                            raw_content = fetch_article_content(link)
-                            if raw_content:
-                                summary = summarize_content(raw_content, link)
+                            summary = get_news_summary(link)
                                 
-                            macro_data["news"].append({
-                                "title": r['title'],
-                                "link": link,
-                                "source": "DuckDuckGo",
-                                "snippet": summary
-                            })
+                            if summary:
+                                macro_data["news"].append({
+                                    "title": r['title'],
+                                    "link": link,
+                                    "source": "DuckDuckGo",
+                                    "summary": summary
+                                })
                             seen_urls.add(link)
                 except Exception as q_err:
                     print(f"Error for query {q}: {q_err}")
@@ -349,3 +234,137 @@ def get_macro_economic_news() -> Dict[str, Any]:
         print(f"Error fetching macro news: {e}")
         
     return macro_data
+
+def get_news_summary(url: str) -> Optional[str]:
+    """
+    Get news summary from cache or fetch and summarize.
+    """
+    if not url:
+        return None
+        
+    db = SessionLocal()
+    try:
+        # Check cache
+        cached_summary = get_valid_cache(db, url)
+        if cached_summary:
+            # print(f"DEBUG: Cache hit for {url}")
+            return cached_summary
+            
+        # Cache miss
+        # print(f"DEBUG: Cache miss for {url}, fetching...")
+        content = fetch_article_content(url)
+        if content:
+            summary = summarize_content(content, url)
+            if summary and "Error" not in summary:
+                save_cache(db, url, summary)
+                return summary
+    except Exception as e:
+        print(f"Error in get_news_summary: {e}")
+    finally:
+        db.close()
+        
+    return None
+
+def fetch_article_content(url: str) -> str:
+    """
+    Fetch and extract main text content from a URL using readability-lxml.
+    """
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Sanitize text to avoid lxml issues with control characters
+        clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', response.text)
+        
+        doc = Document(clean_html)
+        html_content = doc.summary()
+        
+        soup = BeautifulSoup(html_content, 'html.parser')
+        text = soup.get_text(separator=' ', strip=True)
+        
+        # Clean up text
+        if text:
+            text = str(text)
+            text = re.sub(r'\s+', ' ', text).strip()
+        else:
+            text = "No readable text found."
+        
+        # print(f"DEBUG: Successfully fetched {len(text)} chars from {url}")
+        return text
+    except Exception as e:
+        print(f"Error fetching content from {url}: {e}")
+        return ""
+
+def summarize_content(content: str, url: str) -> str:
+    """
+    Summarize the key financial insights from the article content using an LLM.
+    """
+    if not content or len(content) < 100:
+        return None
+        
+    try:
+        # print(f"DEBUG: Summarizing content from {url}...")
+        llm = ChatOpenAI(model="gpt-4o")
+        
+        prompt = f"""
+        Summarize the key financial insights from the following article. 
+        Focus on information relevant to stock analysis, market trends, and economic indicators.
+        Keep the summary concise (2-3 sentences).
+        
+        Article Content:
+        {content[:4000]}
+        """
+        
+        messages = [
+            SystemMessage(content="You are a helpful financial research assistant."),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        summary = response.content.strip()
+        # print(f"DEBUG: Generated summary: {summary[:50]}...")
+        return summary
+    except Exception as e:
+        print(f"Error summarizing content: {e}")
+        return "Error generating summary."
+
+def _parse_yf_news_item(item: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    """
+    Parse a yfinance news item which might vary in structure.
+    Returns dict with title, link, publisher, or None if invalid.
+    """
+    try:
+        # Check for nested 'content' structure (new yfinance)
+        if 'content' in item:
+            content = item['content']
+            title = content.get('title')
+            
+            # Try to find link in clickThroughUrl or canonicalUrl
+            link = None
+            if 'clickThroughUrl' in content and content['clickThroughUrl']:
+                link = content['clickThroughUrl'].get('url')
+            if not link and 'canonicalUrl' in content and content['canonicalUrl']:
+                link = content['canonicalUrl'].get('url')
+                
+            publisher = "Yahoo Finance"
+            if 'provider' in content:
+                publisher = content['provider'].get('displayName', "Yahoo Finance")
+                
+            if title and link:
+                return {"title": title, "link": link, "publisher": publisher}
+                
+        # Fallback to flat structure (old yfinance)
+        elif 'title' in item and 'link' in item:
+            return {
+                "title": item.get('title'),
+                "link": item.get('link'),
+                "publisher": item.get('publisher', 'Unknown')
+            }
+            
+    except Exception as e:
+        print(f"Error parsing news item: {e}")
+        
+    return None

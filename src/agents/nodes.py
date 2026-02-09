@@ -1,8 +1,9 @@
-import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.agents.state import AgentState
 from src.tools.market import resolve_symbol, get_macro_economic_news
+from src.database.database import SessionLocal
+from src.database.crud import cleanup_expired_cache
 
 # Initialize LLM lazily
 def get_llm():
@@ -16,8 +17,6 @@ def research_node(state: AgentState):
     research_data = {}
 
     research_data["macro_economic_news"] = get_macro_economic_news()
-    
-    print(f"--- RESEARCHING {len(portfolio)} STOCKS ---")
     
     for pos in portfolio:
         symbol = pos["symbol"]
@@ -38,24 +37,23 @@ def analyst_node(state: AgentState):
     print("--- ANALYZING PORTFOLIO ---")
     
     # Construct prompt
-    macro_news_text = "\n".join([f"- {n['title']}: {n.get('snippet', 'No snippet')}" for n in macro_economic_news.get('news', [])])
+    macro_news_text = "\n".join([f"- {n.get('title', 'No Title')}: {n.get('summary')}" for n in macro_economic_news.get('news', []) if isinstance(n, dict)])
     
-    prompt = f"""You are a senior investment analyst.
-    Your goal is to analyze the user's portfolio and provide actionable recommendations.
+    prompt = f"""You are a senior investment analyst, your goal is to analyze the user's portfolio and provide actionable recommendations.
 
-    First, summarize and analyze the macro economic news of the day:
-    {macro_news_text}
+First, summarize and analyze the macro economic news of the day:
+{macro_news_text}
     
-    Then, for each stock in the portfolio, analyze:
-    1. Valuation (PE ratio, comparison to sector if known)
-    2. Recent News Sentiment and how they can impact each stocks
-    3. Earnings Outlook (if data available)
-    4. Performance (Current Price vs Avg Cost)
-    
-    Finally, provide a "Buy", "Sell", or "Hold" recommendation with reasoning.
-    
-    Portfolio Data:
-    """
+Then, for each stock in the portfolio, analyze:
+1. Valuation (PE ratio, comparison to sector if known)
+2. Recent News Sentiment and how they can impact each stocks
+3. Earnings Outlook (if data available)
+4. Performance (Current Price vs Avg Cost)
+
+Finally, provide a "Buy", "Sell", or "Hold" recommendation with reasoning.
+
+Portfolio Data:
+"""
     
     for pos in portfolio:
         symbol = pos["symbol"]
@@ -64,22 +62,22 @@ def analyst_node(state: AgentState):
         data = research_data.get(symbol, {})
         
         curr_price = data.get("current_price", 0)
-        info = data.get("info", {})
-        news = data.get("news", [])
+        info = data.get("info") or {}
+        news = data.get("news") or []
         
         prompt += f"\n--- {symbol} ---\n"
         prompt += f"Position: {qty} shares @ ${avg_cost:.2f} (Current: ${curr_price:.2f})\n"
         prompt += f"Valuation: PE={info.get('pe_ratio')}, MarketCap={info.get('market_cap')}\n"
-        prompt += f"News Headlines:\n"
-        for n in news[:3]:
-            prompt += f"- {n.get('title')} ({n.get('snippet', 'No snippet')})\n"
-            content = n.get('content', '')
-            if content:
-                # Add a truncated version of the content to the prompt (first 500 chars)
-                # to stay within context limits while giving more info than snippet
-                prompt += f"  Summary/Excerpt: {content[:500]}...\n"
-            else:
-                 prompt += f"  Snippet: {n.get('snippet', 'No details')}\n"
+        
+        if not news:
+            prompt += "No news available.\n"
+        else:
+            prompt += f"News Headlines:\n"
+            for n in news[:3]:
+                if not isinstance(n, dict): # Add check
+                     continue 
+                prompt += f"- {n.get('title', 'No Title')}\n"
+                prompt += f"  Summary/Excerpt: {n.get('summary', '')[:500]}...\n"
             
     prompt += "\n\nProvide a comprehensive Markdown report."
 
@@ -91,6 +89,24 @@ def analyst_node(state: AgentState):
     ]
     
     llm = get_llm()
-    response = llm.invoke(messages)
-    
-    return {"analysis_report": response.content}
+    try:
+        response = llm.invoke(messages)
+        return {"analysis_report": response.content}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"analysis_report": f"Error running analysis: {e}"}
+
+def cache_maintenance_node(state: AgentState):
+    """
+    Clean up expired news cache entries.
+    """
+    print("--- CACHE MAINTENANCE ---")
+    try:
+        db = SessionLocal()
+        cleanup_expired_cache(db)
+        db.close()
+    except Exception as e:
+        print(f"Error in cache maintenance: {e}")
+        
+    return state

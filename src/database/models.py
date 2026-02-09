@@ -39,3 +39,10 @@ class DailySnapshot(Base):
     total_value = Column(Float)
     
     stock = relationship("Stock", back_populates="daily_snapshots")
+
+class NewsCache(Base):
+    __tablename__ = "news_cache"
+
+    url = Column(String, primary_key=True, index=True)
+    summary = Column(String)
+    expire_at = Column(DateTime)
