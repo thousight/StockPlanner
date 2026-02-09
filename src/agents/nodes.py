@@ -2,7 +2,7 @@ import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.agents.state import AgentState
-from src.tools.market import get_current_price, get_stock_news, get_company_info, get_macro_economic_news
+from src.tools.market import resolve_symbol, get_macro_economic_news
 
 # Initialize LLM lazily
 def get_llm():
@@ -23,11 +23,7 @@ def research_node(state: AgentState):
         symbol = pos["symbol"]
         print(f"Fetching data for {symbol}...")
         
-        research_data[symbol] = {
-            "current_price": get_current_price(symbol),
-            "news": get_stock_news(symbol),
-            "info": get_company_info(symbol)
-        }
+        research_data[symbol] = resolve_symbol(symbol)
         
     return {"research_data": research_data}
 
