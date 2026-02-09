@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy.orm import Session
 from .models import Transaction, Stock, NewsCache
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def add_stock(db: Session, symbol: str, name: str = None, sector: str = None):
     stock = db.query(Stock).filter(Stock.symbol == symbol).first()
@@ -16,7 +16,7 @@ def add_transaction(db: Session, symbol: str, action: str, quantity: float, pric
     add_stock(db, symbol)
     
     if date is None:
-        date = datetime.utcnow()
+        date = datetime.now(timezone.utc).replace(tzinfo=None)
         
     transaction = Transaction(
         symbol=symbol,
@@ -83,12 +83,12 @@ def get_transactions(db: Session, symbol: str = None):
 
 def get_valid_cache(db: Session, url: str) -> Optional[str]:
     entry = db.query(NewsCache).filter(NewsCache.url == url).first()
-    if entry and entry.expire_at > datetime.utcnow():
+    if entry and entry.expire_at > datetime.now(timezone.utc).replace(tzinfo=None):
         return entry.summary
     return None
 
 def save_cache(db: Session, url: str, summary: str, ttl_hours: int = 24):
-    expire_at = datetime.utcnow() + timedelta(hours=ttl_hours)
+    expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
     entry = db.query(NewsCache).filter(NewsCache.url == url).first()
     if entry:
         entry.summary = summary
@@ -99,5 +99,5 @@ def save_cache(db: Session, url: str, summary: str, ttl_hours: int = 24):
     db.commit()
 
 def cleanup_expired_cache(db: Session):
-    db.query(NewsCache).filter(NewsCache.expire_at < datetime.utcnow()).delete()
+    db.query(NewsCache).filter(NewsCache.expire_at < datetime.now(timezone.utc).replace(tzinfo=None)).delete()
     db.commit()
