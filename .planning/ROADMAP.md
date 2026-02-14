@@ -7,11 +7,14 @@
 - [ ] **Supervisor Node:** Implement basic routing logic (User -> Supervisor -> Market Agent).
 - [ ] **Basic UI:** Simple Streamlit chat interface to test the graph.
 
-## Phase 2: Education Engine (News & ELI5)
-**Goal:** Implement the core value proposition—simplifying financial data.
+## Phase 2: Education & Analysis Engine
+**Goal:** Implement the core value proposition—simplifying financial data and providing deep, validated analysis.
 - [ ] **News Agent:** Implement `NewsFetcher` aggregating DuckDuckGo, EODHD, X (Twitter), and Reddit.
+- [ ] **Analyst Agent:** Build the logic to synthesize Fundamentals + Macro + News into a "Stock Profile".
+- [ ] **News Validation:** Implement sub-routines to check for "Fake News" and assess "Narrative Impact" (Short vs Long term).
+- [ ] **Profile Caching:** Implement a caching layer for Analyst outputs to prevent redundant expensive calls.
 - [ ] **Explanation Agent:** Implement the "ELI5" re-writing logic (Editor node).
-- [ ] **Integration:** Update Supervisor to route "Why?" questions to News -> Explanation.
+- [ ] **Integration:** Update Supervisor to route complex "Analyze" questions to the Analyst Agent.
 - [ ] **Prompt Tuning:** Refine "Explain Like I'm 5" metaphors for target audience.
 
 ## Phase 3: Portfolio & Planning
