@@ -9,7 +9,7 @@
 
 ## Phase 2: Education Engine (News & ELI5)
 **Goal:** Implement the core value proposition—simplifying financial data.
-- [ ] **News Agent:** Implement `NewsFetcher` (DuckDuckGo/Finnhub News).
+- [ ] **News Agent:** Implement `NewsFetcher` aggregating DuckDuckGo, EODHD, X (Twitter), and Reddit.
 - [ ] **Explanation Agent:** Implement the "ELI5" re-writing logic (Editor node).
 - [ ] **Integration:** Update Supervisor to route "Why?" questions to News -> Explanation.
 - [ ] **Prompt Tuning:** Refine "Explain Like I'm 5" metaphors for target audience.

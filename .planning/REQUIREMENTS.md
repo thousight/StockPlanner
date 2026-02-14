@@ -13,12 +13,13 @@ A personal financial assistant designed for beginners (elderly, young adults) to
 1.  **Core Agent System (LangGraph):**
     - **Supervisor Agent:** Routes user queries to the appropriate specialized agent.
     - **Market Data Agent:** Fetches real-time/delayed stock prices and basic fundamentals (Market Cap, P/E) using Finnhub/yfinance.
-    - **News Agent:** Fetches and summarizes recent news for specific companies or the general market.
+    - **News Agent:** Fetches and summarizes recent news from diverse sources including traditional news (Finnhub/EODHD) and social media (X, Reddit) to capture sentiment and narratives.
     - **Planner Agent:** Provides general financial planning principles based on user age and risk tolerance.
     - **Explanation Agent:** Rewrites technical outputs into simple, plain English (ELI5).
 
 2.  **Data Management:**
     - **Stock Data:** Integration with Finnhub (primary) and yfinance (history).
+    - **News/Social Data:** Integration with EODHD (financial news), X (Twitter), and Reddit APIs for sentiment analysis.
     - **User Data:** Local SQLite database to store user portfolio (Symbol, Quantity, Avg Cost) and risk profile.
 
 3.  **User Interface:**
