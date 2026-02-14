@@ -1,0 +1,14 @@
+{
+  "projectName": "StockPlanner",
+  "version": "0.1.0",
+  "mode": "mvp",
+  "workflows": {
+    "auto_research": true,
+    "review_gates": true
+  },
+  "paths": {
+    "research": ".planning/research",
+    "requirements": ".planning/REQUIREMENTS.md",
+    "roadmap": ".planning/ROADMAP.md"
+  }
+}
