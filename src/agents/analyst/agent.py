@@ -1,7 +1,8 @@
+from langchain_core.runnables import RunnableConfig
 from src.state import AgentState
-from .subgraph import create_debate_graph
+from src.agents.analyst.subgraph import create_debate_graph
 
-def analyst_agent(state: AgentState):
+def analyst_agent(state: AgentState, config: RunnableConfig):
     """
     Adversarial Analyst: Orchestrates a 'Bull vs. Bear' debate and synthesizes a final investment report.
     """
@@ -15,7 +16,7 @@ def analyst_agent(state: AgentState):
     }
     
     print(f"--- ANALYST: Starting adversarial debate for {user_question} ---")
-    debate_results = debate_graph.invoke(debate_input)
+    debate_results = debate_graph.invoke(debate_input, config=config)
     
     debate_output = {
         "bull_argument": debate_results["bull_argument"],

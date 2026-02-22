@@ -26,7 +26,9 @@ class TestAnalystAgent:
             "user_question": "Analyze AAPL",
         }
         
-        result = analyst_agent(state)
+        config = {"configurable": {"thread_id": "test"}}
+        
+        result = analyst_agent(state, config)
         
         assert "analysis_report" in result
         assert "Portfolio Analysis" in result["analysis_report"]
@@ -37,4 +39,4 @@ class TestAnalystAgent:
         mock_graph.invoke.assert_called_once_with({
             "research_data": "Some data",
             "user_question": "Analyze AAPL"
-        })
+        }, config=config)

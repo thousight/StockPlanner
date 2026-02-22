@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from .database import Base
+from src.database.database import Base
 
 class Stock(Base):
     __tablename__ = "stocks"

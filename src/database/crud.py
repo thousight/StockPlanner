@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from .models import Transaction, Stock, NewsCache
+from src.database.models import Transaction, Stock, NewsCache
 from datetime import datetime, timedelta, timezone
 
 def add_stock(db: Session, symbol: str, name: str = None, sector: str = None):

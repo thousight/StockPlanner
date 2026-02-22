@@ -5,11 +5,11 @@ An AI-powered stock analysis and portfolio management tool. This application use
 ## Features
 
 - **Portfolio Management**: Track your stock holdings, average cost, and performance.
-- **AI Research Agent**: 
+- **AI Research Agent**:
   - Fetches real-time stock data and company info using `yfinance`.
   - Aggregates macro-economic news from multiple sources.
   - Scrapes and summarizes news articles using AI (`gpt-4o`).
-- **AI Analyst Agent**: 
+- **AI Analyst Agent**:
   - Analyzes portfolio performance and valuation.
   - Reviews summarized news for sentiment and impact.
   - Generates comprehensive "Buy", "Sell", or "Hold" reports.
@@ -19,6 +19,7 @@ An AI-powered stock analysis and portfolio management tool. This application use
 ## Architecture
 
 The system is built on a graph-based agent workflow:
+
 1. **Research Node**: Gathers market data and news.
 2. **Analyst Node**: Synthesizes data into a final report.
 3. **Cache Maintenance Node**: Asynchronously cleans up expired news summaries after analysis.
@@ -26,18 +27,21 @@ The system is built on a graph-based agent workflow:
 ## Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd StockPlanner
    ```
 
 2. **Create and activate a virtual environment:**
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    ```
 
 3. **Install dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -52,6 +56,7 @@ The system is built on a graph-based agent workflow:
 ## Usage
 
 **Run the Streamlit App:**
+
 ```bash
 streamlit run src/web/app.py
 ```
@@ -68,9 +73,9 @@ Navigate to `http://localhost:8501` in your browser.
 ## Recent Updates
 
 - **Database Caching**: Implemented a `NewsCache` table to store LLM-generated summaries, improving speed and efficiency.
-- **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling. 
+- **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling.
 
 ## TODO
 
 - [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
-- [ ] Pass in User-Agent string from browser as context to Research Agent, so that 401 and 403 errors from news sites are reduced
+- [x] Pass in User-Agent string from browser as context to Research Agent, so that 401 and 403 errors from news sites are reduced

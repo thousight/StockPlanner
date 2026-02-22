@@ -6,15 +6,15 @@ import sys
 
 # Add project root to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))
+project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
 
 # Load env if exists
 load_dotenv()
 
-from .database.database import get_db, init_db
-from .database.crud import add_transaction, get_holdings, get_transactions
-from .graph import create_graph
+from src.database.database import get_db, init_db
+from src.database.crud import add_transaction, get_holdings, get_transactions
+from src.graph import create_graph
 
 # Page Config
 st.set_page_config(page_title="Stock Planner", layout="wide")
@@ -22,22 +22,34 @@ st.set_page_config(page_title="Stock Planner", layout="wide")
 # Initialize DB
 init_db()
 
+if not os.environ.get("OPENAI_API_KEY"):
+    st.error("🔑 OPENAI_API_KEY not found in .env file. Please add it to run the application.")
+    st.stop()
+
 # Session State for Analysis
 if "analysis_result" not in st.session_state:
     st.session_state["analysis_result"] = None
 if "debate_output" not in st.session_state:
     st.session_state["debate_output"] = None
+if "chat_history" not in st.session_state:
+    st.session_state["chat_history"] = []
 
 # Reusable function to run the agent graph
-def run_agent_graph(holdings, user_question=None):
+def run_agent_graph(holdings, user_question=None, history=None):
     with st.status("Agents are researching market data...", expanded=True) as status:
         try:
             # Prepare State
+            from datetime import datetime
+            client_ua = ""
+            if hasattr(st, "context") and hasattr(st.context, "headers"):
+                client_ua = st.context.headers.get("User-Agent", "")
             initial_state = {
-                "messages": [],
+                "messages": history or [],
                 "portfolio": holdings,
                 "research_data": {},
                 "user_question": user_question or "",
+                "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "user_agent": client_ua,
                 "focus_symbols": [],
                 "analysis_report": "",
                 "next_agent": "",
@@ -53,9 +65,19 @@ def run_agent_graph(holdings, user_question=None):
             
             final_report = ""
             debate_output = {}
-            
-            # Stream events from the graph
-            for s in app.stream(initial_state):
+                    
+            # Stream events from the graph including subgraphs
+            for event in app.stream(initial_state, subgraphs=True):
+                # LangGraph with subgraphs=True yields tuples: (namespace, state_update)
+                namespace, s = event
+                
+                # Check if it is the final output of the top-level graph
+                if not namespace and "__end__" in s:
+                    final_state = s["__end__"]
+                    final_report = final_state.get("analysis_report", "")
+                    debate_output = final_state.get("debate_output", {})
+                    continue
+                    
                 if "__end__" not in s:
                     agent_name = list(s.keys())[0]
                     agent_data = s[agent_name]
@@ -63,23 +85,38 @@ def run_agent_graph(holdings, user_question=None):
                     if agent_name == "supervisor":
                         plan = agent_data.get("high_level_plan", [])
                         next_agent = agent_data.get("next_agent", "N/A")
-                        status.write(f"**Supervisor Plan:** {', '.join(plan)}")
+                        plan_md = "\n".join([f"- {item}" for item in plan])
+                        status.markdown(f"**Supervisor Plan:**\n{plan_md}")
                         status.update(label=f"Supervisor routing to: {next_agent.capitalize()}...", state="running")
                     elif agent_name == "research":
-                        local_plan = agent_data.get("research_plan", {}).get("queries", [])
-                        status.write(f"**Research Plan:** {', '.join(local_plan)}")
+                        local_plan = agent_data.get("research_plan", [])
+                        if local_plan:
+                            plan_md = "\n".join([f"- {item}" for item in local_plan])
+                            status.markdown(f"**Research Plan:**\n{plan_md}")
+                        
+                        # Show a little snippet to show data was gathered
+                        r_data = agent_data.get("research_data", "")
+                        if r_data:
+                            status.markdown(f"**Research Data Gathered:**\n{r_data}")
+                            
                         status.update(label="Researching market data...", state="running")
+                    elif agent_name == "generator":
+                        status.write(f"**Moderator Instructions:** Orchestrating debate...")
+                        status.update(label="Analysts preparing arguments...", state="running")
+                    elif agent_name == "bull":
+                        status.write(f"📈 **Bull Analyst:** Argument prepared.")
+                        status.update(label="Bull Analyst completed...", state="running")
+                    elif agent_name == "bear":
+                        status.write(f"📉 **Bear Analyst:** Argument prepared.")
+                        status.update(label="Bear Analyst completed...", state="running")
+                    elif agent_name == "synthesizer":
+                        status.write(f"⚖️ **Moderator:** Synthesizing final report...")
+                        status.update(label="Finalizing report...", state="running")
                     elif agent_name == "analyst":
-                        status.update(label="Orchestrating adversarial debate...", state="running")
-                        # Capture results from analyst agent if it's the last step
+                        # The top-level analyst node wraps the subgraph
                         if "analysis_report" in agent_data:
                             final_report = agent_data["analysis_report"]
                             debate_output = agent_data.get("debate_output", {})
-                else:
-                    # Final state extraction if not caught during stream
-                    final_state = s["__end__"]
-                    final_report = final_state.get("analysis_report", "")
-                    debate_output = final_state.get("debate_output", {})
             
             status.update(label="Process Complete!", state="complete", expanded=False)
             return final_report, debate_output
@@ -88,14 +125,7 @@ def run_agent_graph(holdings, user_question=None):
             st.error(f"Error running agent: {e}")
             return None, None
 
-# --- Sidebar ---
-st.sidebar.title("Configuration")
-api_key = st.sidebar.text_input("OpenAI API Key", value=os.getenv("OPENAI_API_KEY", ""), type="password")
-if api_key:
-    os.environ["OPENAI_API_KEY"] = api_key
 
-if not os.environ.get("OPENAI_API_KEY"):
-    st.sidebar.warning("Please enter your OpenAI API Key to use the AI Analysis features.")
 
 # --- Main App ---
 st.title("📈 AI Stock Planner")
@@ -167,34 +197,56 @@ with tab2:
         st.divider()
         st.markdown(st.session_state["analysis_result"])
 
-# --- Tab 3: Ask AI ---
+# --- Tab 3: Ask AI (Chat Interface) ---
 with tab3:
-    st.header("Ask AI about your Portfolio")
-    user_q = st.text_input("Your Question:")
-    if st.button("Ask AI"):
+    st.header("Chat with your AI Advisor")
+    
+    messages_container = st.container(height=800, border=False)
+    
+    with messages_container:
+        # Display chat messages from history on app rerun
+        for message in st.session_state["chat_history"]:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+    # React to user input
+    if user_q := st.chat_input("Ask a question about your portfolio or the market..."):
         if not os.environ.get("OPENAI_API_KEY"):
             st.error("Missing OpenAI API Key.")
         elif not holdings:
             st.warning("Portfolio is empty.")
-        elif not user_q:
-            st.error("Please enter a question.")
         else:
-            report, debate = run_agent_graph(holdings, user_question=user_q)
-            if report:
-                st.session_state["analysis_result"] = report # Shared state for report
-                st.session_state["debate_output"] = debate
-                st.success("Answer Ready!")
-
-    if st.session_state["analysis_result"]:
-         # Reuse the same display logic as Tab 2
-         if st.session_state["debate_output"]:
-            debate = st.session_state["debate_output"]
-            with st.expander("View Adversarial Debate Details", expanded=False):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.subheader("🐂 Bull Case")
-                    st.markdown(debate.get("bull_argument", ""))
-                with col2:
-                    st.subheader("🐻 Bear Case")
-                    st.markdown(debate.get("bear_argument", ""))
-         st.markdown(st.session_state["analysis_result"])
+            with messages_container:
+                # Display user message in chat message container
+                st.chat_message("human").markdown(user_q)
+                
+                # Format history for Langchain BaseMessages
+                from langchain_core.messages import HumanMessage, AIMessage
+                langchain_history = []
+                for msg in st.session_state["chat_history"]:
+                    if msg["role"] == "human":
+                        langchain_history.append(HumanMessage(content=msg["content"]))
+                    else:
+                        langchain_history.append(AIMessage(content=msg["content"]))
+                        
+                # Add new user message to session state
+                st.session_state["chat_history"].append({"role": "human", "content": user_q})
+                
+                with st.chat_message("ai"):
+                    report, debate = run_agent_graph(holdings, user_question=user_q, history=langchain_history)
+                    if report:
+                        if debate:
+                            with st.expander("View Adversarial Debate Details", expanded=False):
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.subheader("🐂 Bull Case")
+                                    st.markdown(debate.get("bull_argument", ""))
+                                with col2:
+                                    st.subheader("🐻 Bear Case")
+                                    st.markdown(debate.get("bear_argument", ""))
+                        st.markdown(report)
+                        st.session_state["chat_history"].append({"role": "ai", "content": report})
+                    else:
+                        err_msg = "Sorry, I encountered an error answering your question."
+                        st.markdown(err_msg)
+                        st.session_state["chat_history"].append({"role": "ai", "content": err_msg})

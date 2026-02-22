@@ -3,7 +3,7 @@ from typing import List
 from concurrent.futures import ThreadPoolExecutor
 from src.utils.news import get_summary_result, fetch_yfinance_news_urls, fetch_ddgs_urls, _parse_yf_news_item
 
-def get_stock_news(symbol: str, max_results: int = 3) -> str:
+def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
     """
     Fetch and summarize the latest news for a specific stock ticker.
     """
@@ -20,6 +20,8 @@ def get_stock_news(symbol: str, max_results: int = 3) -> str:
             if not parsed:
                 continue
                 
+            # Passing user_agent into the item dict for get_summary_result to pick up
+            parsed["user_agent"] = kwargs.get("user_agent", "")
             result = get_summary_result(parsed)
             if result:
                 results.append(result)
@@ -29,14 +31,14 @@ def get_stock_news(symbol: str, max_results: int = 3) -> str:
              
         result_lines = [f"News for {symbol}:"]
         for item in results:
-            result_lines.append(f"- **{item['title']}**: {item['summary']} (URL: {item['url']})")
+            result_lines.append(f"- **{item['title']}**: {item['summary']}")
             
         return "\n".join(result_lines) + "\n"
     except Exception as e:
         print(f"Error fetching news for {symbol}: {e}")
         return f"Error fetching news for {symbol}: {e}\n"
 
-def get_macro_economic_news() -> str:
+def get_macro_economic_news(**kwargs) -> str:
     """
     Fetch and summarize the latest global macroeconomic news and indicators.
     """
@@ -65,6 +67,7 @@ def get_macro_economic_news() -> str:
     unique_candidates = []
     for item in title_and_urls:
         if item["link"] not in seen_urls:
+            item["user_agent"] = kwargs.get("user_agent", "")
             unique_candidates.append(item)
             seen_urls.add(item["link"])
             
@@ -78,11 +81,11 @@ def get_macro_economic_news() -> str:
          
     result_lines = ["Macro Economic News:"]
     for item in valid_results:
-        result_lines.append(f"- **{item['title']}**: {item['summary']} (URL: {item['url']})")
+        result_lines.append(f"- **{item['title']}**: {item['summary']}")
         
     return "\n".join(result_lines) + "\n"
 
-def web_search(queries: List[str]) -> str:
+def web_search(queries: List[str], **kwargs) -> str:
     """
     Perform web search and get title and page summary by the queries.
     Returns a formatted markdown string of the results grouped by query.
@@ -98,6 +101,7 @@ def web_search(queries: List[str]) -> str:
         for item in items:
             link = item.get("link")
             if link and link not in unique_candidates:
+                item["user_agent"] = kwargs.get("user_agent", "")
                 unique_candidates[link] = item
                 
     # 3. Fetch summaries in parallel for unique candidates
@@ -123,7 +127,7 @@ def web_search(queries: List[str]) -> str:
             # Ensure we have a valid summary and prevent exact duplicates per query
             if link and link in summary_map and link not in seen_in_group:
                 summary_data = summary_map[link]
-                result_lines.append(f"- **{summary_data['title']}**: {summary_data['summary']} (URL: {summary_data['url']})")
+                result_lines.append(f"- **{summary_data['title']}**: {summary_data['summary']}")
                 seen_in_group.add(link)
                 found_any = True
                 

@@ -1,3 +1,4 @@
+import inspect
 import concurrent.futures
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -5,8 +6,8 @@ from src.state import AgentState
 from src.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.tools.news import get_stock_news, get_macro_economic_news, web_search
 from src.tools.research import get_stock_financials
-from .prompts import RESEARCH_PLANNER_SYSTEM_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
-from .research_plan import ResearchPlan
+from src.agents.research.prompts import RESEARCH_PLANNER_SYSTEM_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
+from src.agents.research.research_plan import ResearchPlan
 
 AVAILABLE_TOOLS = [
     get_stock_financials,
@@ -32,7 +33,7 @@ def research_agent(state: AgentState):
             available_tools=available_tools,
             available_next_agents="supervisor, analyst"
         )),
-        HumanMessage(content=RESEARCH_PLANNER_PLAN_PROMPT)
+        HumanMessage(content=RESEARCH_PLANNER_PLAN_PROMPT.format(dummy=""))
     ]
     
     local_plan = structured_llm.invoke(messages)
@@ -40,9 +41,12 @@ def research_agent(state: AgentState):
     
     research_data = ""  
 
+    # Extract user_agent for downstream tool propagation
+    client_ua = state.get("user_agent", "")
+
     # Run tool calls in parallel using ThreadPoolExecutor
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(execute_tool, step) for step in local_plan.steps]
+        futures = [executor.submit(execute_tool, step, client_ua) for step in local_plan.steps]
         for future in concurrent.futures.as_completed(futures):
             result_str = future.result()
             if result_str:
@@ -50,15 +54,25 @@ def research_agent(state: AgentState):
 
     return {
         "research_data": research_data,
+        "research_plan": [f"{step.tool_name}({step.tool_params})" for step in local_plan.steps],
         "next_agent": local_plan.next_agent
     }
     
-def execute_tool(step):
+def execute_tool(step, user_agent=""):
     # Build a lookup mapping for tool names
     tool_map = {tool.__name__: tool for tool in AVAILABLE_TOOLS}
     tool = tool_map.get(step.tool_name)
     if tool:
         try:
+            # Check if the tool accepts a user_agent parameter or **kwargs
+            sig = inspect.signature(tool)
+            accepts_kwargs = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+            )
+            
+            if "user_agent" in sig.parameters or accepts_kwargs:
+                step.tool_params["user_agent"] = user_agent
+                
             # Execute standard function with unpacked dictionary parameters
             result = tool(**step.tool_params)
             if isinstance(result, str):

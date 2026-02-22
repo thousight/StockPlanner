@@ -1,8 +1,8 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.state import AgentState
-from .prompts import SUPERVISOR_PROMPT, SUPERVISOR_PLAN_PROMPT
-from .high_level_plan import HighLevelPlan
+from src.agents.supervisor.prompts import SUPERVISOR_PROMPT, SUPERVISOR_PLAN_PROMPT
+from src.agents.supervisor.high_level_plan import HighLevelPlan
 from src.utils.prompt import convert_state_to_prompt, convert_agents_to_prompt
 from src.agents.research.agent import research_agent
 from src.agents.analyst.agent import analyst_agent
@@ -23,13 +23,14 @@ def supervisor_agent(state: AgentState):
     structured_llm = llm.with_structured_output(HighLevelPlan, method="function_calling")
     
     # Use utility functions for prompt context
-    messages = [
-        SystemMessage(content=SUPERVISOR_PROMPT.format(
-            current_context=convert_state_to_prompt(state),
-            available_agents=convert_agents_to_prompt(AVAILABLE_AGENTS)
-        )),
-        HumanMessage(content=SUPERVISOR_PLAN_PROMPT)
-    ]
+    system_msg = SystemMessage(content=SUPERVISOR_PROMPT.format(
+        current_context=convert_state_to_prompt(state),
+        available_agents=convert_agents_to_prompt(AVAILABLE_AGENTS)
+    ))
+    human_msg = HumanMessage(content=SUPERVISOR_PLAN_PROMPT.format(dummy=""))
+    
+    # Construct message list: system prompt -> history -> current plan prompt
+    messages = [system_msg] + state.get("messages", []) + [human_msg]
     
     # Loop Detection
     revision_count = state.get("revision_count", 0)

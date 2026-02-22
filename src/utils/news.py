@@ -1,3 +1,4 @@
+import os
 import yfinance as yf
 from ddgs import DDGS
 from typing import Dict, List, Any, Optional
@@ -10,11 +11,12 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.database.database import SessionLocal
 from src.database.crud import get_valid_cache, save_cache
-from .prompt import ARTICLE_SUMMARY_PROMPT
+from src.utils.prompt import ARTICLE_SUMMARY_PROMPT
 
 def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""
-    summary = get_summary(item['link'])
+    user_agent = item.get("user_agent", "")
+    summary = get_summary(item['link'], user_agent)
     if summary:
         return {
             "title": item["title"],
@@ -55,7 +57,7 @@ def fetch_ddgs_urls(query: str) -> List[Dict[str, str]]:
         print(f"Error for query {query}: {e}")
     return results
 
-def get_summary(url: str) -> Optional[str]:
+def get_summary(url: str, user_agent: str = "") -> Optional[str]:
     """
     Get news summary from cache or fetch and summarize.
     TTL: 7 days.
@@ -71,7 +73,7 @@ def get_summary(url: str) -> Optional[str]:
             return cached_summary
             
         # Cache miss
-        content = fetch_article_content(url)
+        content = fetch_article_content(url, user_agent)
         if content:
             summary = summarize_content(content, url)
             if summary and "Error" not in summary:
@@ -86,16 +88,18 @@ def get_summary(url: str) -> Optional[str]:
         
     return None
 
-def fetch_article_content(url: str) -> str:
+def fetch_article_content(url: str, user_agent: str = "") -> str:
     """Fetch and extract main text content from a URL."""
     try:
+        final_ua = user_agent if user_agent else "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+            "User-Agent": final_ua
         }
         response = requests.get(url, headers=headers, timeout=10)
         
-        # Silently skip any non-200 responses
-        if response.status_code != 200:
+        # Silently skip any failing responses
+        if response.status_code >= 400:
             return None
         
         clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', response.text)

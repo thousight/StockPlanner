@@ -3,7 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, Field
-from .prompts import INSTRUCTION_GENERATOR_PROMPT, BULL_PROMPT, BEAR_PROMPT, SYNTHESIS_PROMPT
+from src.agents.analyst.prompts import INSTRUCTION_GENERATOR_PROMPT, BULL_PROMPT, BEAR_PROMPT, SYNTHESIS_PROMPT
 from src.utils.prompt import convert_state_to_prompt
 
 class DebateState(TypedDict):

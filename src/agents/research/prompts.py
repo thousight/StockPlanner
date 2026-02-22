@@ -1,4 +1,6 @@
-RESEARCH_PLANNER_SYSTEM_PROMPT = """
+from langchain_core.prompts import ChatPromptTemplate
+
+RESEARCH_PLANNER_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
 You are a Senior Research Analyst. Your goal is to create a detailed local research plan to gather financial and news data for the specified focus areas.
 
 Current Context:
@@ -16,8 +18,8 @@ Your Task:
 3. Determine the `next_agent` to route to after gathering data
 
 Output your plan as a structured JSON object.
-"""
+""")
 
-RESEARCH_PLANNER_PLAN_PROMPT = """
+RESEARCH_PLANNER_PLAN_PROMPT = ChatPromptTemplate.from_template("""
 Generate a local research plan.
-"""
+""")
