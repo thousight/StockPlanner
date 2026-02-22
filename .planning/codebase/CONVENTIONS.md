@@ -6,12 +6,12 @@
 
 **Files:**
 - snake_case for all Python files.
-- Example: `src/agents/graph.py`, `src/database/crud.py`
+- Example: `src/graph.py`, `src/database/crud.py`
 - Test files prefixed with `test_`. Example: `tests/test_crud.py`
 
 **Functions:**
 - snake_case for all functions.
-- Example: `research_node`, `add_stock`, `resolve_symbol`
+- Example: `research_agent`, `add_stock`, `resolve_symbol`
 - Private helper functions prefixed with underscore. Example: `_parse_yf_news_item`
 
 **Variables:**
@@ -48,7 +48,7 @@
 **Patterns:**
 - Try-except blocks used in utility functions to handle external API failures (yfinance, DuckDuckGo).
 - Returns default empty values (e.g., `[]`, `{}`, `0`, `None`) on failure to ensure system stability.
-- Example: `src/agents/nodes/research/utils.py` handles exceptions in `resolve_symbol` by returning a default dictionary.
+- Example: `src/tools/research.py (or src/tools/news.py)` handles exceptions in `resolve_symbol` by returning a default dictionary.
 
 ## Logging
 
@@ -91,13 +91,13 @@
 ## Module Structure for Agents
 
 **Architecture:**
-- Each agent node MUST be organized as a directory-based package.
-- **Node Logic:** The primary logic for the agent node (the function integrated into the graph) MUST reside in `node.py`.
+- Each agent agent MUST be organized as a directory-based package.
+- **Node Logic:** The primary logic for the agent agent (the function integrated into the graph) MUST reside in `agent.py`.
 - **Prompts:** All LLM prompts, system messages, and template strings MUST reside in `prompts.py`.
 - **Structure:**
   ```text
-  src/agents/nodes/<agent_name>/
-  ├── node.py
+  src/agents/<agent_name>/
+  ├── agent.py
   └── prompts.py
   ```
 - **Rationale:** Separating prompts from logic improves readability and allows for easier prompt engineering without touching the execution flow.

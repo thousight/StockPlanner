@@ -8,16 +8,16 @@
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
-- **Persona-Driven:** Each worker agent has a dedicated `prompts.py` and `node.py` in its own directory.
+- **Persona-Driven:** Each agent agent has a dedicated `prompts.py` and `agent.py` in its own directory.
 - **Supervisor Decomposition:** Supervisor performs high-level planning (steps, assignments, dependencies) before delegating.
 - **Local Planning (Research):** Research agent generates a specific `ResearchPlan` before executing tools.
 - **Context-Aware Analysis (Analyst):** Analyst evaluates context and can loop back to Research if gaps exist.
 - **Simplified News Utility:** News agent is refactored into a utility/workflow for the Research agent.
-- **Direct Communication:** Workers can communicate (Analyst -> Research) via state/graph edges.
+- **Direct Communication:** Agents can communicate (Analyst -> Research) via state/graph edges.
 - **User Experience:** Only high-level "thinking" steps displayed; expanders for details.
 
 ### Claude's Discretion
-- **Implementation of "Planner" Node:** Specific Pydantic models and state structure.
+- **Implementation of "Planner" Agent:** Specific Pydantic models and state structure.
 - **Loopback Logic:** exact conditional edge implementation.
 - **News Integration:** Tool vs. Subgraph (Recommendation: Tool/Helper).
 
@@ -27,7 +27,7 @@
 
 ## Summary
 
-The core architectural shift is from a flat "Router" model to a **"Plan-and-Execute" Mesh**. The Supervisor is no longer just a router; it is a **Planner** that populates the state with a `HighLevelPlan`. Workers (Research) are intelligent agents that perform **Local Planning** before execution. 
+The core architectural shift is from a flat "Router" model to a **"Plan-and-Execute" Mesh**. The Supervisor is no longer just a router; it is a **Planner** that populates the state with a `HighLevelPlan`. Agents (Research) are intelligent agents that perform **Local Planning** before execution. 
 
 The Analyst agent is being refactored into a **"Debate-and-Synthesize" Moderator**. Instead of a single LLM pass, it will orchestrate an internal adversarial debate between "Bull" and "Bear" personas to ensure all risks and opportunities are surfaced before the final synthesis.
 
@@ -38,18 +38,18 @@ The Analyst agent is being refactored into a **"Debate-and-Synthesize" Moderator
 ### Core Libraries
 | Library | Purpose | Why Standard |
 |---------|---------|--------------|
-| `langgraph` | Orchestration | Supports subgraphs and parallel node execution (essential for debate). |
+| `langgraph` | Orchestration | Supports subgraphs and parallel agent execution (essential for debate). |
 | `pydantic` | Structured Output | Used for `ResearchPlan`, `DebateOutput`, and `FinalReport`. |
 | `langchain_core` | LLM Interfaces | Standard abstraction for chat models and adversarial prompt templates. |
 
 ## Architecture Patterns
 
 ### 1. Adversarial Analyst Subgraph (Debate Pattern)
-To implement the "Debate-and-Synthesize" logic without bloating the main graph, the Analyst node should be implemented as a subgraph.
+To implement the "Debate-and-Synthesize" logic without bloating the main graph, the Analyst agent should be implemented as a subgraph.
 
-**Subgraph Nodes:**
+**Subgraph Agents:**
 1.  **Generator:** Analyzes `research_data` and generates specific Bullish/Bearish instructions.
-2.  **Bull Agent & Bear Agent (Parallel):** These nodes execute in parallel using the generated instructions.
+2.  **Bull Agent & Bear Agent (Parallel):** These agents execute in parallel using the generated instructions.
 3.  **Synthesizer (Moderator):** Evaluates the debate and the raw data to produce the final, unbiased report.
 
 ### 2. State Isolation
@@ -92,7 +92,7 @@ The Synthesizer (Moderator) should use a **"Point-Counterpoint"** framework:
 **How to avoid:** Use "Adversarial System Instructions" that explicitly forbid agreeing. "Your goal is to win the argument, not find common ground."
 
 ### Pitfall 2: Context Bloat in Parallel
-**What goes wrong:** Sending the massive `research_data` to 3 different nodes (Generator, Bull, Bear, Synthesizer) simultaneously.
+**What goes wrong:** Sending the massive `research_data` to 3 different agents (Generator, Bull, Bear, Synthesizer) simultaneously.
 **How to avoid:** The Bull/Bear agents should only receive the *relevant snippets* or a summary if the data is > 10k tokens.
 
 ### Pitfall 3: Synthesizer Bias
@@ -105,10 +105,10 @@ The Synthesizer (Moderator) should use a **"Point-Counterpoint"** framework:
 ```python
 # Analyst Subgraph Definition
 builder = StateGraph(DebateState)
-builder.add_node("generator", generate_prompts)
-builder.add_node("bull", bullish_node)
-builder.add_node("bear", bearish_node)
-builder.add_node("synthesizer", synthesis_node)
+builder.add_agent("generator", generate_prompts)
+builder.add_agent("bull", bullish_agent)
+builder.add_agent("bear", bearish_agent)
+builder.add_agent("synthesizer", synthesis_agent)
 
 builder.add_edge(START, "generator")
 builder.add_edge("generator", "bull")

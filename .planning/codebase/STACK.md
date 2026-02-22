@@ -19,29 +19,29 @@
 ## Frameworks
 
 **Core:**
-- **Streamlit** - Used for the web-based user interface (`src/web/app.py`).
-- **LangGraph** - Manages the agentic workflow and state transition logic (`src/agents/graph.py`).
-- **LangChain** - Provides abstractions for LLM interactions and message handling (`src/agents/nodes/analyst/node.py`, `src/agents/nodes/research/utils.py`).
+- **Streamlit** - Used for the web-based user interface (`src/app.py`).
+- **LangGraph** - Manages the agentic workflow and state transition logic (`src/graph.py`).
+- **LangChain** - Provides abstractions for LLM interactions and message handling (`src/agents/analyst/agent.py`, `src/tools/research.py (or src/tools/news.py)`).
 
 **Testing:**
 - **Pytest** - Test runner and framework (`pytest.ini`, `tests/` directory).
 
 **Data/UI:**
-- **Pandas** - Data manipulation and analysis (`src/web/app.py`).
-- **Plotly** - Interactive visualizations (imported in `requirements.txt`, used in `src/web/app.py`).
+- **Pandas** - Data manipulation and analysis (`src/app.py`).
+- **Plotly** - Interactive visualizations (imported in `requirements.txt`, used in `src/app.py`).
 
 ## Key Dependencies
 
 **Critical:**
 - `langchain-openai` - OpenAI LLM integration for analysis and summarization.
-- `yfinance` - Real-time and historical market data retrieval (`src/agents/nodes/research/utils.py`).
+- `yfinance` - Real-time and historical market data retrieval (`src/tools/research.py (or src/tools/news.py)`).
 - `sqlalchemy` - ORM for database interactions (`src/database/database.py`).
-- `pydantic` - Data validation and settings management (e.g. `AgentState` in `src/agents/state.py`).
+- `pydantic` - Data validation and settings management (e.g. `AgentState` in `src/state.py`).
 
 **Infrastructure:**
-- `python-dotenv` - Environment variable management (`src/web/app.py`).
-- `requests` / `beautifulsoup4` / `readability-lxml` - Web scraping and content extraction for news analysis (`src/agents/nodes/research/utils.py`).
-- `ddgs` - DuckDuckGo Search for supplemental research (`src/agents/nodes/research/utils.py`).
+- `python-dotenv` - Environment variable management (`src/app.py`).
+- `requests` / `beautifulsoup4` / `readability-lxml` - Web scraping and content extraction for news analysis (`src/tools/research.py (or src/tools/news.py)`).
+- `ddgs` - DuckDuckGo Search for supplemental research (`src/tools/research.py (or src/tools/news.py)`).
 
 ## Configuration
 

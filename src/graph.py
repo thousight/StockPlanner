@@ -1,12 +1,12 @@
 from langgraph.graph import StateGraph, END
-from src.agents.state import AgentState
-from src.agents.nodes.supervisor.node import supervisor_node
-from src.agents.nodes.research.node import research_node
-from src.agents.nodes.analyst.node import analyst_node
-from src.agents.nodes.nodes import cache_maintenance_node
+from src.state import AgentState
+from src.agents.supervisor.agent import supervisor_agent
+from src.agents.research.agent import research_agent
+from src.agents.analyst.agent import analyst_agent
+from src.agents.cache_maintenance.agent import cache_maintenance_agent
 
 def mesh_router(state: AgentState):
-    dest = state.get("next_node", "cache_maintenance").lower()
+    dest = state.get("next_agent", "cache_maintenance").lower()
     if dest in ["end", "cache_maintenance"]:
         return "cache_maintenance"
     return dest
@@ -14,11 +14,11 @@ def mesh_router(state: AgentState):
 def create_graph():
     workflow = StateGraph(AgentState)
     
-    # Add nodes
-    workflow.add_node("supervisor", supervisor_node)
-    workflow.add_node("research", research_node)
-    workflow.add_node("analyst", analyst_node)
-    workflow.add_node("cache_maintenance", cache_maintenance_node)
+    # Add nodes (we keep the string names the same, but use the new function names)
+    workflow.add_node("supervisor", supervisor_agent)
+    workflow.add_node("research", research_agent)
+    workflow.add_node("analyst", analyst_agent)
+    workflow.add_node("cache_maintenance", cache_maintenance_agent)
     
     # Set entry point
     workflow.set_entry_point("supervisor")
@@ -34,21 +34,23 @@ def create_graph():
         }
     )
     
-    # Research can go back to Supervisor, hand off to Analyst, or finish
     workflow.add_conditional_edges(
         "research",
         mesh_router,
         {
             "analyst": "analyst",
+            "supervisor": "supervisor",
+            "cache_maintenance": "cache_maintenance"
         }
     )
     
-    # Analyst can loop back for more research or finish
     workflow.add_conditional_edges(
         "analyst",
         mesh_router,
         {
             "research": "research",
+            "supervisor": "supervisor",
+            "cache_maintenance": "cache_maintenance"
         }
     )
     

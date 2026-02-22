@@ -1,10 +1,10 @@
-from src.agents.state import AgentState
+from src.state import AgentState
 from src.database.database import SessionLocal
 from src.database.crud import cleanup_expired_cache
 
-def cache_maintenance_node(state: AgentState):
+def cache_maintenance_agent(state: AgentState):
     """
-    Clean up expired news cache entries. This node is always called as the last node in the graph before it ends, can be treated as an END node.
+    Clean up expired news cache entries. This agent is always called as the last agent in the graph before it ends, can be treated as an END agent.
     """
     try:
         db = SessionLocal()

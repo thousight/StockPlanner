@@ -1,10 +1,10 @@
 # Requirements
 
 ## 1. Multi-Agent Refactor (Architecture)
-- [ ] **Supervisor Node:** Implement a central planner node that receives user intent and delegates to specialized workers.
-- [ ] **Worker Pattern:** Define a standard `AgentWorker` interface (or skill) for data retrieval and analysis nodes.
+- [ ] **Supervisor Agent:** Implement a central planner agent that receives user intent and delegates to specialized agents.
+- [ ] **Agent Pattern:** Define a standard `AgentAgent` interface (or skill) for data retrieval and analysis agents.
 - [ ] **Tooling Wrapper:** Wrap existing tools (`yfinance`, `duckduckgo`) into standardized Agent Tools.
-- [ ] **Parallel Execution:** Enable the supervisor to trigger multiple worker nodes in parallel (e.g., Financials + News) using LangGraph's branching logic.
+- [ ] **Parallel Execution:** Enable the supervisor to trigger multiple agent agents in parallel (e.g., Financials + News) using LangGraph's branching logic.
 
 ## 2. Deep Stock Profiling (Issue #5)
 - [ ] **Business Profile:** Fetch and summarize company basics, revenue drivers, and competitive landscape.
@@ -22,7 +22,7 @@
 
 ## 5. User Alignment (Issue #1)
 - [ ] **Formal Profiling:** Implement a one-time setup flow to capture User Age, Risk Tolerance (Conservative/Moderate/Aggressive), and Goals.
-- [ ] **Alignment Scorer:** A final "Editor" node that scores the analyzed stock against the user's profile and flags discrepancies (e.g., "Too volatile for your conservative profile").
+- [ ] **Alignment Scorer:** A final "Editor" agent that scores the analyzed stock against the user's profile and flags discrepancies (e.g., "Too volatile for your conservative profile").
 
 ## 6. Technical & UX
 - [ ] **Database Persistence:** Enhance SQLite models to cache stock profiles and institutional snapshots.

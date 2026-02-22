@@ -7,9 +7,13 @@ Current Context:
 Available Tools:
 {available_tools}
 
+Available Next Agents:
+{available_next_agents}
+
 Your Task:
 1. Define specific search queries or data points to fetch.
-2. Use the appropriate tools from the available list with the appropriate parameters.
+2. Use the appropriate tools from the available list. You MUST provide the necessary parameters for each tool using the `tool_params` field (e.g., {{"symbol": "NVDA"}}).
+3. Determine the `next_agent` to route to after gathering data
 
 Output your plan as a structured JSON object.
 """

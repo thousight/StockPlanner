@@ -4,10 +4,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, Field
 from .prompts import INSTRUCTION_GENERATOR_PROMPT, BULL_PROMPT, BEAR_PROMPT, SYNTHESIS_PROMPT
-from src.agents.utils.prompt_utils import convert_state_to_prompt
+from src.utils.prompt import convert_state_to_prompt
 
 class DebateState(TypedDict):
-    research_data: Dict[str, Any]
+    research_data: str
     user_question: str
     bull_instruction: Optional[str]
     bear_instruction: Optional[str]
@@ -25,7 +25,7 @@ def generate_instructions(state: DebateState):
     Debate Orchestrator: Analyzes research data to generate adversarial instructions for sub-agents.
     """
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    structured_llm = llm.with_structured_output(Instructions)
+    structured_llm = llm.with_structured_output(Instructions, method="function_calling")
     
     prompt = INSTRUCTION_GENERATOR_PROMPT.format(
         current_context=convert_state_to_prompt(state)
@@ -70,7 +70,7 @@ def synthesizer(state: DebateState):
     Moderator: Synthesizes a final, unbiased report based on the adversarial arguments.
     """
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    structured_llm = llm.with_structured_output(FinalSynthesis)
+    structured_llm = llm.with_structured_output(FinalSynthesis, method="function_calling")
     
     prompt = SYNTHESIS_PROMPT.format(
         bull_argument=state["bull_argument"],

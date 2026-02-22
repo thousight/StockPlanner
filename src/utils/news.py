@@ -1,7 +1,6 @@
 import yfinance as yf
 from ddgs import DDGS
 from typing import Dict, List, Any, Optional
-from concurrent.futures import ThreadPoolExecutor
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -11,117 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.database.database import SessionLocal
 from src.database.crud import get_valid_cache, save_cache
-from src.agents.utils.prompts import ARTICLE_SUMMARY_PROMPT
-
-def get_stock_news(symbol: str, max_results: int = 3) -> List[Dict[str, Any]]:
-    """
-    Fetch and summarize the latest news for a specific stock ticker.
-    """
-    results = []
-    try:
-        stock = yf.Ticker(symbol)
-        news_items = stock.news
-        
-        if not news_items:
-             return []
-
-        for item in news_items[:max_results]:
-            parsed = _parse_yf_news_item(item)
-            if not parsed:
-                continue
-                
-            result = get_summary_result(parsed)
-            if result:
-                results.append(result)
-                
-        return results
-    except Exception as e:
-        print(f"Error fetching news for {symbol}: {e}")
-        return []
-
-def get_macro_economic_news() -> List[Dict[str, Any]]:
-    """
-    Fetch and summarize the latest global macroeconomic news and indicators.
-    """
-    title_and_urls = []
-
-    # 1. Collect URLs from yfinance tickers in parallel
-    tickers = ["^GSPC", "^VIX", "^TNX", "DX-Y.NYB"]
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        for result in executor.map(fetch_yfinance_news_urls, tickers):
-            title_and_urls.extend(result)
-    
-    # 2. Collect URLs from DuckDuckGo queries in parallel
-    queries = [
-        "Macroeconomics news today",
-        "US economy outlook today",
-        "Federal Reserve interest rates news",
-        "US employment report news",
-        "US inflation cpi report news",
-    ]
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        for result in executor.map(fetch_ddgs_urls, queries):
-            title_and_urls.extend(result)
-            
-    # 3. Deduplicate by URL
-    seen_urls = set()
-    unique_candidates = []
-    for item in title_and_urls:
-        if item["link"] not in seen_urls:
-            unique_candidates.append(item)
-            seen_urls.add(item["link"])
-            
-    # 4. Fetch summaries in parallel
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        all_results = list(executor.map(get_summary_result, unique_candidates))
-        
-    return [r for r in all_results if r]
-
-
-def web_search(queries: List[str]) -> List[List[Dict[str, str]]]:
-    """
-    Perform web search and get title and page summary by the queries.
-    Returns a list of results, where each outer index corresponds to the query index,
-    and the inner list contains the summarized results for that query.
-    """
-    # 1. Fetch URLs for each query in parallel
-    # list(executor.map) returns results in the exact same order as the input queries
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        query_results = list(executor.map(fetch_ddgs_urls, queries))
-    
-    # 2. Collect unique candidate URLs to speed up summary extraction
-    unique_candidates = {}
-    for items in query_results:
-        for item in items:
-            link = item.get("link")
-            if link and link not in unique_candidates:
-                unique_candidates[link] = item
-                
-    # 3. Fetch summaries in parallel for unique candidates
-    candidate_list = list(unique_candidates.values())
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        summarized_results = list(executor.map(get_summary_result, candidate_list))
-        
-    # Create a lookup mapping from URL to the summarized result
-    summary_map = {}
-    for res in summarized_results:
-        if res and "url" in res:
-            summary_map[res["url"]] = res
-            
-    # 4. Rebuild the final results grouped by query
-    final_results = []
-    for items in query_results:
-        query_group = []
-        seen_in_group = set()
-        for item in items:
-            link = item.get("link")
-            # Ensure we have a valid summary and prevent exact duplicates per query
-            if link and link in summary_map and link not in seen_in_group:
-                query_group.append(summary_map[link])
-                seen_in_group.add(link)
-        final_results.append(query_group)
-        
-    return final_results
+from .prompt import ARTICLE_SUMMARY_PROMPT
 
 def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""
@@ -201,10 +90,13 @@ def fetch_article_content(url: str) -> str:
     """Fetch and extract main text content from a URL."""
     try:
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
         }
         response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
+        
+        # Silently skip any non-200 responses
+        if response.status_code != 200:
+            return None
         
         clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', response.text)
         doc = Document(clean_html)
@@ -219,9 +111,9 @@ def fetch_article_content(url: str) -> str:
         else:
             text = "No readable text found."
         return text
-    except Exception as e:
-        print(f"Error fetching content from {url}: {e}")
-        return ""
+    except Exception:
+        # Silently skip any connection errors, parsing errors, etc.
+        return None
 
 def summarize_content(content: str, url: str) -> str:
     """Summarize content using an LLM."""
@@ -239,7 +131,7 @@ def summarize_content(content: str, url: str) -> str:
         return response.content.strip()
     except Exception as e:
         print(f"Error summarizing content: {e}")
-        return "Error generating summary."
+        return None
 
 def _parse_yf_news_item(item: Dict[str, Any]) -> Optional[Dict[str, str]]:
     """Parse a yfinance news item."""

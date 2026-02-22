@@ -1,0 +1,28 @@
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.68.80:8501
+
+/Users/marwen/Projects/StockPlanner/.venv/lib/python3.14/site-packages/langchain_core/_api/deprecation.py:25: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1.fields import FieldInfo as FieldInfoV1
+2026-02-22 01:31:22.799 Uncaught app execution
+Traceback (most recent call last):
+  File "/Users/marwen/Projects/StockPlanner/.venv/lib/python3.14/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+  File "/Users/marwen/Projects/StockPlanner/.venv/lib/python3.14/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 689, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marwen/Projects/StockPlanner/src/web/app.py", line 17, in <module>
+    from src.agents.graph import create_graph
+  File "/Users/marwen/Projects/StockPlanner/src/agents/graph.py", line 3, in <module>
+    from src.agents.nodes.supervisor.node import supervisor_node
+  File "/Users/marwen/Projects/StockPlanner/src/agents/nodes/supervisor/node.py", line 7, in <module>
+    from src.agents.nodes.research.node import research_node
+  File "/Users/marwen/Projects/StockPlanner/src/agents/nodes/research/node.py", line 8, in <module>
+    from .research_plan import ResearchPlan
+  File "/Users/marwen/Projects/StockPlanner/src/agents/nodes/research/research_plan.py", line 3, in <module>
+    from agents.utils.tool_call import ToolCall
+ModuleNotFoundError: No module named 'agents'
+/Users/marwen/Projects/StockPlanner/.venv/lib/python3.14/site-packages/langchain_openai/chat_models/base.py:472: UserWarning: Invalid schema for OpenAI's structured output feature, which is the default method for `with_structured_output` as of langchain-openai==0.3. Specify `method="function_calling"` instead or update your schema. See supported schemas: https://platform.openai.com/docs/guides/structured-outputs#supported-schemas
+  warnings.warn(message)

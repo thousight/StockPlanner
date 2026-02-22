@@ -24,16 +24,16 @@ pytest tests/test_crud.py  # Run specific test file
 - Separate `tests/` directory at the project root.
 
 **Naming:**
-- Files: `test_*.py`. Example: `tests/test_research_node.py`
+- Files: `test_*.py`. Example: `tests/test_research_agent.py`
 - Classes: `Test*`. Example: `class TestStockOperations`
 - Functions: `test_*`. Example: `def test_add_stock_creates_new_stock`
 
 **Structure:**
 ```
 tests/
-├── test_analyst_node.py
+├── test_analyst_agent.py
 ├── test_crud.py
-├── test_research_node.py
+├── test_research_agent.py
 └── test_research_utils.py
 ```
 
@@ -42,17 +42,17 @@ tests/
 **Suite Organization:**
 ```python
 class TestResearchNode:
-    """Tests for the research_node function."""
+    """Tests for the research_agent function."""
     
     @patch('src.agents.nodes.research.node.get_macro_economic_news')
     @patch('src.agents.nodes.research.node.resolve_symbol')
-    def test_research_node_returns_research_data(self, mock_resolve, mock_macro):
+    def test_research_agent_returns_research_data(self, mock_resolve, mock_macro):
         # Arrange
         mock_macro.return_value = [...]
         state = {"portfolio": [...]}
         
         # Act
-        result = research_node(state)
+        result = research_agent(state)
         
         # Assert
         assert "research_data" in result
@@ -119,7 +119,7 @@ pytest --cov=src
 - Mock external dependencies rigorously.
 
 **Integration Tests:**
-- Tests for nodes (`analyst_node`, `research_node`) that involve multiple components, though still heavily mocked.
+- Tests for agents (`analyst_agent`, `research_agent`) that involve multiple components, though still heavily mocked.
 
 **E2E Tests:**
 - Not explicitly detected as part of the automated suite. Manual verification via `test_market_manual.py`.

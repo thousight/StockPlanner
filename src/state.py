@@ -7,10 +7,10 @@ import operator
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]
     portfolio: List[Dict[str, Any]]
-    research_data: Annotated[Dict[str, Any], operator.ior]
+    research_data: str
     user_question: str
     analysis_report: str
-    next_node: str
+    next_agent: str
     high_level_plan: List[str]
     debate_output: Dict[str, Any]
     analysis_cache_key: str

@@ -12,9 +12,9 @@ sys.path.append(project_root)
 # Load env if exists
 load_dotenv()
 
-from src.database.database import get_db, init_db
-from src.database.crud import add_transaction, get_holdings, get_transactions
-from src.agents.graph import create_graph
+from .database.database import get_db, init_db
+from .database.crud import add_transaction, get_holdings, get_transactions
+from .graph import create_graph
 
 # Page Config
 st.set_page_config(page_title="Stock Planner", layout="wide")
@@ -40,7 +40,7 @@ def run_agent_graph(holdings, user_question=None):
                 "user_question": user_question or "",
                 "focus_symbols": [],
                 "analysis_report": "",
-                "next_node": "",
+                "next_agent": "",
                 "high_level_plan": [],
                 "research_plan": {},
                 "debate_output": {},
@@ -57,24 +57,24 @@ def run_agent_graph(holdings, user_question=None):
             # Stream events from the graph
             for s in app.stream(initial_state):
                 if "__end__" not in s:
-                    node_name = list(s.keys())[0]
-                    node_data = s[node_name]
+                    agent_name = list(s.keys())[0]
+                    agent_data = s[agent_name]
                     
-                    if node_name == "supervisor":
-                        plan = node_data.get("high_level_plan", [])
-                        next_worker = node_data.get("next_node", "N/A")
+                    if agent_name == "supervisor":
+                        plan = agent_data.get("high_level_plan", [])
+                        next_agent = agent_data.get("next_agent", "N/A")
                         status.write(f"**Supervisor Plan:** {', '.join(plan)}")
-                        status.update(label=f"Supervisor routing to: {next_worker.capitalize()}...", state="running")
-                    elif node_name == "research":
-                        local_plan = node_data.get("research_plan", {}).get("queries", [])
+                        status.update(label=f"Supervisor routing to: {next_agent.capitalize()}...", state="running")
+                    elif agent_name == "research":
+                        local_plan = agent_data.get("research_plan", {}).get("queries", [])
                         status.write(f"**Research Plan:** {', '.join(local_plan)}")
                         status.update(label="Researching market data...", state="running")
-                    elif node_name == "analyst":
+                    elif agent_name == "analyst":
                         status.update(label="Orchestrating adversarial debate...", state="running")
-                        # Capture results from analyst node if it's the last step
-                        if "analysis_report" in node_data:
-                            final_report = node_data["analysis_report"]
-                            debate_output = node_data.get("debate_output", {})
+                        # Capture results from analyst agent if it's the last step
+                        if "analysis_report" in agent_data:
+                            final_report = agent_data["analysis_report"]
+                            debate_output = agent_data.get("debate_output", {})
                 else:
                     # Final state extraction if not caught during stream
                     final_state = s["__end__"]
