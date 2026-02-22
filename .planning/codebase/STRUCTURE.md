@@ -9,8 +9,11 @@ StockPlanner/
 ├── src/
 │   ├── agents/         # Agent orchestration and state
 │   │   ├── nodes/      # Individual graph nodes
-│   │   │   ├── analyst/ # Analysis node logic & prompts
-│   │   │   └── research/ # Research node logic & utils
+│   │   │   ├── analyst/    # Analysis node package
+│   │   │   ├── research/   # Research node package
+│   │   │   ├── financials/ # Financials node package
+│   │   │   ├── news/       # News node package
+│   │   │   └── supervisor/ # Supervisor node package
 │   │   ├── graph.py    # LangGraph definition
 │   │   └── state.py    # Agent state definition
 │   ├── database/       # Persistence layer
@@ -37,7 +40,8 @@ StockPlanner/
 
 **src/agents/nodes/:**
 - Purpose: Modular units of work for the agent.
-- Contains: Node functions and domain-specific prompts or utilities.
+- Contains: Individual agent packages.
+- **Strict Format:** Each agent MUST have its own directory containing at least `node.py` (logic) and `prompts.py` (LLM templates).
 - Key files: `research/node.py`, `analyst/node.py`.
 
 **src/database/:**

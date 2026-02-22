@@ -1,23 +1,20 @@
-# Financial Health Assistant
+# Project: StockPlanner
 
-## Overview
-A multi-agent application built with LangChain/LangGraph designed to help financial planning beginners (elderly and young adults) start their investment journey and achieve better financial health.
+## Core Mission
+Building an autonomous, multi-agent financial planning and analysis system. It transforms raw market data (Financials, SEC filings, News, Social sentiment) into deeply personalized investment profiles, identifying institutional moves ("Whale tracking") and distinguishing real narratives from artificial "Hype" (Narrative Intelligence).
 
-## Target Audience
-- **Elderly:** Users who may have fear or hesitation regarding investment.
-- **Young Adults:** Users starting their investment journey for the first time.
+## Key Themes
+- **Multi-Agent Autonomy:** Moving from single-node logic to a LangGraph **Supervisor/Worker** model for scalable, parallel stock research.
+- **Deep Stock Profiling:** Automated gathering of business models, financial health, and growth metrics to ground all investment advice.
+- **Whale Tracking:** Scraping and parsing raw SEC 13F filings from EDGAR to track institutional movements as primary analysis context.
+- **Narrative Intelligence:** A hybrid approach using both News Sentiment and Social Media (X/Reddit) to detect "bubbles" and artificial market manipulation.
+- **Formal Personalization:** Matching stock profiles to a user's explicitly defined risk tolerance, age, and long-term goals.
 
-## Core Features
-1.  **Portfolio Management:** Allow users to input their stock holdings (shares, purchase price).
-2.  **Investment Suggestions:** Provide Buy/Sell/Hold recommendations based on:
-    - Stock Performance
-    - News (Company specific)
-    - Fundamentals
-    - Macro-economic trends
-3.  **Financial Planning:** Personalized advice based on age and risk tolerance.
-4.  **Education & Wellbeing:** Tips for financial wellbeing and healthy financial habits.
+## Architecture Vision
+- **Orchestration:** LangGraph `StateGraph` with a central `Supervisor` node.
+- **Frontend:** Streamlit for portfolio management and interactive analysis reports.
+- **Backend:** Python + SQLAlchemy (SQLite) for state and portfolio persistence.
+- **Agents:** Specialized workers (Financials, Sentiment, WhaleTracker, HypeDetector).
 
-## Technology Stack
-- **AI/Agents:** LangChain, LangGraph
-- **Data:** yfinance (Stocks), News APIs, Macro-economic sources
-- **UI:** (To be determined, likely Streamlit or simple web interface)
+---
+*Created: 2026-02-21*

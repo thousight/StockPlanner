@@ -87,8 +87,10 @@ def get_valid_cache(db: Session, url: str) -> Optional[str]:
         return entry.summary
     return None
 
-def save_cache(db: Session, url: str, summary: str, ttl_hours: int = 24):
-    expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
+def save_cache(db: Session, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 24):
+    if expire_at is None:
+        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
+    
     entry = db.query(NewsCache).filter(NewsCache.url == url).first()
     if entry:
         entry.summary = summary
@@ -96,6 +98,41 @@ def save_cache(db: Session, url: str, summary: str, ttl_hours: int = 24):
     else:
         entry = NewsCache(url=url, summary=summary, expire_at=expire_at)
         db.add(entry)
+    db.commit()
+
+from .models import NewsCache, AnalysisCache
+
+def get_analysis_cache(db: Session, ticker: str, user_question: str) -> Optional[AnalysisCache]:
+    """Get valid analysis cache for a ticker and question."""
+    return db.query(AnalysisCache).filter(
+        AnalysisCache.ticker == ticker,
+        AnalysisCache.user_question == user_question,
+        AnalysisCache.expire_at > datetime.now(timezone.utc).replace(tzinfo=None)
+    ).first()
+
+def save_analysis_cache(db: Session, ticker: str, user_question: str, report: str, debate_output: dict):
+    """Save analysis with market-aware TTL (6pm/6am rule)."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    # TTL Logic: 
+    # Weekdays: Expires at 6 PM (18:00) today + 12h, or if after 18:00, 6 AM + 12h.
+    # Simplified: 12h on weekday, 24h on weekend.
+    is_weekend = now.weekday() >= 5
+    if is_weekend:
+        # Weekend: 24h
+        expire_at = now + timedelta(hours=24)
+    else:
+        # Weekday: 12h
+        expire_at = now + timedelta(hours=12)
+
+    entry = AnalysisCache(
+        ticker=ticker,
+        user_question=user_question,
+        report=report,
+        debate_output=debate_output,
+        expire_at=expire_at
+    )
+    db.add(entry)
     db.commit()
 
 def cleanup_expired_cache(db: Session):

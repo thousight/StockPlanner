@@ -88,13 +88,24 @@
 - Return types are occasionally hinted using `->`.
 - Consistent return structures (e.g., always returning a dict or a list) are used in research utilities.
 
+## Module Structure for Agents
+
+**Architecture:**
+- Each agent node MUST be organized as a directory-based package.
+- **Node Logic:** The primary logic for the agent node (the function integrated into the graph) MUST reside in `node.py`.
+- **Prompts:** All LLM prompts, system messages, and template strings MUST reside in `prompts.py`.
+- **Structure:**
+  ```text
+  src/agents/nodes/<agent_name>/
+  ├── node.py
+  └── prompts.py
+  ```
+- **Rationale:** Separating prompts from logic improves readability and allows for easier prompt engineering without touching the execution flow.
+
 ## Module Design
 
 **Exports:**
 - Modules export functions and classes directly.
-
-**Barrel Files:**
-- `__init__.py` files are present in packages but mostly empty, except for directory markers.
 
 ---
 

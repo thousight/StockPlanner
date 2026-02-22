@@ -1,14 +1,16 @@
 {
-  "projectName": "StockPlanner",
-  "version": "0.1.0",
-  "mode": "mvp",
-  "workflows": {
-    "auto_research": true,
-    "review_gates": true
+  "project_name": "StockPlanner",
+  "workflow": "new-project",
+  "config": {
+    "architecture": "Supervisor Pattern",
+    "whale_data_source": "SEC EDGAR Scraper",
+    "hype_detection": "Hybrid (News + Social)",
+    "user_profiling": "Formal Setup Flow"
   },
-  "paths": {
-    "research": ".planning/research",
-    "requirements": ".planning/REQUIREMENTS.md",
-    "roadmap": ".planning/ROADMAP.md"
+  "phases": {
+    "1": "Multi-Agent Core Refactor",
+    "2": "Deep Profile & Whale Tracking",
+    "3": "Narrative & Hype Intelligence",
+    "4": "Portfolio Alignment & Reporting"
   }
 }

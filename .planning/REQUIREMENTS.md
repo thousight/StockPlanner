@@ -1,38 +1,32 @@
 # Requirements
 
-## Overview
-A personal financial assistant designed for beginners (elderly, young adults) to improve financial health through education and simplified analysis. The system uses a multi-agent architecture to provide data, news, and planning advice in an accessible "Explain Like I'm 5" format.
+## 1. Multi-Agent Refactor (Architecture)
+- [ ] **Supervisor Node:** Implement a central planner node that receives user intent and delegates to specialized workers.
+- [ ] **Worker Pattern:** Define a standard `AgentWorker` interface (or skill) for data retrieval and analysis nodes.
+- [ ] **Tooling Wrapper:** Wrap existing tools (`yfinance`, `duckduckgo`) into standardized Agent Tools.
+- [ ] **Parallel Execution:** Enable the supervisor to trigger multiple worker nodes in parallel (e.g., Financials + News) using LangGraph's branching logic.
 
-## User Requirements
-- **Beginner-Friendly:** Users must be able to interact via natural language without understanding financial jargon.
-- **Trust & Safety:** Users must feel safe; the system must clearly distinguish between facts and general educational guidance (no "hot stock picks").
-- **Accessibility:** Text should be large, clear, and easy to read. Complex concepts should be explained with metaphors.
-- **Portfolio Tracking:** Users should be able to input their holdings to get relevant news and performance updates.
+## 2. Deep Stock Profiling (Issue #5)
+- [ ] **Business Profile:** Fetch and summarize company basics, revenue drivers, and competitive landscape.
+- [ ] **Financial Health:** Automated retrieval of 1y/3y/5y CAGR, margins, debt ratios, and ROE/ROIC.
+- [ ] **Valuation Metrics:** Automated calculation of P/E, EV/EBITDA, and PEG vs. historical averages.
+- [ ] **Dividend Policy:** Analysis of payout ratios and historical consistency.
 
-## Functional Requirements
-1.  **Core Agent System (LangGraph):**
-    - **Supervisor Agent:** Routes user queries to the appropriate specialized agent.
-    - **Market Data Agent:** Fetches real-time/delayed stock prices and basic fundamentals (Market Cap, P/E) using Finnhub/yfinance.
-    - **News Agent:** Fetches and summarizes recent news from diverse sources including traditional news (Finnhub/EODHD) and social media (X, Reddit) to capture sentiment and narratives.
-    - **Analyst Agent:** Performs deep-dive analysis on specific stocks. It synthesizes macro-economic trends, fundamentals, and news to build and cache "Stock Profiles". It validates news (checking for fake news), assesses impact duration (short vs. long term), and evaluates narrative consistency (does this ruin the company's story?).
-    - **Planner Agent:** Provides general financial planning principles based on user age and risk tolerance.
-    - **Explanation Agent:** Rewrites technical outputs into simple, plain English (ELI5).
+## 3. Whale Tracking (Issue #3)
+- [ ] **EDGAR Scraper:** Implement a scraper to fetch and parse SEC 13F filings for specific tickers.
+- [ ] **Institutional Context:** Summarize top 10 institutional holders and recent big moves (buys/sells) to inform the final analysis report.
 
-2.  **Data Management:**
-    - **Stock Data:** Integration with Finnhub (primary) and yfinance (history).
-    - **News/Social Data:** Integration with EODHD (financial news), X (Twitter), and Reddit APIs for sentiment analysis.
-    - **Stock Profiles:** Caching mechanism (JSON/DB) to store generated stock profiles (Narrative, Fundamentals, Risk Factors) to avoid re-analyzing unchanged data.
-    - **User Data:** Local SQLite database to store user portfolio (Symbol, Quantity, Avg Cost) and risk profile.
+## 4. Narrative Intelligence (Issue #2)
+- [ ] **Sentiment Hybrid:** Correlate news sentiment spikes with social media (Reddit/X) volume to flag artificial hype bubbles.
+- [ ] **Hype Detection:** Logic to assess if current price volatility is "story-driven" (narrative) vs. "fact-driven" (fundamentals).
 
-3.  **User Interface:**
-    - **Chat Interface:** Primary mode of interaction.
-    - **Dashboard:** Simple view of portfolio value and "Risk Weather" (volatility indicator).
+## 5. User Alignment (Issue #1)
+- [ ] **Formal Profiling:** Implement a one-time setup flow to capture User Age, Risk Tolerance (Conservative/Moderate/Aggressive), and Goals.
+- [ ] **Alignment Scorer:** A final "Editor" node that scores the analyzed stock against the user's profile and flags discrepancies (e.g., "Too volatile for your conservative profile").
 
-## Non-Functional Requirements
-- **Compliance:** System must include hardcoded disclaimers. It must NOT execute trades or offer personalized investment advice (RIA compliance).
-- **Latency:** Chat responses should be reasonable (streaming tokens preferred).
-- **Cost:** Use free tiers of APIs where possible (Finnhub Free Tier).
-
-## Constraints
-- **Local Execution:** MVP runs locally (Streamlit/Python).
-- **No Real Money:** No integration with brokerages for trading.
+## 6. Technical & UX
+- [ ] **Database Persistence:** Enhance SQLite models to cache stock profiles and institutional snapshots.
+- [ ] **Streamlit UI:**
+  - [ ] **Portfolio Management:** Add/Edit/Delete holdings.
+  - [ ] **Analysis Report:** A clean, multi-section markdown report rendered in Streamlit.
+- [ ] **API Security:** Secure management of OpenAI and other API keys via `.env`.

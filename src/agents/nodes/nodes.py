@@ -4,7 +4,7 @@ from src.database.crud import cleanup_expired_cache
 
 def cache_maintenance_node(state: AgentState):
     """
-    Clean up expired news cache entries.
+    Clean up expired news cache entries. This node is always called as the last node in the graph before it ends, can be treated as an END node.
     """
     try:
         db = SessionLocal()

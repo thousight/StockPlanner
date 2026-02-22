@@ -1,64 +1,53 @@
-from src.agents.nodes.analyst.prompts import ANALYST_PROMPT
 from src.agents.state import AgentState
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
-from typing import List, Dict, Any
+from .subgraph import create_debate_graph
+from src.database.database import SessionLocal
+from src.database.crud import get_analysis_cache, save_analysis_cache
 
 def analyst_node(state: AgentState):
     """
-    Analyze the portfolio based on gathered data.
+    Adversarial Analyst: Orchestrates a 'Bull vs. Bear' debate and synthesizes a final investment report.
     """
-    portfolio = state["portfolio"]
-    research_data = state["research_data"]
-    macro_economic_news = research_data["macro_economic_news"]
+    db = SessionLocal()
+    user_question = state.get("user_question", "Analyze the current portfolio and provide recommendations.")
     
-    # Construct prompt
-    prompt = ANALYST_PROMPT.format(
-        macro_news="\n".join([f"- {n.get('title', 'No Title')}: {n.get('summary')}" for n in macro_economic_news if isinstance(n, dict)]),
-        portfolio=build_portfolio_data_prompt(portfolio, research_data)
-    )
-    
-    messages = [
-        SystemMessage(content="You are a helpful and insightful senior financial investment analyst, your goal is to analyze the user's portfolio and provide actionable recommendations."),
-        HumanMessage(content=prompt)
-    ]
-
-    print(messages)
-    
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
     try:
-        response = llm.invoke(messages)
-        return {"analysis_report": response.content}
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"analysis_report": f"Error running analysis: {e}"}
-
-def build_portfolio_data_prompt(portfolio: List[Dict[str, Any]], research_data: Dict[str, Any]):
-    portfolio_data = ""
-    
-    for pos in portfolio:
-        symbol = pos["symbol"]
-        qty = pos["quantity"]
-        avg_cost = pos["avg_cost"]
-        data = research_data.get(symbol, {})
+        # Check cache
+        cached = get_analysis_cache(db, user_question)
+        if cached:
+            print(f"--- ANALYST: Cache hit for {user_question} ---")
+            return {
+                    "analysis_report": cached.report,
+                    "debate_output": cached.debate_output
+                }
         
-        curr_price = data.get("current_price", 0)
-        info = data.get("info") or {}
-        news = data.get("news") or []
+        # Cache miss
+        debate_graph = create_debate_graph()
+        debate_input = {
+            "research_data": state.get("research_data", {}),
+            "user_question": user_question
+        }
         
-        portfolio_data += f"\n--- {symbol} ---\n"
-        portfolio_data += f"Position: {qty} shares @ ${avg_cost:.2f} (Current: ${curr_price:.2f})\n"
-        portfolio_data += f"Valuation: PE={info.get('pe_ratio')}, MarketCap={info.get('market_cap')}\n"
+        print(f"--- ANALYST: Cache miss. Starting debate for {user_question} ---")
+        debate_results = debate_graph.invoke(debate_input)
         
-        if not news:
-            portfolio_data += "No news available.\n"
-        else:
-            portfolio_data += f"News Headlines:\n"
-            for n in news[:3]:
-                if not isinstance(n, dict): # Add check
-                     continue 
-                portfolio_data += f"- {n.get('title', 'No Title')}\n"
-                portfolio_data += f"  Summary/Excerpt: {n.get('summary', '')[:500]}...\n"
+        debate_output = {
+            "bull_argument": debate_results["bull_argument"],
+            "bear_argument": debate_results["bear_argument"],
+            "confidence_score": debate_results["confidence_score"]
+        }
+        
+        # Save to cache
+        save_analysis_cache(
+                db, 
+                user_question, 
+                debate_results["final_report"], 
+                debate_output
+            )
             
-    return portfolio_data
+        return {
+            "analysis_report": debate_results["final_report"],
+            "debate_output": debate_output,
+            "next_node": "cache_maintenance"
+        }
+    finally:
+        db.close()

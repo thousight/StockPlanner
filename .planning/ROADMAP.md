@@ -1,32 +1,36 @@
 # Roadmap
 
-## Phase 1: Foundation (Data & Supervisor)
-**Goal:** Establish the LangGraph supervisor architecture and prove accurate data retrieval.
-- [ ] **Infrastructure Setup:** Project structure, poetry/pip env, API key management.
-- [ ] **Market Data Agent:** Implement `PriceFetcher` using Finnhub.
-- [ ] **Supervisor Node:** Implement basic routing logic (User -> Supervisor -> Market Agent).
-- [ ] **Basic UI:** Simple Streamlit chat interface to test the graph.
+## Phase 1: Multi-Agent Core Refactor (Architecture) [COMPLETED]
+**Goal:** Establish the LangGraph supervisor/worker architecture and migrate existing research logic.
+- [x] **Infrastructure Setup:** Finalize project structure and dependency management.
+- [x] **Supervisor Node:** Implement the `SupervisorAgent` with planning and routing logic.
+- [x] **Financials Worker:** Implement a worker for basic stock data and financials (yfinance).
+- [x] **News Worker:** Implement a worker for news and basic sentiment (DuckDuckGo).
+- [x] **Integration:** Connect the Supervisor to workers and test the graph.
+- [x] **Basic UI:** Update Streamlit to trigger the multi-agent graph and show worker "thinking" steps.
 
-## Phase 2: Education & Analysis Engine
-**Goal:** Implement the core value proposition—simplifying financial data and providing deep, validated analysis.
-- [ ] **News Agent:** Implement `NewsFetcher` aggregating DuckDuckGo, EODHD, X (Twitter), and Reddit.
-- [ ] **Analyst Agent:** Build the logic to synthesize Fundamentals + Macro + News into a "Stock Profile".
-- [ ] **News Validation:** Implement sub-routines to check for "Fake News" and assess "Narrative Impact" (Short vs Long term).
-- [ ] **Profile Caching:** Implement a caching layer for Analyst outputs to prevent redundant expensive calls.
-- [ ] **Explanation Agent:** Implement the "ELI5" re-writing logic (Editor node).
-- [ ] **Integration:** Update Supervisor to route complex "Analyze" questions to the Analyst Agent.
-- [ ] **Prompt Tuning:** Refine "Explain Like I'm 5" metaphors for target audience.
+## Phase 2: Deep Profiling & Whale Tracking (Data Intelligence)
+**Goal:** Implement the "Deep Stock Profile" and track institutional movements.
+- [ ] **Deep Profile Worker:** Add business model, competitive landscape, and historical financials (Issue #5).
+- [ ] **EDGAR Scraper (Whale Tracker):** Implement the 13F filing scraper and parser for institutional context (Issue #3).
+- [ ] **Valuation Logic:** Build the worker that calculates and compares multiples (P/E, EV/EBITDA, etc.).
+- [ ] **Database Persistence:** Cache deep profiles and institutional snapshots in SQLite.
 
-## Phase 3: Portfolio & Planning
-**Goal:** Add personalization and context.
-- [ ] **Database Layer:** SQLite models for `Portfolio` and `Transaction`.
-- [ ] **Portfolio Agent:** Tools to Add/View/Analyze holdings.
-- [ ] **Planner Agent:** Logic for "Am I on track?" (Age/Risk heuristics).
-- [ ] **Dashboard UI:** Add visual portfolio summary to Streamlit.
+## Phase 3: Narrative Intelligence (Market Hype)
+**Goal:** Implement the hybrid detection of narratives and "Hype" bubbles.
+- [ ] **Social Worker:** Implement a worker to scrape/analyze sentiment from Reddit/X (Issue #2).
+- [ ] **Hype Detector Node:** Logic to correlate sentiment spikes with news and price action.
+- [ ] **Narrative Analysis:** Summarize if current market moves are driven by artificial stories or fundamentals.
 
-## Phase 4: Polish & Compliance
-**Goal:** Prepare for user release (even if local).
-- [ ] **Compliance Guardrails:** Add system prompt injections for disclaimers.
-- [ ] **Accessibility Review:** Check font sizes, contrast, and clarity.
-- [ ] **Error Handling:** Graceful failures when APIs are down.
-- [ ] **Documentation:** User guide for "How to run".
+## Phase 4: User Alignment & Final Reporting
+**Goal:** Personalize analysis and polish the user experience.
+- [ ] **Formal Setup Flow:** Implement the UI to capture user profile (Age, Risk, Goals) (Issue #1).
+- [ ] **Alignment Scorer (Editor):** Create the final node that flags if a stock matches the user's profile.
+- [ ] **Full Analysis UI:** Multi-tab report in Streamlit (Summary, Financials, Whale Context, Narrative, User Fit).
+- [ ] **Refinement:** Polish prompts and error handling for all agents.
+
+## Phase 5: Generic Personal Assistant
+**Goal:** Generalize the platform beyond finance into a holistic decision-support system.
+- [ ] **Domain Expansion:** Refactor Researcher/Analyst agents to handle non-financial queries (travel, health, productivity).
+- [ ] **Enhanced Profiling:** Expand user profile to capture hobbies, interests, and life goals.
+- [ ] **Adaptive UI:** Create a dynamic interface that adjusts based on the query domain.
