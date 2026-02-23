@@ -8,7 +8,7 @@ from src.utils.prompt import convert_state_to_prompt
 
 class DebateState(TypedDict):
     research_data: str
-    user_question: str
+    user_input: str
     bull_instruction: Optional[str]
     bear_instruction: Optional[str]
     bull_argument: Optional[str]

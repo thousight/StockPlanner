@@ -3,34 +3,38 @@ from src.state import AgentState
 from src.agents.supervisor.agent import supervisor_agent
 from src.agents.research.agent import research_agent
 from src.agents.analyst.agent import analyst_agent
-from src.agents.cache_maintenance.agent import cache_maintenance_agent
+from src.agents.off_topic.agent import off_topic_agent
+from src.agents.summarizer.agent import summarizer_agent
 
 def mesh_router(state: AgentState):
-    dest = state.get("next_agent", "cache_maintenance").lower()
-    if dest in ["end", "cache_maintenance"]:
-        return "cache_maintenance"
-    return dest
+    interactions = state.get("agent_interactions", [])
+    if not interactions:
+        return "summarizer"
+    
+    last_interaction = interactions[-1]
+    return last_interaction.get("next_agent", "summarizer").lower()
 
 def create_graph():
     workflow = StateGraph(AgentState)
     
-    # Add nodes (we keep the string names the same, but use the new function names)
+    # Add nodes
     workflow.add_node("supervisor", supervisor_agent)
     workflow.add_node("research", research_agent)
     workflow.add_node("analyst", analyst_agent)
-    workflow.add_node("cache_maintenance", cache_maintenance_agent)
+    workflow.add_node("off_topic", off_topic_agent)
+    workflow.add_node("summarizer", summarizer_agent)
     
     # Set entry point
     workflow.set_entry_point("supervisor")
 
-    # Supervisor decides the initial or next logical path
     workflow.add_conditional_edges(
         "supervisor",
         mesh_router,
         {
             "research": "research",
             "analyst": "analyst",
-            "cache_maintenance": "cache_maintenance"
+            "off_topic": "off_topic",
+            "summarizer": "summarizer"
         }
     )
     
@@ -40,7 +44,7 @@ def create_graph():
         {
             "analyst": "analyst",
             "supervisor": "supervisor",
-            "cache_maintenance": "cache_maintenance"
+            "summarizer": "summarizer"
         }
     )
     
@@ -48,13 +52,21 @@ def create_graph():
         "analyst",
         mesh_router,
         {
-            "research": "research",
             "supervisor": "supervisor",
-            "cache_maintenance": "cache_maintenance"
+            "summarizer": "summarizer"
         }
     )
     
-    # Final cleanup node leads to the actual END
-    workflow.add_edge("cache_maintenance", END)
+    workflow.add_conditional_edges(
+        "off_topic",
+        mesh_router,
+        {
+            "research": "research",
+            "supervisor": "supervisor",
+            "summarizer": "summarizer"
+        }
+    )
+
+    workflow.add_edge("summarizer", END)
     
     return workflow.compile()

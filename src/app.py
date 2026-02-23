@@ -13,7 +13,7 @@ sys.path.append(project_root)
 load_dotenv()
 
 from src.database.database import get_db, init_db
-from src.database.crud import add_transaction, get_holdings, get_transactions
+from src.database.crud import add_transaction, get_holdings, cleanup_expired_cache
 from src.graph import create_graph
 
 # Page Config
@@ -35,7 +35,7 @@ if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
 # Reusable function to run the agent graph
-def run_agent_graph(holdings, user_question=None, history=None):
+def run_agent_graph(holdings, user_input=None, history=None):
     with st.status("Agents are researching market data...", expanded=True) as status:
         try:
             # Prepare State
@@ -46,16 +46,12 @@ def run_agent_graph(holdings, user_question=None, history=None):
             initial_state = {
                 "messages": history or [],
                 "portfolio": holdings,
-                "research_data": {},
-                "user_question": user_question or "",
+                "user_input": user_input or "",
                 "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "user_agent": client_ua,
-                "focus_symbols": [],
-                "analysis_report": "",
-                "next_agent": "",
+                "output": "",
                 "high_level_plan": [],
-                "research_plan": {},
-                "debate_output": {},
+                "agent_interactions": [],
                 "analysis_cache_key": "",
                 "revision_count": 0
             }
@@ -71,59 +67,71 @@ def run_agent_graph(holdings, user_question=None, history=None):
                 # LangGraph with subgraphs=True yields tuples: (namespace, state_update)
                 namespace, s = event
                 
-                # Check if it is the final output of the top-level graph
                 if not namespace and "__end__" in s:
                     final_state = s["__end__"]
-                    final_report = final_state.get("analysis_report", "")
-                    debate_output = final_state.get("debate_output", {})
+                    final_report = final_state.get("output", "")
+                    # Extract debate_output from interactions
+                    analyst_interaction = next((i for i in reversed(final_state.get("agent_interactions", [])) if i.get("agent") == "analyst"), None)
+                    debate_output = analyst_interaction.get("debate_output", {}) if analyst_interaction else {}
                     continue
                     
                 if "__end__" not in s:
                     agent_name = list(s.keys())[0]
                     agent_data = s[agent_name]
                     
+                    # Extract next_agent and ask from interactions for general status update
+                    interactions = agent_data.get("agent_interactions", [])
+                    curr_interaction = interactions[-1] if interactions else {}
+                    int_id = curr_interaction.get("id", "?")
+                    step_id = curr_interaction.get("step_id", "?")
+                    next_dest = curr_interaction.get("next_agent", "N/A")
+                    next_question = curr_interaction.get("next_question", "N/A")
+                    
+                    status_prefix = f"[{int_id} (Step {step_id})]"
+                    status.update(label=f"{status_prefix} Agent {agent_name.capitalize()} working... routing to **{next_dest.capitalize()}** with instructions: *{next_question}*", state="running")
+                    
                     if agent_name == "supervisor":
                         plan = agent_data.get("high_level_plan", [])
-                        next_agent = agent_data.get("next_agent", "N/A")
-                        plan_md = "\n".join([f"- {item}" for item in plan])
+                        # plan is now a list of dicts: {"id": int, "description": str}
+                        plan_md = "\n".join([f"{item['id']}. {item['description']}" for item in plan])
                         status.markdown(f"**Supervisor Plan:**\n{plan_md}")
-                        status.update(label=f"Supervisor routing to: {next_agent.capitalize()}...", state="running")
+                        status.update(label=f"{status_prefix} Supervisor routing to **{next_dest.capitalize()}** with instruction: *{next_question}*", state="running")
                     elif agent_name == "research":
-                        local_plan = agent_data.get("research_plan", [])
-                        if local_plan:
-                            plan_md = "\n".join([f"- {item}" for item in local_plan])
-                            status.markdown(f"**Research Plan:**\n{plan_md}")
-                        
-                        # Show a little snippet to show data was gathered
-                        r_data = agent_data.get("research_data", "")
-                        if r_data:
-                            status.markdown(f"**Research Data Gathered:**\n{r_data}")
-                            
-                        status.update(label="Researching market data...", state="running")
+                        status.update(label=f"{status_prefix} Researching market data for: *{next_question}*", state="running")
                     elif agent_name == "generator":
                         status.write(f"**Moderator Instructions:** Orchestrating debate...")
                         status.update(label="Analysts preparing arguments...", state="running")
                     elif agent_name == "bull":
                         status.write(f"📈 **Bull Analyst:** Argument prepared.")
-                        status.update(label="Bull Analyst completed...", state="running")
+                        status.update(label=f"{status_prefix} Bull Analyst completed...", state="running")
                     elif agent_name == "bear":
                         status.write(f"📉 **Bear Analyst:** Argument prepared.")
-                        status.update(label="Bear Analyst completed...", state="running")
+                        status.update(label=f"{status_prefix} Bear Analyst completed...", state="running")
                     elif agent_name == "synthesizer":
                         status.write(f"⚖️ **Moderator:** Synthesizing final report...")
                         status.update(label="Finalizing report...", state="running")
+                    elif agent_name == "off_topic":
+                        status.write(f"👋 **Assistant:** Replying to general question...")
+                        status.update(label="Formulating response...", state="running")
+                    elif agent_name == "summarizer":
+                        status.write(f"📝 **Summarizer:** Synthesizing final response...")
+                        status.update(label=f"{status_prefix} Creating final answer...", state="running")
                     elif agent_name == "analyst":
                         # The top-level analyst node wraps the subgraph
-                        if "analysis_report" in agent_data:
-                            final_report = agent_data["analysis_report"]
-                            debate_output = agent_data.get("debate_output", {})
+                        if "output" in agent_data:
+                            final_report = agent_data["output"]
             
             status.update(label="Process Complete!", state="complete", expanded=False)
             return final_report, debate_output
         except Exception as e:
-            status.update(label="Error occurred", state="error")
-            st.error(f"Error running agent: {e}")
-            return None, None
+            status.update(label="Error in analysis.", state="error")
+            return f"An error occurred: {e}", debate_output
+                
+    # Perform cache maintenance outside the agent graph
+    with get_db() as db:
+        cleanup_expired_cache(db)
+            
+    return final_report, debate_output
 
 
 
@@ -233,7 +241,7 @@ with tab3:
                 st.session_state["chat_history"].append({"role": "human", "content": user_q})
                 
                 with st.chat_message("ai"):
-                    report, debate = run_agent_graph(holdings, user_question=user_q, history=langchain_history)
+                    report, debate = run_agent_graph(holdings, user_input=user_q, history=langchain_history)
                     if report:
                         if debate:
                             with st.expander("View Adversarial Debate Details", expanded=False):

@@ -17,9 +17,8 @@ def convert_state_to_prompt(state: Dict[str, Any]) -> str:
     """
     context = []
     
-    # 1. User Question
-    if "user_question" in state:
-        context.append(f"User Question: {state['user_question']}")
+    if "user_input" in state:
+        context.append(f"User Input: {state['user_input']}")
         
     # 2. Current Datetime
     if "current_datetime" in state:
@@ -28,18 +27,35 @@ def convert_state_to_prompt(state: Dict[str, Any]) -> str:
     # 3. High-Level Plan
     plan = state.get("high_level_plan", [])
     if plan:
-        context.append(f"High-Level Plan: {', '.join(plan)}")
+        # Compatibility check: if it's a list of dicts (new) or list of strings (old)
+        if plan and isinstance(plan[0], dict):
+            plan_str = ", ".join([f"{item.get('id', '?')}. {item.get('description', '')}" for item in plan])
+        else:
+            plan_str = ", ".join(plan)
+        context.append(f"High-Level Plan: {plan_str}")
         
-    # 4. Research Data
-    research_data = state.get("research_data", {})
-    if research_data:
+    # 4. Chat History
+    messages = state.get("messages", [])
+    if messages:
+        context.append("--- CHAT HISTORY ---")
+        for msg in messages:
+            # Determine role based on message type
+            role = "User" if msg.type in ["human", "user"] else "AI"
+            context.append(f"{role}: {msg.content}")
+        context.append("--- END CHAT HISTORY ---")
+    else:
+        context.append("Chat History: None.")
+        
+    # 5. Research Data (from interactions)
+    research_interaction = next((i for i in reversed(state.get("agent_interactions", [])) if i.get("agent") == "research"), None)
+    if research_interaction:
         context.append("--- RESEARCH DATA ---")
-        context.append(str(research_data))
+        context.append(str(research_interaction.get("answer", "No data gathered.")))
         context.append("--- END RESEARCH DATA ---")
     else:
         context.append("Research Data: No data gathered yet.")
 
-    # 5. Revision Count
+    # 6. Revision Count
     if "revision_count" in state:
         context.append(f"Revision Count: {state['revision_count']}")
     

@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import List
+from src.agents.base import BaseAgentResponse
 
-class HighLevelPlan(BaseModel):
-    steps: List[str] = Field(description="The sequence of high-level steps to be taken by which agent")
-    next_agent: str = Field(description="The next specialized agent to call")
+class PlanStep(BaseModel):
+    id: int = Field(description="Unique ID for the plan step")
+    description: str = Field(description="Description of what should be done in this step")
+
+class HighLevelPlan(BaseAgentResponse):
+    steps: List[PlanStep] = Field(description="The sequence of high-level steps to be taken")

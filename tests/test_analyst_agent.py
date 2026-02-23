@@ -22,21 +22,37 @@ class TestAnalystAgent:
         
         state = {
             "portfolio": [{"symbol": "AAPL", "quantity": 10.0, "avg_cost": 150.0}],
-            "research_data": "Some data",
-            "user_question": "Analyze AAPL",
+            "user_input": "Analyze AAPL",
+            "agent_interactions": [{
+                "id": 1,
+                "step_id": 1,
+                "agent": "research",
+                "question": "Research AAPL",
+                "answer": "Some data",
+                "next_agent": "analyst",
+                "next_question": "Analyze the findings for AAPL"
+            }]
         }
         
         config = {"configurable": {"thread_id": "test"}}
         
         result = analyst_agent(state, config)
         
-        assert "analysis_report" in result
-        assert "Portfolio Analysis" in result["analysis_report"]
-        assert result["next_agent"] == "cache_maintenance"
-        assert result["debate_output"]["confidence_score"] == 85
+        # Check interactions
+        analyst_int = next((i for i in result["agent_interactions"] if i["agent"] == "analyst"), None)
+        assert analyst_int is not None
+        assert analyst_int["debate_output"]["confidence_score"] == 85
+        assert analyst_int["answer"] == "# Portfolio Analysis\n\nBuy AAPL"
+        
+        assert analyst_int["next_agent"] == "summarizer"
+        assert analyst_int["question"] == "Analyze the findings for AAPL"
+        assert "Summarize" in analyst_int["next_question"]
+        assert analyst_int["id"] == 2
+        assert analyst_int["step_id"] == 1
+        assert "output" not in result
         
         # Verify the graph was invoked with correct input
         mock_graph.invoke.assert_called_once_with({
             "research_data": "Some data",
-            "user_question": "Analyze AAPL"
+            "user_input": "Analyze AAPL"
         }, config=config)

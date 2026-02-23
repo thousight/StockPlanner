@@ -15,7 +15,9 @@ Available Next Agents:
 Your Task:
 1. Define specific search queries or data points to fetch.
 2. Use the appropriate tools from the available list. You MUST provide the necessary parameters for each tool using the `tool_params` field (e.g., {{"symbol": "NVDA"}}).
-3. Determine the `next_agent` to route to after gathering data
+4. Determine the `next_agent` to route to after gathering data.
+5. Provide the `step_id` of the high-level plan step you are currently fulfilling.
+6. Provide a clear and specific instruction for the `next_agent` in the `next_question` field.
 
 Output your plan as a structured JSON object.
 """)
