@@ -78,4 +78,6 @@ Navigate to `http://localhost:8501` in your browser.
 ## TODO
 
 - [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
-- [x] Pass in User-Agent string from browser as context to Research Agent, so that 401 and 403 errors from news sites are reduced
+- [ ] Fix the loop issue on off_topic agent back to supervisor, maybe it's not taking summarizer as the last agent
+- [ ] Fix UI to show each agent interaction with all the IDs
+- [ ] Test and find any other issues.
