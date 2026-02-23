@@ -87,7 +87,7 @@ def get_valid_cache(db: Session, url: str) -> Optional[str]:
         return entry.summary
     return None
 
-def save_cache(db: Session, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 24):
+def save_cache(db: Session, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 168):
     if expire_at is None:
         expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
     

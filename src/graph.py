@@ -6,13 +6,19 @@ from src.agents.analyst.agent import analyst_agent
 from src.agents.off_topic.agent import off_topic_agent
 from src.agents.summarizer.agent import summarizer_agent
 
-def mesh_router(state: AgentState):
-    interactions = state.get("agent_interactions", [])
-    if not interactions:
-        return "summarizer"
-    
-    last_interaction = interactions[-1]
-    return last_interaction.get("next_agent", "summarizer").lower()
+def create_mesh_router(allowed_destinations: list):
+    def router(state: AgentState):
+        interactions = state.get("agent_interactions", [])
+        if not interactions:
+            return "summarizer"
+        
+        last_interaction = interactions[-1]
+        next_agent = last_interaction.get("next_agent", "summarizer").lower()
+        if next_agent not in allowed_destinations:
+            print(f"WARNING: Invalid next_agent '{next_agent}'. Falling back.")
+            return "summarizer" if "summarizer" in allowed_destinations else allowed_destinations[0]
+        return next_agent
+    return router
 
 def create_graph():
     workflow = StateGraph(AgentState)
@@ -29,7 +35,7 @@ def create_graph():
 
     workflow.add_conditional_edges(
         "supervisor",
-        mesh_router,
+        create_mesh_router(["research", "analyst", "off_topic", "summarizer"]),
         {
             "research": "research",
             "analyst": "analyst",
@@ -40,7 +46,7 @@ def create_graph():
     
     workflow.add_conditional_edges(
         "research",
-        mesh_router,
+        create_mesh_router(["analyst", "supervisor", "summarizer"]),
         {
             "analyst": "analyst",
             "supervisor": "supervisor",
@@ -50,7 +56,7 @@ def create_graph():
     
     workflow.add_conditional_edges(
         "analyst",
-        mesh_router,
+        create_mesh_router(["supervisor", "summarizer"]),
         {
             "supervisor": "supervisor",
             "summarizer": "summarizer"
@@ -59,7 +65,7 @@ def create_graph():
     
     workflow.add_conditional_edges(
         "off_topic",
-        mesh_router,
+        create_mesh_router(["research", "supervisor", "summarizer"]),
         {
             "research": "research",
             "supervisor": "supervisor",

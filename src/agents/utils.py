@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 def get_next_interaction_id(state: Dict[str, Any]) -> int:
     """Returns the next sequential interaction ID."""

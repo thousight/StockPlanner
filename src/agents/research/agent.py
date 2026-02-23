@@ -3,7 +3,7 @@ import concurrent.futures
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.state import AgentState
-from src.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt, convert_agents_to_prompt
+from src.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.tools.news import get_stock_news, get_macro_economic_news, web_search
 from src.tools.research import get_stock_financials
 from src.agents.research.prompts import RESEARCH_PLANNER_SYSTEM_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
@@ -11,12 +11,14 @@ from src.agents.research.research_plan import ResearchPlan
 from src.agents.research.next_agents import get_research_next_agents_prompt
 from src.agents.utils import get_next_interaction_id, get_current_question
 
-AVAILABLE_TOOLS = convert_tools_to_prompt([
+TOOLS_LIST = [
     get_stock_financials,
     get_stock_news,
     get_macro_economic_news,
     web_search
-])
+]
+
+AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)
 
 def research_agent(state: AgentState):
     """
@@ -28,7 +30,7 @@ def research_agent(state: AgentState):
     messages = [
         SystemMessage(content=RESEARCH_PLANNER_SYSTEM_PROMPT.format(
             current_context=convert_state_to_prompt(state),
-            available_tools=AVAILABLE_TOOLS,
+            available_tools=AVAILABLE_TOOLS_PROMPT,
             available_next_agents=get_research_next_agents_prompt()
         )),
         HumanMessage(content=RESEARCH_PLANNER_PLAN_PROMPT.format(dummy=""))
@@ -61,8 +63,8 @@ def research_agent(state: AgentState):
     }
     
 def execute_tool(step, user_agent=""):
-    # Build a lookup mapping for tool names
-    tool_map = {tool.__name__: tool for tool in AVAILABLE_TOOLS}
+    # Build a lookup mapping for tool names from the actual function list
+    tool_map = {tool.__name__: tool for tool in TOOLS_LIST}
     tool = tool_map.get(step.tool_name)
     if tool:
         try:

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, TypedDict, Annotated, Optional, NotRequired
+from typing import List, Dict, Any, TypedDict, Annotated, NotRequired
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
 
@@ -10,7 +10,7 @@ class AgentInteraction(TypedDict):
     - id: A unique integer ID for this interaction.
     - step_id: The ID of the high-level plan step this interaction fulfills.
     - agent: The agent that performed the work.
-    - question: The instruction or task given to the NEXT agent (delegation).
+    - question: The instruction or task given to the CURRENT agent.
     - answer: The result or output produced by the CURRENT agent.
     - next_agent: The destination for the next step.
     - next_question: The instruction for the next agent.

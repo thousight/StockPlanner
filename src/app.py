@@ -124,6 +124,9 @@ def run_agent_graph(holdings, user_input=None, history=None):
             status.update(label="Process Complete!", state="complete", expanded=False)
             return final_report, debate_output
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Graph execution failed:\\n{error_trace}")
             status.update(label="Error in analysis.", state="error")
             return f"An error occurred: {e}", debate_output
                 
@@ -143,8 +146,8 @@ tab1, tab2, tab3 = st.tabs(["Manage Portfolio", "AI Analysis", "Ask AI"])
 # --- Tab 1: Portfolio Management ---
 with tab1:
     st.header("Your Holdings")
-    db = next(get_db())
-    holdings = get_holdings(db)
+    with next(get_db()) as db:
+        holdings = get_holdings(db)
     
     if holdings:
         df_holdings = pd.DataFrame(holdings)
@@ -168,7 +171,8 @@ with tab1:
         
     if st.button("Add Transaction"):
         if symbol and qty > 0 and price > 0:
-            add_transaction(db, symbol, action, qty, price)
+            with next(get_db()) as db:
+                add_transaction(db, symbol, action, qty, price)
             st.success(f"Added {action} {qty} {symbol} @ ${price}")
             st.rerun()
         else:
@@ -209,7 +213,7 @@ with tab2:
 with tab3:
     st.header("Chat with your AI Advisor")
     
-    messages_container = st.container(height=800, border=False)
+    messages_container = st.container(height=700, border=False)
     
     with messages_container:
         # Display chat messages from history on app rerun

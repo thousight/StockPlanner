@@ -77,9 +77,8 @@ def get_summary(url: str, user_agent: str = "") -> Optional[str]:
         if content:
             summary = summarize_content(content, url)
             if summary and "Error" not in summary:
-                # 7-day TTL
-                expire_at = datetime.utcnow() + timedelta(days=7)
-                save_cache(db, url, summary, expire_at)
+                # Use default TTL from save_cache (168 hours / 7 days)
+                save_cache(db, url, summary)
                 return summary
     except Exception as e:
         print(f"Error in get_summary: {e}")

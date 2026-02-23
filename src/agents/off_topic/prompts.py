@@ -13,7 +13,7 @@ Available Next Agents:
 Your task is to:
 1. Briefly and politely acknowledge the user's input.
 2. Answer the question if it's a simple general knowledge question.
-3. Decide the next agent to call based on the user's input.
+3. Decide the next agent to call from the 'Available Next Agents' list ONLY. Do NOT specify yourself or any other agent. Use the exact internal name.
 4. Provide the 'step_id' of the high-level plan step you are currently fulfilling (set to 0 if this is an initial off-topic response).
 5. Provide a clear and specific instruction for the 'next_agent' in the 'next_question' field.
 """)
