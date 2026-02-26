@@ -1,6 +1,7 @@
 import inspect
 from typing import List, Callable, Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
+from src.state import AgentState
 
 ARTICLE_SUMMARY_PROMPT = ChatPromptTemplate.from_template("""
 Summarize the key financial insights from the following article. 
@@ -11,7 +12,7 @@ Article Content:
 {content}
 """)
 
-def convert_state_to_prompt(state: Dict[str, Any]) -> str:
+def convert_state_to_prompt(state: AgentState) -> str:
     """
     Converts AgentState or a similar dict into a readable string for inclusion in LLM prompts.
     """
@@ -20,44 +21,42 @@ def convert_state_to_prompt(state: Dict[str, Any]) -> str:
     if "user_input" in state:
         context.append(f"User Input: {state['user_input']}")
         
+    session_ctx = state.get("session_context", {})
+        
     # 2. Current Datetime
-    if "current_datetime" in state:
-        context.append(f"Current Date/Time: {state['current_datetime']}")
+    if "current_datetime" in session_ctx:
+        context.append(f"Current Date/Time: {session_ctx['current_datetime']}")
         
-    # 3. High-Level Plan
-    plan = state.get("high_level_plan", [])
-    if plan:
-        # Compatibility check: if it's a list of dicts (new) or list of strings (old)
-        if plan and isinstance(plan[0], dict):
-            plan_str = ", ".join([f"{item.get('id', '?')}. {item.get('description', '')}" for item in plan])
-        else:
-            plan_str = ", ".join(plan)
-        context.append(f"High-Level Plan: {plan_str}")
-        
-    # 4. Chat History
-    messages = state.get("messages", [])
+    # 3. Chat History
+    messages = session_ctx.get("messages", [])
     if messages:
         context.append("--- CHAT HISTORY ---")
         for msg in messages:
             # Determine role based on message type
-            role = "User" if msg.type in ["human", "user"] else "AI"
-            context.append(f"{role}: {msg.content}")
+            if getattr(msg, "type", "") in ["human", "user"]:
+                context.append(f"User: {msg.content}")
+            else:
+                context.append(f"AI: {msg.content}")
         context.append("--- END CHAT HISTORY ---")
     else:
         context.append("Chat History: None.")
         
-    # 5. Research Data (from interactions)
-    research_interaction = next((i for i in reversed(state.get("agent_interactions", [])) if i.get("agent") == "research"), None)
-    if research_interaction:
-        context.append("--- RESEARCH DATA ---")
-        context.append(str(research_interaction.get("answer", "No data gathered.")))
-        context.append("--- END RESEARCH DATA ---")
+    # 4. Agent Interactions
+    interactions = state.get("agent_interactions", [])
+    if interactions:
+        context.append("--- PREVIOUS AGENT INTERACTIONS ---")
+        for itr in interactions:
+            agent = itr.get("agent", "unknown")
+            answer = itr.get("answer", "")
+            dest = itr.get("next_agent", "end")
+            context.append(f"[{agent} -> {dest}]: {answer}")
+        context.append("--- END AGENT INTERACTIONS ---")
     else:
-        context.append("Research Data: No data gathered yet.")
+        context.append("Agent Interactions: None.")
 
-    # 6. Revision Count
-    if "revision_count" in state:
-        context.append(f"Revision Count: {state['revision_count']}")
+    # 5. Revision Count
+    if "revision_count" in session_ctx:
+        context.append(f"Revision Count: {session_ctx['revision_count']}")
     
     return "\n".join(context)
 

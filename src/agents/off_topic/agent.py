@@ -5,11 +5,12 @@ from src.agents.off_topic.prompts import OFF_TOPIC_SYSTEM_PROMPT
 from src.utils.prompt import convert_state_to_prompt
 from src.agents.off_topic.next_agents import get_off_topic_next_agents_prompt
 from src.agents.off_topic.off_topic_answer import OffTopicAnswer
-from src.agents.utils import get_next_interaction_id, get_current_question
+from src.agents.utils import get_next_interaction_id, with_logging
 
+@with_logging
 def off_topic_agent(state: AgentState):
     """
-    Off-Topic Agent: Handles queries that are completely unrelated to finance or the portfolio.
+    Off-Topic Agent: Handles queries that are not able to be handled by other specialized agents.
     """
     llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
     structured_llm = llm.with_structured_output(OffTopicAnswer, method="function_calling")
@@ -25,11 +26,8 @@ def off_topic_agent(state: AgentState):
     return {
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
-            "step_id": response.step_id,
             "agent": "off_topic",
-            "question": get_current_question(state, "Off-topic question"),
-            "answer": response.reasoning,
-            "next_agent": response.next_agent,
-            "next_question": response.next_question
+            "answer": response.answer,
+            "next_agent": response.next_agent
         }]
     }

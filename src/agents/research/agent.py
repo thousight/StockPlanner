@@ -9,7 +9,7 @@ from src.tools.research import get_stock_financials
 from src.agents.research.prompts import RESEARCH_PLANNER_SYSTEM_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
 from src.agents.research.research_plan import ResearchPlan
 from src.agents.research.next_agents import get_research_next_agents_prompt
-from src.agents.utils import get_next_interaction_id, get_current_question
+from src.agents.utils import get_next_interaction_id, with_logging
 
 TOOLS_LIST = [
     get_stock_financials,
@@ -20,6 +20,7 @@ TOOLS_LIST = [
 
 AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)
 
+@with_logging
 def research_agent(state: AgentState):
     """
     Research agent: Plan a research based on the research question, and execute the research tools.
@@ -53,12 +54,9 @@ def research_agent(state: AgentState):
     return {
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
-            "step_id": local_plan.step_id,
             "agent": "research",
-            "question": get_current_question(state, "Research"),
             "answer": research_data,
-            "next_agent": local_plan.next_agent,
-            "next_question": local_plan.next_question
+            "next_agent": local_plan.next_agent
         }]
     }
     

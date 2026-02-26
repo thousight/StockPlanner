@@ -40,7 +40,6 @@ def create_graph():
             "research": "research",
             "analyst": "analyst",
             "off_topic": "off_topic",
-            "summarizer": "summarizer"
         }
     )
     
@@ -49,7 +48,6 @@ def create_graph():
         create_mesh_router(["analyst", "supervisor", "summarizer"]),
         {
             "analyst": "analyst",
-            "supervisor": "supervisor",
             "summarizer": "summarizer"
         }
     )
@@ -58,7 +56,6 @@ def create_graph():
         "analyst",
         create_mesh_router(["supervisor", "summarizer"]),
         {
-            "supervisor": "supervisor",
             "summarizer": "summarizer"
         }
     )
@@ -68,7 +65,6 @@ def create_graph():
         create_mesh_router(["research", "supervisor", "summarizer"]),
         {
             "research": "research",
-            "supervisor": "supervisor",
             "summarizer": "summarizer"
         }
     )

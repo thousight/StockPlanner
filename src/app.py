@@ -50,9 +50,7 @@ def run_agent_graph(holdings, user_input=None, history=None):
                 "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "user_agent": client_ua,
                 "output": "",
-                "high_level_plan": [],
                 "agent_interactions": [],
-                "analysis_cache_key": "",
                 "revision_count": 0
             }
             
@@ -83,21 +81,15 @@ def run_agent_graph(holdings, user_input=None, history=None):
                     interactions = agent_data.get("agent_interactions", [])
                     curr_interaction = interactions[-1] if interactions else {}
                     int_id = curr_interaction.get("id", "?")
-                    step_id = curr_interaction.get("step_id", "?")
                     next_dest = curr_interaction.get("next_agent", "N/A")
-                    next_question = curr_interaction.get("next_question", "N/A")
                     
-                    status_prefix = f"[{int_id} (Step {step_id})]"
-                    status.update(label=f"{status_prefix} Agent {agent_name.capitalize()} working... routing to **{next_dest.capitalize()}** with instructions: *{next_question}*", state="running")
+                    status_prefix = f"[{int_id}]"
+                    status.update(label=f"{status_prefix} Agent {agent_name.capitalize()} working... routing to **{next_dest.capitalize()}**", state="running")
                     
                     if agent_name == "supervisor":
-                        plan = agent_data.get("high_level_plan", [])
-                        # plan is now a list of dicts: {"id": int, "description": str}
-                        plan_md = "\n".join([f"{item['id']}. {item['description']}" for item in plan])
-                        status.markdown(f"**Supervisor Plan:**\n{plan_md}")
-                        status.update(label=f"{status_prefix} Supervisor routing to **{next_dest.capitalize()}** with instruction: *{next_question}*", state="running")
+                        status.update(label=f"{status_prefix} Supervisor routing to **{next_dest.capitalize()}**", state="running")
                     elif agent_name == "research":
-                        status.update(label=f"{status_prefix} Researching market data for: *{next_question}*", state="running")
+                        status.update(label=f"{status_prefix} Researching market data", state="running")
                     elif agent_name == "generator":
                         status.write(f"**Moderator Instructions:** Orchestrating debate...")
                         status.update(label="Analysts preparing arguments...", state="running")
@@ -118,8 +110,10 @@ def run_agent_graph(holdings, user_input=None, history=None):
                         status.update(label=f"{status_prefix} Creating final answer...", state="running")
                     elif agent_name == "analyst":
                         # The top-level analyst node wraps the subgraph
-                        if "output" in agent_data:
-                            final_report = agent_data["output"]
+                        pass
+
+                    if "output" in agent_data:
+                        final_report = agent_data["output"]
             
             status.update(label="Process Complete!", state="complete", expanded=False)
             return final_report, debate_output

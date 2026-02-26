@@ -78,6 +78,7 @@ Navigate to `http://localhost:8501` in your browser.
 ## TODO
 
 - [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
-- [ ] Fix the loop issue on off_topic agent back to supervisor, maybe it's not taking summarizer as the last agent
 - [ ] Fix UI to show each agent interaction with all the IDs
+- [ ] Fix chat message not showing on state
+- [ ] Fix debate agentstate
 - [ ] Test and find any other issues.
