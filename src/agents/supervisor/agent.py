@@ -26,11 +26,11 @@ def supervisor_agent(state: AgentState):
     messages = [system_msg, human_msg]
     
     # Loop Detection
-    revision_count = state.get("revision_count", 0)
+    revision_count = state.get("session_context", {}).get("revision_count", 0)
     if revision_count > 5:
         print("--- SUPERVISOR: Loop limit reached! Forcing an end... ---")
         return {
-            "revision_count": 1,
+            "session_context": {"revision_count": 1},
             "agent_interactions": [{
                 "id": get_next_interaction_id(state),
                 "agent": "supervisor",
@@ -42,7 +42,7 @@ def supervisor_agent(state: AgentState):
     plan_output = structured_llm.invoke(messages)
     
     return {
-        "revision_count": 1,
+        "session_context": {"revision_count": 1},
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
             "agent": "supervisor",

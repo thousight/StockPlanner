@@ -3,6 +3,8 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 import sys
+from langchain_core.messages import HumanMessage, AIMessage
+from datetime import datetime
 
 # Add project root to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -39,19 +41,22 @@ def run_agent_graph(holdings, user_input=None, history=None):
     with st.status("Agents are researching market data...", expanded=True) as status:
         try:
             # Prepare State
-            from datetime import datetime
             client_ua = ""
             if hasattr(st, "context") and hasattr(st.context, "headers"):
                 client_ua = st.context.headers.get("User-Agent", "")
             initial_state = {
-                "messages": history or [],
-                "portfolio": holdings,
+                "session_context": {
+                    "messages": history or [],
+                    "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "user_agent": client_ua,
+                    "revision_count": 0
+                },
+                "user_context": {
+                    "portfolio": holdings,
+                },
                 "user_input": user_input or "",
-                "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "user_agent": client_ua,
                 "output": "",
-                "agent_interactions": [],
-                "revision_count": 0
+                "agent_interactions": []
             }
             
             # Run Graph
@@ -59,6 +64,7 @@ def run_agent_graph(holdings, user_input=None, history=None):
             
             final_report = ""
             debate_output = {}
+            shown_interaction_ids = set()
                     
             # Stream events from the graph including subgraphs
             for event in app.stream(initial_state, subgraphs=True):
@@ -68,52 +74,57 @@ def run_agent_graph(holdings, user_input=None, history=None):
                 if not namespace and "__end__" in s:
                     final_state = s["__end__"]
                     final_report = final_state.get("output", "")
-                    # Extract debate_output from interactions
-                    analyst_interaction = next((i for i in reversed(final_state.get("agent_interactions", [])) if i.get("agent") == "analyst"), None)
-                    debate_output = analyst_interaction.get("debate_output", {}) if analyst_interaction else {}
+                    
+                    # Extract debate arguments from individual agent interactions
+                    bull_interaction = next((i for i in reversed(final_state.get("agent_interactions", [])) if i.get("agent") == "bull"), None)
+                    bear_interaction = next((i for i in reversed(final_state.get("agent_interactions", [])) if i.get("agent") == "bear"), None)
+                    
+                    debate_output = {
+                        "bull_argument": bull_interaction.get("answer", "") if bull_interaction else "No bullish case provided.",
+                        "bear_argument": bear_interaction.get("answer", "") if bear_interaction else "No bearish case provided.",
+                    }
                     continue
                     
                 if "__end__" not in s:
-                    agent_name = list(s.keys())[0]
-                    agent_data = s[agent_name]
-                    
-                    # Extract next_agent and ask from interactions for general status update
-                    interactions = agent_data.get("agent_interactions", [])
-                    curr_interaction = interactions[-1] if interactions else {}
-                    int_id = curr_interaction.get("id", "?")
-                    next_dest = curr_interaction.get("next_agent", "N/A")
-                    
-                    status_prefix = f"[{int_id}]"
-                    status.update(label=f"{status_prefix} Agent {agent_name.capitalize()} working... routing to **{next_dest.capitalize()}**", state="running")
-                    
-                    if agent_name == "supervisor":
-                        status.update(label=f"{status_prefix} Supervisor routing to **{next_dest.capitalize()}**", state="running")
-                    elif agent_name == "research":
-                        status.update(label=f"{status_prefix} Researching market data", state="running")
-                    elif agent_name == "generator":
-                        status.write(f"**Moderator Instructions:** Orchestrating debate...")
-                        status.update(label="Analysts preparing arguments...", state="running")
-                    elif agent_name == "bull":
-                        status.write(f"📈 **Bull Analyst:** Argument prepared.")
-                        status.update(label=f"{status_prefix} Bull Analyst completed...", state="running")
-                    elif agent_name == "bear":
-                        status.write(f"📉 **Bear Analyst:** Argument prepared.")
-                        status.update(label=f"{status_prefix} Bear Analyst completed...", state="running")
-                    elif agent_name == "synthesizer":
-                        status.write(f"⚖️ **Moderator:** Synthesizing final report...")
-                        status.update(label="Finalizing report...", state="running")
-                    elif agent_name == "off_topic":
-                        status.write(f"👋 **Assistant:** Replying to general question...")
-                        status.update(label="Formulating response...", state="running")
-                    elif agent_name == "summarizer":
-                        status.write(f"📝 **Summarizer:** Synthesizing final response...")
-                        status.update(label=f"{status_prefix} Creating final answer...", state="running")
-                    elif agent_name == "analyst":
-                        # The top-level analyst node wraps the subgraph
-                        pass
-
-                    if "output" in agent_data:
-                        final_report = agent_data["output"]
+                    for agent_name, agent_data in s.items():
+                        # Extract interactions for general status update
+                        interactions = agent_data.get("agent_interactions", [])
+                        
+                        for interaction in interactions:
+                            int_id = interaction.get("id", "?")
+                            if int_id in shown_interaction_ids:
+                                continue
+                            shown_interaction_ids.add(int_id)
+                            
+                            int_agent = interaction.get("agent", agent_name)
+                            int_next = interaction.get("next_agent", "N/A")
+                            
+                            icon = "🤖"
+                            if int_agent == "supervisor": icon = "👔"
+                            elif int_agent == "research": icon = "🔍"
+                            elif int_agent == "generator": icon = "⚖️"
+                            elif int_agent == "bull": icon = "📈"
+                            elif int_agent == "bear": icon = "📉"
+                            elif int_agent == "synthesizer": icon = "📝"
+                            elif int_agent == "off_topic": icon = "👋"
+                            elif int_agent == "summarizer": icon = "✨"
+                            elif int_agent == "analyst": icon = "📊"
+                            
+                            status.write(f"{icon} **[{int_id}] {int_agent.capitalize()}** completed. Routing to **{int_next.capitalize()}**.")
+                            
+                            answer_text = interaction.get("answer", "")
+                            if answer_text:
+                                with status.expander(f"View details from {int_agent.capitalize()}", expanded=False) if hasattr(status, "expander") else st.expander(f"View details from {int_agent.capitalize()}", expanded=False):
+                                    st.markdown(answer_text)
+                        
+                        if interactions:
+                            curr_interaction = interactions[-1]
+                            int_id = curr_interaction.get("id", "?")
+                            next_dest = curr_interaction.get("next_agent", "N/A")
+                            status.update(label=f"[{int_id}] Routing to {next_dest.capitalize()}...", state="running")
+    
+                        if "output" in agent_data:
+                            final_report = agent_data["output"]
             
             status.update(label="Process Complete!", state="complete", expanded=False)
             return final_report, debate_output
@@ -198,7 +209,6 @@ with tab2:
             with col2:
                 with st.expander("🐻 Bear Analyst Case", expanded=False):
                     st.markdown(debate.get("bear_argument", "No bearish case provided."))
-            st.caption(f"**Moderator Confidence Score:** {debate.get('confidence_score', 'N/A')}/100")
             
         st.divider()
         st.markdown(st.session_state["analysis_result"])
@@ -227,7 +237,6 @@ with tab3:
                 st.chat_message("human").markdown(user_q)
                 
                 # Format history for Langchain BaseMessages
-                from langchain_core.messages import HumanMessage, AIMessage
                 langchain_history = []
                 for msg in st.session_state["chat_history"]:
                     if msg["role"] == "human":

@@ -11,9 +11,10 @@ def summarizer_agent(state: AgentState):
     """
     interactions = state.get("agent_interactions", [])
     
-    # If there are 2 or fewer interactions (e.g. supervisor -> agent -> summarizer), bypass the summarizer LLM
-    if len(interactions) <= 2 and interactions:
-        final_content = interactions[-1].get("answer", "")
+    # If there is only one substantive interaction and it's already short enough, we can bypass
+    last_answer = interactions[-1].get("answer", "") if interactions else ""
+    if len(interactions) <= 2 and interactions and len(last_answer) < 800:
+        final_content = last_answer
     else:
         llm = ChatOpenAI(model="gpt-4o", temperature=0)
         

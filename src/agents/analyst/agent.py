@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableConfig
 from src.state import AgentState
 from src.agents.analyst.subgraph import create_debate_graph
-from src.agents.utils import get_next_interaction_id, with_logging
+from src.agents.utils import with_logging
 
 @with_logging
 def analyst_agent(state: AgentState, config: RunnableConfig):
@@ -18,23 +18,26 @@ def analyst_agent(state: AgentState, config: RunnableConfig):
     debate_graph = create_debate_graph()
     debate_input = {
         "research_data": research_context,
-        "user_input": user_input
+        "user_input": user_input,
+        "session_context": state.get("session_context", {}),
+        "agent_interactions": state.get("agent_interactions", [])
     }
     
     debate_results = debate_graph.invoke(debate_input, config=config)
     
-    debate_output = {
-        "bull_argument": debate_results["bull_argument"],
-        "bear_argument": debate_results["bear_argument"],
-        "confidence_score": debate_results["confidence_score"]
+    # Get the newly generated interactions from subgraph
+    initial_interactions_count = len(state.get("agent_interactions", []))
+    new_interactions = debate_results.get("agent_interactions", [])[initial_interactions_count:]
+    
+    # Add the Analyst's own final output interaction
+    analyst_interaction = {
+        "id": initial_interactions_count + len(new_interactions) + 1,
+        "agent": "analyst",
+        "answer": debate_results.get("final_report", ""),
+        "next_agent": "summarizer"
     }
+    new_interactions.append(analyst_interaction)
     
     return {
-        "agent_interactions": [{
-            "id": get_next_interaction_id(state),
-            "agent": "analyst",
-            "answer": debate_results["final_report"],
-            "next_agent": "summarizer",
-            "debate_output": debate_output # Store the structured debate results here
-        }]
+        "agent_interactions": new_interactions
     }

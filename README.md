@@ -78,7 +78,10 @@ Navigate to `http://localhost:8501` in your browser.
 ## TODO
 
 - [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
-- [ ] Fix UI to show each agent interaction with all the IDs
-- [ ] Fix chat message not showing on state
-- [ ] Fix debate agentstate
+- [ ] Research agent query debug error: "Error executing tool web_search: web_search() missing 1 required positional argument: 'queries'"
+- [ ] Fix parallel bull and bear agents not streamed
+- [ ] Fix off-topic agent routed better than supervisor, maybe tune the model
+- [ ] Break down research subagents into its own folder with files
+- [ ] Add test coverages
+- [ ] Fix AI Analysis flow
 - [ ] Test and find any other issues.

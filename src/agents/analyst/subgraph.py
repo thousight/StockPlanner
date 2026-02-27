@@ -1,16 +1,22 @@
-from typing import TypedDict, Optional, Dict, Any
+from src.agents.utils import with_logging
+from typing import TypedDict, Optional, Annotated, List
+import operator
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, Field
 from src.agents.analyst.prompts import INSTRUCTION_GENERATOR_PROMPT, BULL_PROMPT, BEAR_PROMPT, SYNTHESIS_PROMPT
 from src.utils.prompt import convert_state_to_prompt
+from src.state import AgentInteraction, SessionContext
+from src.agents.utils import get_next_interaction_id
 
 class DebateState(TypedDict):
     research_data: str
     user_input: str
+    session_context: SessionContext
     bull_instruction: Optional[str]
     bear_instruction: Optional[str]
+    agent_interactions: Annotated[List[AgentInteraction], operator.add]
     bull_argument: Optional[str]
     bear_argument: Optional[str]
     final_report: Optional[str]
@@ -34,9 +40,16 @@ def generate_instructions(state: DebateState):
     result = structured_llm.invoke([SystemMessage(content=prompt)])
     return {
         "bull_instruction": result.bull_instruction,
-        "bear_instruction": result.bear_instruction
+        "bear_instruction": result.bear_instruction,
+        "agent_interactions": [{
+            "id": get_next_interaction_id(state),
+            "agent": "generator",
+            "answer": f"Bull Instruction:\n{result.bull_instruction}\n\nBear Instruction:\n{result.bear_instruction}",
+            "next_agent": "bull and bear"
+        }]
     }
 
+@with_logging
 def bull_agent(state: DebateState):
     """
     Bull Analyst: Build the strongest possible 'Buy' case for the focus stocks.
@@ -47,8 +60,17 @@ def bull_agent(state: DebateState):
         current_context=convert_state_to_prompt(state)
     )
     response = llm.invoke([SystemMessage(content=prompt)])
-    return {"bull_argument": response.content}
+    return {
+        "bull_argument": response.content,
+        "agent_interactions": [{
+            "id": get_next_interaction_id(state),
+            "agent": "bull",
+            "answer": response.content,
+            "next_agent": "synthesizer"
+        }]
+    }
 
+@with_logging
 def bear_agent(state: DebateState):
     """
     Bear Analyst: Build the strongest possible 'Sell' or 'Avoid' case for the focus stocks.
@@ -59,7 +81,15 @@ def bear_agent(state: DebateState):
         current_context=convert_state_to_prompt(state)
     )
     response = llm.invoke([SystemMessage(content=prompt)])
-    return {"bear_argument": response.content}
+    return {
+        "bear_argument": response.content,
+        "agent_interactions": [{
+            "id": get_next_interaction_id(state),
+            "agent": "bear",
+            "answer": response.content,
+            "next_agent": "synthesizer"
+        }]
+    }
 
 class FinalSynthesis(BaseModel):
     report: str = Field(description="The full synthesized report in Markdown")
@@ -81,7 +111,13 @@ def synthesizer(state: DebateState):
     result = structured_llm.invoke([SystemMessage(content=prompt)])
     return {
         "final_report": result.report,
-        "confidence_score": result.confidence_score
+        "confidence_score": result.confidence_score,
+        "agent_interactions": [{
+            "id": get_next_interaction_id(state),
+            "agent": "synthesizer",
+            "answer": f"Confidence Score: {result.confidence_score}/100\n\n{result.report}",
+            "next_agent": "analyst (end)"
+        }]
     }
 
 def create_debate_graph():

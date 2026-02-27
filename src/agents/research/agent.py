@@ -41,7 +41,7 @@ def research_agent(state: AgentState):
     research_data = ""
 
     # Extract user_agent for downstream tool propagation
-    client_ua = state.get("user_agent", "")
+    client_ua = state.get("session_context", {}).get("user_agent", "")
 
     # Run tool calls in parallel using ThreadPoolExecutor
     with concurrent.futures.ThreadPoolExecutor() as executor:

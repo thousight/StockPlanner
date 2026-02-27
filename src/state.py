@@ -17,7 +17,6 @@ class AgentInteraction(TypedDict):
     agent: str
     answer: str
     next_agent: str
-    debate_output: NotRequired[Dict[str, Any]]
 
 class SessionContext(TypedDict):
     current_datetime: str
