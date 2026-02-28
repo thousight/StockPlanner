@@ -1,20 +1,35 @@
 # Project: StockPlanner
 
-## Core Mission
-Building an autonomous, multi-agent financial planning and analysis system. It transforms raw market data (Financials, SEC filings, News, Social sentiment) into deeply personalized investment profiles, identifying institutional moves ("Whale tracking") and distinguishing real narratives from artificial "Hype" (Narrative Intelligence).
+## Vision
 
-## Key Themes
-- **Multi-Agent Autonomy:** Moving from single-node logic to a LangGraph **Supervisor/Agent** model for scalable, parallel stock research.
-- **Deep Stock Profiling:** Automated gathering of business models, financial health, and growth metrics to ground all investment advice.
-- **Whale Tracking:** Scraping and parsing raw SEC 13F filings from EDGAR to track institutional movements as primary analysis context.
-- **Narrative Intelligence:** A hybrid approach using both News Sentiment and Social Media (X/Reddit) to detect "bubbles" and artificial market manipulation.
-- **Formal Personalization:** Matching stock profiles to a user's explicitly defined risk tolerance, age, and long-term goals.
+A comprehensive financial planner application that collects user financial information and uses a multi-agent LangGraph orchestration to provide personalized financial suggestions and adversarial stock analysis. This repository serves as the RESTful API backend for a Flutter-based mobile UI.
 
-## Architecture Vision
-- **Orchestration:** LangGraph `StateGraph` with a central `Supervisor` agent.
-- **Frontend:** Streamlit for portfolio management and interactive analysis reports.
-- **Backend:** Python + SQLAlchemy (SQLite) for state and portfolio persistence.
-- **Agents:** Specialized agents (Financials, Sentiment, WhaleTracker, HypeDetector).
+## Tech Stack
 
----
-*Created: 2026-02-21*
+- **Orchestration**: LangGraph
+- **LLM Integration**: LangChain, OpenAI (GPT-4o)
+- **API Framework**: FastAPI (Targeted for Milestone 1)
+- **Data Layer**: Supabase (PostgreSQL)
+- **Market Data**: yfinance, DuckDuckGo Search
+- **Memory**: PostgreSQL (Long-term), Redis (Short-term, targeted for Milestone 3)
+- **Verification**: Pytest
+
+## Core Principles
+
+- **API-First**: Headless RESTful backend designed for high-performance mobile clients.
+- **Cloud-Synced**: Uses Supabase for cross-device data persistence.
+- **Adversarial Analysis**: Uses a 'Bull vs. Bear' debate pattern to provide unbiased financial insights.
+- **State-Driven**: Entire workflow and conversation history are managed by structured LangGraph states.
+
+## Key Decisions
+
+- **[2025-03-05] Multi-Agent Architecture**: Moved from single-agent to a supervisor-led multi-agent mesh for better specialization.
+- **[2026-02-28] Streamlit UI Removal**: Pivoted to a headless architecture to prioritize the robustness of the agentic engine.
+- **[2026-02-28] Explicit Debate Metadata**: Restored `debate_output` in `AgentInteraction` to ensure confidence scores and adversarial arguments are captured.
+- **[2026-02-28] Financial Planner Pivot**: Expanded scope from stock analysis to general financial planning with a Flutter mobile frontend and Supabase cloud integration.
+
+## Constraints
+
+- Dependent on OpenAI API for core reasoning.
+- Market data via yfinance (limited to what Yahoo provides).
+- Supabase connection and authentication requirements for mobile clients.

@@ -1,20 +1,20 @@
-# Project State
+# Project State - StockPlanner API Backend
 
-**Current Phase:** Phase 2: Deep Profiling & Whale Tracking
-**Last Updated:** 2026-02-21
+## Current Position
+- **Milestone:** Milestone 1: API Server & Cloud Sync
+- **Phase:** Phase 1: API Scaffolding
+- **Status:** Initializing Milestone 1
+- **Last Activity:** [2026-02-28] — Project re-initialized with a focus on a Flutter-integrated RESTful API backend.
 
-## Context
-Phase 1 (Multi-Agent Core Refactor) completed successfully.
-The architecture now uses a Supervisor/Agent pattern with LangGraph.
-Streamlit UI updated to show real-time progress using `st.status`.
+## Planning Context
+- **Vision:** Financial planner with LangGraph agents and Flutter UI.
+- **Goal:** Transform local agent logic into a cloud-synced, streaming API.
+- **Constraints:** FastAPI, Supabase (PostgreSQL), LangGraph SSE streaming.
 
-## Completed (Phase 1)
-- Supervisor agent with LLM routing.
-- Specialized Financials and News agents.
-- Parallel research execution logic.
-- Streamlit streaming integration.
-
-## Next Steps
-- Start Phase 2 execution.
-- Implement Deep Profile Agent (Issue #5).
-- Implement EDGAR Scraper for Whale Tracking (Issue #3).
+## Accumulated Context
+- **Previous Milestone:** (Local Stock Analyzer Prototype)
+- **Key Pivot:** Moving away from Streamlit and local SQLite to an API-first, cloud-synced architecture.
+- **Research Findings:** 
+  - FastAPI `StreamingResponse` with `astream_events` is the best practice for LangGraph SSE.
+  - Supabase requires `prepare_threshold: 0` for transaction-level pooling.
+  - `AsyncPostgresSaver` is the recommended checkpointer for async Postgres persistence.
