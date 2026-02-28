@@ -10,7 +10,7 @@ from src.agents.utils import get_next_interaction_id, with_logging
 @with_logging
 def off_topic_agent(state: AgentState):
     """
-    Off-Topic Agent: Handles queries that are not able to be handled by other specialized agents.
+    Off-Topic Agent: ONLY handles casual conversation, greetings (like "hi" or "hello"), or queries entirely unrelated to finance. DO NOT route any market, economy, or stock questions here, even if they are broad or in a foreign language.
     """
     llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
     structured_llm = llm.with_structured_output(OffTopicAnswer, method="function_calling")

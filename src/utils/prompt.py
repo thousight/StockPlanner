@@ -44,7 +44,7 @@ def convert_state_to_prompt(state: AgentState) -> str:
     # 4. Agent Interactions
     interactions = state.get("agent_interactions", [])
     if interactions:
-        context.append("--- PREVIOUS AGENT INTERACTIONS ---")
+        context.append("--- AGENT INTERACTIONS ---")
         for itr in interactions:
             agent = itr.get("agent", "unknown")
             answer = itr.get("answer", "")

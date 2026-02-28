@@ -77,10 +77,14 @@ Navigate to `http://localhost:8501` in your browser.
 
 ## TODO
 
-- [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
-- [ ] Research agent query debug error: "Error executing tool web_search: web_search() missing 1 required positional argument: 'queries'"
+- [ ] Converting this entire app into an API server that:
+  - [ ] Uses proper LangGraph Streaming Schema
+  - [ ] Has proper authentication and authorization can be used by multiple clients, using Supabase.
+  - [ ] Allows interrupts
+  - [ ] Uses short-term memory (Redis) to store conversation history.
+  - [ ] Uses long-term memory (PostgreSQL) to store user's portfolio and preferences.
 - [ ] Fix parallel bull and bear agents not streamed
-- [ ] Fix off-topic agent routed better than supervisor, maybe tune the model
+- [ ] Enhance off-topic to research flow
 - [ ] Break down research subagents into its own folder with files
 - [ ] Add test coverages
 - [ ] Fix AI Analysis flow

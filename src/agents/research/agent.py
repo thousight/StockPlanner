@@ -75,6 +75,18 @@ def execute_tool(step, user_agent=""):
             if "user_agent" in sig.parameters or accepts_kwargs:
                 step.tool_params["user_agent"] = user_agent
                 
+            # Quick fix for web_search arguments
+            if step.tool_name == "web_search":
+                if "query" in step.tool_params and "queries" not in step.tool_params:
+                    step.tool_params["queries"] = [step.tool_params.pop("query")]
+                elif "q" in step.tool_params and "queries" not in step.tool_params:
+                    step.tool_params["queries"] = [step.tool_params.pop("q")]
+                elif "queries" in step.tool_params and isinstance(step.tool_params["queries"], str):
+                    step.tool_params["queries"] = [step.tool_params["queries"]]
+                elif "queries" not in step.tool_params:
+                    # Fallback if somehow it's empty but called
+                    step.tool_params["queries"] = ["latest market news"]
+                
             # Execute standard function with unpacked dictionary parameters
             result = tool(**step.tool_params)
             if isinstance(result, str):
