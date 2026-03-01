@@ -9,7 +9,7 @@ A comprehensive financial planner application that collects user financial infor
 - **Orchestration**: LangGraph
 - **LLM Integration**: LangChain, OpenAI (GPT-4o)
 - **API Framework**: FastAPI (Targeted for Milestone 1)
-- **Data Layer**: Google Cloud SQL (PostgreSQL)
+- **Data Layer**: Railway (PostgreSQL)
 - **Market Data**: yfinance, DuckDuckGo Search
 - **Memory**: PostgreSQL (Long-term), Redis (Short-term, targeted for Milestone 3)
 - **Verification**: Pytest
@@ -17,16 +17,16 @@ A comprehensive financial planner application that collects user financial infor
 ## Core Principles
 
 - **API-First**: Headless RESTful backend designed for high-performance mobile clients.
-- **Cloud-Synced**: Uses Google Cloud SQL for cross-device data persistence.
+- **Cloud-Synced**: Uses Railway for cross-device data persistence.
 - **State-Driven**: Entire workflow and conversation history are managed by structured LangGraph states.
 
 ## Key Decisions
 
 - **[2026-02-28] Multi-Agent Architecture**: Moved from single-agent to a supervisor-led multi-agent mesh for better specialization.
-- **[2026-02-28] Financial Planner Pivot**: Expanded scope from stock analysis to general financial planning with a Flutter mobile frontend and Google Cloud SQL integration.
+- **[2026-02-28] Financial Planner Pivot**: Expanded scope from stock analysis to general financial planning with a Flutter mobile frontend and Railway cloud integration.
 
 ## Constraints
 
 - Dependent on OpenAI API for core reasoning.
 - Market data via yfinance (limited to what Yahoo provides).
-- Google Cloud SQL connection and authentication requirements for mobile clients.
+- Railway connection and authentication requirements for mobile clients.

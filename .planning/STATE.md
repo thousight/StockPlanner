@@ -9,12 +9,12 @@
 ## Planning Context
 - **Vision:** Financial planner with LangGraph agents and Flutter UI.
 - **Goal:** Transform local agent logic into a cloud-synced, streaming API.
-- **Constraints:** FastAPI, Google Cloud SQL (PostgreSQL), LangGraph SSE streaming.
+- **Constraints:** FastAPI, Railway (PostgreSQL), LangGraph SSE streaming.
 
 ## Accumulated Context
 - **Previous Milestone:** (Local Stock Analyzer Prototype)
 - **Key Pivot:** Moving away from Streamlit and local SQLite to an API-first, cloud-synced architecture.
 - **Research Findings:** 
   - FastAPI `StreamingResponse` with `astream_events` is the best practice for LangGraph SSE.
-  - Google Cloud SQL (via Cloud SQL Auth Proxy) or standard Postgres connections are supported.
+  - Railway PostgreSQL supports direct TCP connections and automatic deployments via GitHub.
   - `AsyncPostgresSaver` is the recommended checkpointer for async Postgres persistence.

@@ -8,7 +8,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 | Phase | Title | Focus | Status |
 |---|---|---|---|
 | **Phase 1** | **API Scaffolding** | Setup FastAPI, health checks, and async architecture. | Pending |
-| **Phase 2** | **Data & Persistence** | Google Cloud SQL integration, PostgreSQL schemas, and LangGraph checkpointer. | Pending |
+| **Phase 2** | **Data & Persistence** | Railway integration, PostgreSQL schemas, and LangGraph checkpointer. | Pending |
 | **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | Pending |
 | **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Pending |
 

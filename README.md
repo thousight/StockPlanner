@@ -82,7 +82,7 @@ Navigate to `http://localhost:8501` in your browser.
     - `/chat`: Chat endpoint that uses LangGraph Streaming Schema
     - `/investment`: GET endpoints for fetching user's investment portfolio out of user's transactions
     - `/investment/transactions/{transaction_id}`: CRUD endpoints for investment transactions
-  - Use Google Cloud SQL (PostgreSQL) as the database
+  - Use Railway PostgreSQL as the cloud database
   - Implement proper long-term memory (PostgreSQL) to store user's portfolio
   - Refactor all documentations
 - Milestone 2: Authentication
