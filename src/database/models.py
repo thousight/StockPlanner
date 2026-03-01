@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date
 from sqlalchemy.orm import relationship
-from datetime import datetime
-from src.database.database import Base
+from datetime import datetime, timezone
+from src.database.session import Base
 
 class Stock(Base):
     __tablename__ = "stocks"
@@ -18,7 +18,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     symbol = Column(String, ForeignKey("stocks.symbol"))
     action = Column(String)  # BUY, SELL
     quantity = Column(Float)
