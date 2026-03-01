@@ -1,3 +1,4 @@
+import re
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
 from src.graph.state import AgentState
@@ -18,9 +19,18 @@ def summarizer_agent(state: AgentState):
         
     response = llm.invoke([system_msg])
     final_content = response.content
+    
+    # Try to extract the symbol from user_input (basic regex for UPPERCASE 1-5 letters)
+    user_input = state.get("user_input", "")
+    symbol_match = re.search(r'\b[A-Z]{1,5}\b', user_input)
+    symbol = symbol_match.group(0) if symbol_match else None
         
     return {
         "output": final_content,
+        "pending_report": {
+            "content": final_content,
+            "symbol": symbol
+        },
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
             "agent": "summarizer",

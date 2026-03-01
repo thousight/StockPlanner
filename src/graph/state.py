@@ -34,3 +34,4 @@ class AgentState(TypedDict):
     user_input: str
     agent_interactions: Annotated[List[AgentInteraction], operator.add]
     output: str
+    pending_report: NotRequired[Dict[str, Any]]

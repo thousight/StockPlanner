@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from asgi_correlation_id import CorrelationIdMiddleware
 from contextlib import asynccontextmanager
@@ -17,6 +18,9 @@ from src.graph.persistence import get_checkpointer
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
+
+# Global set for thread concurrency protection
+active_threads = set()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -77,6 +81,32 @@ app = FastAPI(
 
 # Apply global route class for excluding None/null fields
 app.router.route_class = ExcludeNoneRoute
+
+@app.middleware("http")
+async def thread_concurrency_protection(request: Request, call_next):
+    """
+    Protects against concurrent runs for the same thread_id.
+    Looks for 'X-Thread-ID' in request headers.
+    """
+    thread_id = request.headers.get("X-Thread-ID")
+    
+    # We only apply this to potential chat/graph endpoints
+    if thread_id and ("/chat" in request.url.path or "/graph" in request.url.path):
+        if thread_id in active_threads:
+            logger.warning(f"Rejecting concurrent request for thread_id: {thread_id}")
+            return JSONResponse(
+                status_code=409,
+                content={"detail": f"Conflict: Thread {thread_id} is already being processed."}
+            )
+        
+        active_threads.add(thread_id)
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            active_threads.discard(thread_id)
+    
+    return await call_next(request)
 
 # Add correlation ID middleware for request tracking
 app.add_middleware(CorrelationIdMiddleware)
