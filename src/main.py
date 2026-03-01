@@ -19,10 +19,6 @@ async def lifespan(app: FastAPI):
     # Startup logic
     logger.info(f"Starting {settings.PROJECT_NAME} in {settings.ENVIRONMENT} mode")
     
-    # Initialize database tables (MVP requirement)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
     yield
     # Shutdown logic
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
