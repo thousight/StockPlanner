@@ -7,10 +7,19 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 | Phase | Title | Focus | Status |
 |---|---|---|---|
-| **Phase 1** | **API Scaffolding** | Setup FastAPI, health checks, and async architecture. | Pending |
+| **Phase 1** | **API Scaffolding** | Setup FastAPI, health checks, and async architecture. | In Progress |
 | **Phase 2** | **Data & Persistence** | Railway integration, PostgreSQL schemas, and LangGraph checkpointer. | Pending |
 | **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | Pending |
 | **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Pending |
+
+### Phase 1: API Scaffolding
+**Goal:** Setup FastAPI, health checks, and async architecture for a Railway-hosted PostgreSQL backend.
+**Plans:** 1 plan
+
+**Requirements:** REQ-001, REQ-002, REQ-003
+
+**Plans:**
+- [ ] 1-01-PLAN.md — Setup FastAPI foundation, async DB session, and health endpoints.
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
