@@ -43,7 +43,7 @@ class Transaction(Base):
     fx_rate = Column(Numeric(precision=20, scale=10), default=1.0)
     price_base = Column(Numeric(precision=20, scale=10))
     total_base = Column(Numeric(precision=20, scale=10))
-    metadata = Column(JSONB, nullable=True)
+    asset_metadata = Column(JSONB, nullable=True)
     is_deleted = Column(Boolean, default=False)
     
     asset = relationship("Asset", back_populates="transactions")

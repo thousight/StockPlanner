@@ -54,7 +54,7 @@ class TransactionBase(BaseModel):
     currency: str = Field("USD", min_length=3, max_length=3)
     fx_rate: Decimal = Decimal("1.0")
     date: Optional[datetime] = None
-    metadata: Optional[AssetMetadata] = Field(None, discriminator="type")
+    asset_metadata: Optional[AssetMetadata] = Field(None, discriminator="type")
 
 class TransactionCreate(TransactionBase):
     pass
