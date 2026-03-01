@@ -12,6 +12,7 @@ from src.middleware import ExcludeNoneRoute
 from src.database.session import engine
 from src.database import models  # Ensure models are registered
 from src.controllers.health import router as health_router
+from src.controllers.transactions import router as transactions_router
 from src.lifecycle.tasks import cleanup_checkpoints, cleanup_news_cache
 from src.graph.persistence import get_checkpointer
 
@@ -122,6 +123,7 @@ app.add_middleware(
 
 # Register routers
 app.include_router(health_router)
+app.include_router(transactions_router)
 
 @app.get("/")
 async def root():
