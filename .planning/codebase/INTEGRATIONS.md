@@ -1,75 +1,79 @@
 # External Integrations
 
-**Analysis Date:** 2025-02-13
+**Analysis Date:** 2025-05-22
 
 ## APIs & External Services
 
-**LLM & Intelligence:**
-- **OpenAI** - Used for financial news summarization and portfolio analysis.
-  - SDK/Client: `langchain-openai` (ChatOpenAI)
-  - Auth: `OPENAI_API_KEY` (via env var or UI input)
+**LLM Provider:**
+- **OpenAI** - Primary LLM provider for all agent functions (GPT-4o).
+  - SDK/Client: `langchain-openai`
+  - Auth: `OPENAI_API_KEY` (env var)
 
 **Market Data:**
-- **Yahoo Finance** - Primary source for stock prices, fundamental info, and stock-specific news.
+- **Yahoo Finance** - Provides historical/current financial data and news.
   - SDK/Client: `yfinance`
-  - Auth: None required (Public API)
+  - Auth: None (publicly accessible).
 
-**Search:**
-- **DuckDuckGo** - Used for macroeconomic and general financial news search.
-  - SDK/Client: `ddgs` (DuckDuckGo Search)
-  - Auth: None required
+**Web Search:**
+- **DuckDuckGo** - Provides general web search capabilities.
+  - SDK/Client: `ddgs` (duckduckgo-search)
+  - Auth: None (publicly accessible).
 
 ## Data Storage
 
 **Databases:**
-- **SQLite** (Local)
-  - Connection: `sqlite:///stocks.db`
-  - Client: `SQLAlchemy`
-  - Purpose: Stores portfolio transactions, holdings, and news summary cache.
+- **SQLite**
+  - Connection: Local file `stocks.db` in project root.
+  - Client: `sqlalchemy` ORM.
+  - Usage: Portfolio transaction history (`src/database/models.py`) and news summary caching (`src/utils/news.py`).
 
 **File Storage:**
-- **Local filesystem only** - Used for the SQLite database file and cache.
+- **Local filesystem only**
+  - Storage of `stocks.db`.
 
 **Caching:**
-- **SQL-based Cache** - News article summaries are cached in the `cache` table of the SQLite database to avoid redundant LLM calls (`src/database/models.py`, `src/database/crud.py`).
+- **Local SQLite Cache**
+  - Implementation: `src/utils/news.py` caches summaries of fetched news articles with a 7-day TTL.
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- **None/Custom** - Currently relies on the user providing an `OPENAI_API_KEY` in the UI or environment. No user-level login for the MVP.
+- **Local Env Key (OpenAI)**
+  - Implementation: API keys provided via `.env` file and validated during app startup (`src/app.py`).
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- **None** - Errors are currently logged to console/terminal.
+- **None** - Local console output and Streamlit error UI only.
 
 **Logs:**
-- Standard Python `print` and `traceback` logging.
+- **Custom Agent Logger**
+  - Decorator `@with_logging` in `src/agents/utils.py` catches and prints agent tracebacks to console.
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not explicitly defined, but designed for Streamlit-compatible hosts (e.g., Streamlit Community Cloud).
+- **Streamlit (Implicitly)** - Designed to be run as a Streamlit application.
 
 **CI Pipeline:**
-- None detected.
+- **None detected** - No explicit GitHub Actions or other CI/CD files.
 
 ## Environment Configuration
 
 **Required env vars:**
-- `OPENAI_API_KEY`: Required for AI-powered features.
+- `OPENAI_API_KEY`: Critical for LLM operations.
 
 **Secrets location:**
-- `.env` file (local development).
+- `.env` file (local) - Standardized by `python-dotenv`.
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None.
+- **None**
 
 **Outgoing:**
-- None.
+- **None**
 
 ---
 
-*Integration audit: 2025-02-13*
+*Integration audit: 2025-05-22*

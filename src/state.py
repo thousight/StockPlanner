@@ -11,12 +11,13 @@ class AgentInteraction(TypedDict):
     - agent: The agent that performed the work.
     - answer: The result or output produced by the CURRENT agent.
     - next_agent: The destination for the next step.
-    - debate_output: Structured metadata (only for Analyst agent).
+    - debate_output: Optional metadata for the Analyst agent.
     """
     id: int
     agent: str
     answer: str
     next_agent: str
+    debate_output: NotRequired[Dict[str, Any]]
 
 class SessionContext(TypedDict):
     current_datetime: str

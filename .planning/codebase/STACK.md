@@ -1,11 +1,14 @@
 # Technology Stack
 
-**Analysis Date:** 2025-02-13
+**Analysis Date:** 2025-05-22
 
 ## Languages
 
 **Primary:**
-- Python 3.x - Core application logic, agents, data processing, and web interface.
+- Python 3.x - Used for the entire backend application, including agent logic, data processing, and the Streamlit UI.
+
+**Secondary:**
+- None detected.
 
 ## Runtime
 
@@ -19,48 +22,49 @@
 ## Frameworks
 
 **Core:**
-- **Streamlit** - Used for the web-based user interface (`src/app.py`).
-- **LangGraph** - Manages the agentic workflow and state transition logic (`src/graph.py`).
-- **LangChain** - Provides abstractions for LLM interactions and message handling (`src/agents/analyst/agent.py`, `src/tools/research.py (or src/tools/news.py)`).
+- **LangGraph** (v.latest) - Used for building the multi-agent orchestration graph (`src/graph.py`).
+- **LangChain** (v.latest) - Used for LLM abstractions, message structures, and tool integrations (`src/utils/news.py`, `src/agents/research/agent.py`).
+- **Streamlit** (v.latest) - Used for the web-based user interface and session management (`src/app.py`).
 
 **Testing:**
-- **Pytest** - Test runner and framework (`pytest.ini`, `tests/` directory).
+- **Pytest** - Used for unit and integration testing (`pytest.ini`, `tests/` directory).
 
-**Data/UI:**
-- **Pandas** - Data manipulation and analysis (`src/app.py`).
-- **Plotly** - Interactive visualizations (imported in `requirements.txt`, used in `src/app.py`).
+**Build/Dev:**
+- **python-dotenv** - Manages environment variables from `.env` files (`src/app.py`).
 
 ## Key Dependencies
 
 **Critical:**
-- `langchain-openai` - OpenAI LLM integration for analysis and summarization.
-- `yfinance` - Real-time and historical market data retrieval (`src/tools/research.py (or src/tools/news.py)`).
-- `sqlalchemy` - ORM for database interactions (`src/database/database.py`).
-- `pydantic` - Data validation and settings management (e.g. `AgentState` in `src/state.py`).
+- **langchain-openai** - Integration with OpenAI's models (GPT-4o).
+- **yfinance** - SDK for fetching market data and stock news from Yahoo Finance.
+- **ddgs (duckduckgo-search)** - SDK for performing web searches via DuckDuckGo.
+- **sqlalchemy** - SQL Toolkit and ORM for managing the local SQLite database.
+- **pydantic** - Data validation and settings management using Python type annotations.
 
 **Infrastructure:**
-- `python-dotenv` - Environment variable management (`src/app.py`).
-- `requests` / `beautifulsoup4` / `readability-lxml` - Web scraping and content extraction for news analysis (`src/tools/research.py (or src/tools/news.py)`).
-- `ddgs` - DuckDuckGo Search for supplemental research (`src/tools/research.py (or src/tools/news.py)`).
+- **pandas** - Data manipulation and analysis, used for portfolio dataframes (`src/app.py`).
+- **plotly** - (Present in `requirements.txt`) Intended for interactive data visualization.
+- **beautifulsoup4** & **readability-lxml** - Used for extracting and cleaning content from news articles (`src/utils/news.py`).
 
 ## Configuration
 
 **Environment:**
-- Configured via `.env` file (loaded using `python-dotenv`).
+- Configured via `.env` file.
 - Key configs required: `OPENAI_API_KEY`.
 
 **Build:**
-- None (standard Python project).
+- `requirements.txt` for dependency management.
+- `pytest.ini` for test runner configuration.
 
 ## Platform Requirements
 
 **Development:**
-- Python 3.8+ recommended.
-- Local SQLite database (`stocks.db`).
+- Local Python environment (3.10+ recommended).
+- Internet access for OpenAI API, Yahoo Finance, and DuckDuckGo.
 
 **Production:**
-- Streamlit Cloud or any cloud provider supporting Python and SQLite.
+- Streamlit Cloud, Heroku, or any Linux/Windows environment supporting Python and persistent local file storage (for `stocks.db`).
 
 ---
 
-*Stack analysis: 2025-02-13*
+*Stack analysis: 2025-05-22*

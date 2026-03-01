@@ -1,112 +1,84 @@
 # Coding Conventions
 
-**Analysis Date:** 2025-02-14
+**Analysis Date:** 2024-05-22
 
 ## Naming Patterns
 
 **Files:**
-- snake_case for all Python files.
-- Example: `src/graph.py`, `src/database/crud.py`
-- Test files prefixed with `test_`. Example: `tests/test_crud.py`
+- `snake_case.py` (e.g., `src/app.py`, `src/agents/analyst/agent.py`)
 
 **Functions:**
-- snake_case for all functions.
-- Example: `research_agent`, `add_stock`, `resolve_symbol`
-- Private helper functions prefixed with underscore. Example: `_parse_yf_news_item`
+- `snake_case()` (e.g., `run_agent_graph()`, `analyst_agent()`)
 
 **Variables:**
-- snake_case for local variables and parameters.
-- Example: `holdings`, `research_data`, `db_session`
+- `snake_case` (e.g., `user_input`, `current_datetime`)
 
-**Types:**
-- PascalCase for classes (models, state, tests).
-- Example: `Stock`, `Transaction`, `AgentState`, `TestResearchNode`
+**Types/Classes:**
+- `PascalCase` (e.g., `Stock`, `Transaction`, `AgentState`, `BaseAgentResponse`)
 
 ## Code Style
 
 **Formatting:**
-- Standard PEP 8 alignment observed.
-- No explicit formatting tool (like Black) config found, but code is consistently formatted with 4-space indentation.
+- No explicit formatting tool (like Black or Prettier) detected in configuration.
+- Standard Python (PEP 8) style is followed.
 
 **Linting:**
-- Not explicitly configured via `.flake8` or `pyproject.toml`.
-- Type hints are used for function parameters and return types where possible.
+- No explicit linting configuration (like Flake8 or Pylint) detected.
 
 ## Import Organization
 
 **Order:**
-1. Standard library imports (e.g., `from typing import Dict`).
-2. Third-party library imports (e.g., `import yfinance as yf`).
-3. Local application imports (e.g., `from src.database.models import Stock`).
+1. Standard library imports (e.g., `import os`, `import sys`)
+2. Third-party library imports (e.g., `import streamlit as st`, `from langchain_core.messages import HumanMessage`)
+3. Local module imports (e.g., `from src.database.database import get_db`)
 
 **Path Aliases:**
-- Absolute imports starting from `src` are preferred.
-- Example: `from src.agents.state import AgentState`
+- Project root is added to `sys.path` in `src/app.py` to allow absolute imports from `src`.
 
 ## Error Handling
 
 **Patterns:**
-- Try-except blocks used in utility functions to handle external API failures (yfinance, DuckDuckGo).
-- Returns default empty values (e.g., `[]`, `{}`, `0`, `None`) on failure to ensure system stability.
-- Example: `src/tools/research.py (or src/tools/news.py)` handles exceptions in `resolve_symbol` by returning a default dictionary.
+- **Decorators:** `@with_logging` decorator in `src/agents/utils.py` is used to catch, log (print), and re-throw exceptions in agent functions.
+- **Try-Except:** Used around critical operations like agent graph execution in `src/app.py`.
+- **Traceback:** `traceback.format_exc()` is commonly used to capture detailed error information.
 
 ## Logging
 
-**Framework:** `print` statements.
+**Framework:** `print` statements and `traceback`.
 
 **Patterns:**
-- DEBUG and Error messages are printed to stdout/stderr.
-- Example: `print(f"Error fetching news for {stock.ticker}: {e}")`
+- Unified logging for agents via `@with_logging` in `src/agents/utils.py`.
+- Prints "--- AGENT_NAME: Starting ---" and logs errors with stack traces.
 
 ## Comments
 
 **When to Comment:**
-- Inline comments used for complex logic (e.g., cost basis calculation in `src/database/crud.py`).
-- TODOs (if any) are used for future improvements.
+- Section headers in large files like `src/app.py` (e.g., `# --- Main App ---`).
+- Explaining complex logic or configurations.
 
 **JSDoc/TSDoc:**
-- Python triple-quoted docstrings used for function and class documentation.
-- Example:
-  ```python
-  def resolve_symbol(symbol: str) -> Dict[str, Any]:
-      """
-      Resolve the symbol to its data: price, change, news, info.
-      """
-  ```
+- Triple-quote docstrings (`"""Docstring"""`) are used for class and function documentation.
 
 ## Function Design
 
 **Size:**
-- Functions are generally kept small and focused on a single responsibility.
-- Large tasks are broken down using `ThreadPoolExecutor` and helper functions.
+- Streamlit application logic in `src/app.py` contains large functions (`run_agent_graph`).
+- Agent logic is generally modularized into specialized functions.
 
 **Parameters:**
-- Explicit typing used for parameters where clarity is needed.
-- Example: `db: Session`, `symbol: str`.
+- LangGraph agents consistently take `state: AgentState` and `config: RunnableConfig`.
 
 **Return Values:**
-- Return types are occasionally hinted using `->`.
-- Consistent return structures (e.g., always returning a dict or a list) are used in research utilities.
-
-## Module Structure for Agents
-
-**Architecture:**
-- Each agent agent MUST be organized as a directory-based package.
-- **Node Logic:** The primary logic for the agent agent (the function integrated into the graph) MUST reside in `agent.py`.
-- **Prompts:** All LLM prompts, system messages, and template strings MUST reside in `prompts.py`.
-- **Structure:**
-  ```text
-  src/agents/<agent_name>/
-  ├── agent.py
-  └── prompts.py
-  ```
-- **Rationale:** Separating prompts from logic improves readability and allows for easier prompt engineering without touching the execution flow.
+- Agents return a dictionary that updates the `AgentState`.
 
 ## Module Design
 
 **Exports:**
-- Modules export functions and classes directly.
+- Explicit function and class exports are used across modules.
+
+**Barrel Files:**
+- Not extensively used; direct imports from specific modules are preferred.
 
 ---
 
-*Convention analysis: 2025-02-14*
+*Convention analysis: 2024-05-22*

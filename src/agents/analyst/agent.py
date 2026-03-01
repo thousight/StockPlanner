@@ -34,7 +34,12 @@ def analyst_agent(state: AgentState, config: RunnableConfig):
         "id": initial_interactions_count + len(new_interactions) + 1,
         "agent": "analyst",
         "answer": debate_results.get("final_report", ""),
-        "next_agent": "summarizer"
+        "next_agent": "summarizer",
+        "debate_output": {
+            "bull_argument": debate_results.get("bull_argument", ""),
+            "bear_argument": debate_results.get("bear_argument", ""),
+            "confidence_score": debate_results.get("confidence_score", 0)
+        }
     }
     new_interactions.append(analyst_interaction)
     
