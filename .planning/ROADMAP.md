@@ -9,7 +9,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 |---|---|---|---|
 | **Phase 1** | **API Scaffolding** | Setup FastAPI, health checks, and async architecture. | Completed |
 | **Phase 2** | **Data & Persistence** | Railway integration, PostgreSQL schemas, and LangGraph checkpointer. | Completed |
-| **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | Pending |
+| **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | In Progress |
 | **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Pending |
 
 ### Phase 1: API Scaffolding
@@ -30,9 +30,20 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Requirements:** REQ-012, REQ-020, REQ-023
 
 **Plans:**
-- [ ] 2-01-PLAN.md — Schema Foundation & Migrations (Alembic async, Reports table).
-- [ ] 2-02-PLAN.md — Persistence & Lifecycle (AsyncPostgresSaver, APScheduler TTL).
-- [ ] 2-03-PLAN.md — Transaction Integrity (Propose-Commit pattern, concurrency).
+- [x] 2-01-PLAN.md — Schema Foundation & Migrations (Alembic async, Reports table).
+- [x] 2-02-PLAN.md — Persistence & Lifecycle (AsyncPostgresSaver, APScheduler TTL).
+- [x] 2-03-PLAN.md — Transaction Integrity (Propose-Commit pattern, concurrency).
+
+### Phase 3: Financial APIs
+**Goal:** Implement portfolio analytics and transaction CRUD operations with multi-currency support, fractional shares, and strict consistency.
+**Plans:** 3 plans
+
+**Requirements:** REQ-021, REQ-022, REQ-023
+
+**Plans:**
+- [ ] 3-01-PLAN.md — Refine Financial Schema & Polymorphic Metadata.
+- [ ] 3-02-PLAN.md — Transaction CRUD with Strict Consistency & FX.
+- [ ] 3-03-PLAN.md — Portfolio Analytics & Performance Metrics.
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
