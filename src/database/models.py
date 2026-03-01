@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from src.database.session import Base
@@ -44,5 +44,14 @@ class NewsCache(Base):
     __tablename__ = "news_cache"
 
     url = Column(String, primary_key=True, index=True)
-    summary = Column(String)
+    summary = Column(Text)
     expire_at = Column(DateTime)
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(String, index=True)
+    symbol = Column(String, index=True)
+    content = Column(Text)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
