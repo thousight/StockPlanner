@@ -16,14 +16,14 @@ This milestone focuses on transforming the StockPlanner agent into a robust, clo
 |---|---|---|---|
 | **REQ-010** | **`/chat` Streaming Endpoint**: Implement a POST `/chat` endpoint that supports token-level streaming using Server-Sent Events (SSE). | P0 | Pending |
 | **REQ-011** | **LangGraph Orchestration**: Integrate the existing multi-agent LangGraph workflow into the FastAPI request lifecycle. | P0 | Pending |
-| **REQ-012** | **State Persistence (Checkpointer)**: Use `AsyncPostgresSaver` with Supabase to persist conversation threads and agent states across requests. | P0 | Pending |
+| **REQ-012** | **State Persistence (Checkpointer)**: Use `AsyncPostgresSaver` with Google Cloud SQL to persist conversation threads and agent states across requests. | P0 | Pending |
 | **REQ-013** | **Thread Management**: Support `thread_id` in chat requests to allow multiple concurrent and persistent conversations. | P0 | Pending |
 
 ## 3. Financial Data & CRUD
 
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
-| **REQ-020** | **Supabase Integration**: Transition from local SQLite to a cloud-hosted Supabase (PostgreSQL) instance. | P0 | Pending |
+| **REQ-020** | **Google Cloud SQL Integration**: Transition from local SQLite to a cloud-hosted Google Cloud SQL (PostgreSQL) instance. | P0 | Pending |
 | **REQ-021** | **Portfolio Analytics API**: Implement `GET /investment` to return aggregated portfolio metrics (total value, gain/loss, holdings). | P1 | Pending |
 | **REQ-022** | **Transaction CRUD**: Implement `POST`, `GET`, `PUT`, `DELETE` endpoints for user investment transactions at `/investment/transactions`. | P1 | Pending |
 | **REQ-023** | **SQLAlchemy Models**: Refactor existing models to support PostgreSQL and ensure proper schema mapping for financial data. | P0 | Pending |
@@ -32,7 +32,7 @@ This milestone focuses on transforming the StockPlanner agent into a robust, clo
 
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
-| **REQ-030** | **Environment Configuration**: Update `.env` templates to include Supabase connection strings and API keys. | P0 | Pending |
+| **REQ-030** | **Environment Configuration**: Update `.env` templates to include Google Cloud SQL connection strings and API keys. | P0 | Pending |
 | **REQ-031** | **API Documentation**: Ensure all endpoints are documented with proper request/response schemas in the codebase. | P1 | Pending |
 | **REQ-032** | **Testing Suite**: Update pytest to cover FastAPI endpoints and integration with the cloud database. | P1 | Pending |
 
@@ -40,5 +40,5 @@ This milestone focuses on transforming the StockPlanner agent into a robust, clo
 
 1.  A user can send a chat message via the `/chat` API and receive a streaming response in real-time.
 2.  Chat history and agent state are preserved across requests via `thread_id`.
-3.  Investments and transactions are persisted to Supabase and accessible via REST endpoints.
+3.  Investments and transactions are persisted to Google Cloud SQL and accessible via REST endpoints.
 4.  The application passes all integration tests for the new API-first architecture.

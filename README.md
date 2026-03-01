@@ -75,17 +75,31 @@ Navigate to `http://localhost:8501` in your browser.
 - **Database Caching**: Implemented a `NewsCache` table to store LLM-generated summaries, improving speed and efficiency.
 - **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling.
 
-## TODO
+## Roadmap
 
-- [ ] Converting this entire app into an API server that:
-  - [ ] Uses proper LangGraph Streaming Schema
-  - [ ] Has proper authentication and authorization can be used by multiple clients, using Supabase.
-  - [ ] Allows interrupts
-  - [ ] Uses short-term memory (Redis) to store conversation history.
-  - [ ] Uses long-term memory (PostgreSQL) to store user's portfolio and preferences.
-- [ ] Fix parallel bull and bear agents not streamed
-- [ ] Enhance off-topic to research flow
-- [ ] Break down research subagents into its own folder with files
-- [ ] Add test coverages
-- [ ] Fix AI Analysis flow
-- [ ] Test and find any other issues.
+- Milestone 1: API Server
+  - Convert this app into an API server that has the following APIs:
+    - `/chat`: Chat endpoint that uses LangGraph Streaming Schema
+    - `/investment`: GET endpoints for fetching user's investment portfolio out of user's transactions
+    - `/investment/transactions/{transaction_id}`: CRUD endpoints for investment transactions
+  - Use Google Cloud SQL (PostgreSQL) as the database
+  - Implement proper long-term memory (PostgreSQL) to store user's portfolio
+  - Refactor all documentations
+- Milestone 2: Authentication
+  - Implement proper Google Sign-in, and auth APIs
+  - Implement proper authentication and authorization for each API transaction
+  - Update DB schema to separate user's data
+- Milestone 3: Chat History
+  - Implement proper short-term memory (Redis) to store conversation history
+  - Implement storage for user's conversation history
+  - Implement APIs for fetching user's conversation history
+- Milestone 4: Deep Dive into Agents
+  - Break down research and analyst agents into smaller, more specific and independent agents, so that they handle financial and off-topic queries better
+  - Implement EDGAR research agent for instituition context
+  - Implement social media research agent for social media context
+  - Implement sentiment for each news article
+  - Implement narrative analysis for the market
+  - Break down analyst subagents into its own folder with files, fix any streaming issues
+- Milestone 5: Daily AI Analysis
+  - Implement deep research agent that scrapes and analyzes news articles
+  - Implement daily AI analysis agent that reviews the user's portfolio, deep research news and provides a summary
