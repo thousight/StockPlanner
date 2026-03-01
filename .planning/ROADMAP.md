@@ -19,9 +19,20 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Requirements:** REQ-001, REQ-002, REQ-003, REQ-020, REQ-023, REQ-030
 
 **Plans:**
-- [ ] 1-01-PLAN.md — Reorganize project structure and setup dependencies.
-- [ ] 1-02-PLAN.md — Implement core FastAPI infrastructure and middleware.
-- [ ] 1-03-PLAN.md — Implement async database and health diagnostics.
+- [x] 1-01-PLAN.md — Reorganize project structure and setup dependencies.
+- [x] 1-02-PLAN.md — Implement core FastAPI infrastructure and middleware.
+- [x] 1-03-PLAN.md — Implement async database and health diagnostics.
+
+### Phase 2: Data & Persistence
+**Goal:** Finalize PostgreSQL schemas, implement Alembic migrations, LangGraph checkpointer, and automated data lifecycle.
+**Plans:** 3 plans
+
+**Requirements:** REQ-012, REQ-020, REQ-023
+
+**Plans:**
+- [ ] 2-01-PLAN.md — Schema Foundation & Migrations (Alembic async, Reports table).
+- [ ] 2-02-PLAN.md — Persistence & Lifecycle (AsyncPostgresSaver, APScheduler TTL).
+- [ ] 2-03-PLAN.md — Transaction Integrity (Propose-Commit pattern, concurrency).
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
