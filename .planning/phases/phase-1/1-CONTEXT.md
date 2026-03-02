@@ -11,15 +11,15 @@ This document captures implementation decisions for Phase 1 of the StockPlanner 
   - `src/config.py`: Settings management (Pydantic `BaseSettings`).
   - `src/middleware.py`: Custom Route classes and middleware.
   - `src/database/`: DB connection clients, sessions (`session.py`), and models (`models.py`).
-  - `src/api/controllers/`: Feature-based API routers (renamed from "routes").
-  - `src/api/schemas/`: Pydantic models for request/response validation.
+  - `src/controllers/`: Feature-based API routers (renamed from "routes").
+  - `src/schemas/`: Pydantic models for request/response validation.
   - `src/services/`: Business logic and use-case implementations.
-  - `src/graphs/`: LangGraph orchestration, including `agents/`, `tools/`, and `utils/`.
-- **Organization:**
-  - **Controllers:** Grouped by feature (e.g., `src/api/controllers/investments/`).
+  - `src/graph/`: LangGraph orchestration, including `agents/`, `tools/`, and `utils/`.
+  - **Organization:**
+  - **Controllers:** Grouped by feature (e.g., `src/controllers/investments/`).
   - **Database Structure:** Modular structure for sessions and clients (no `__init__.py`).
   - **Models:** Flat `src/database/models.py` for the initial MVP.
-  - **Graphs:** Core agentic logic separated from the API and service layers.
+  - **Graph:** Core agentic logic separated from the API and service layers.
 
 ## 2. Standardized Response Payloads
 
