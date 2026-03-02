@@ -75,4 +75,4 @@ def create_graph(checkpointer=None):
     workflow.add_edge("summarizer", "commit")
     workflow.add_edge("commit", END)
     
-    return workflow.compile(checkpointer=checkpointer, interrupt_before=["commit"])
+    return workflow.compile(checkpointer=checkpointer)

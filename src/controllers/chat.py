@@ -27,21 +27,15 @@ async def handle_interrupts(graph, config) -> AsyncGenerator[str, None]:
     """
     state = await graph.aget_state(config)
     if state.next:
-        # Check for interrupt_before breakpoints (e.g., 'commit')
-        if "commit" in state.next:
-            interrupt_event = ChatInterruptEvent(
-                content="Safety Check: Final verification required before committing results. Please approve to continue.",
-                data={"node": "commit"}
-            )
-            yield f"data: {interrupt_event.model_dump_json()}\n\n"
-        
         # Check for explicit interrupt() calls inside nodes
         for task in state.tasks:
             if task.interrupts:
                 for inter in task.interrupts:
+                    # Enriched metadata from interrupt payload
+                    interrupt_data = inter.value if isinstance(inter.value, dict) else {"message": str(inter.value)}
                     interrupt_event = ChatInterruptEvent(
-                        content="The agent requires your feedback to proceed.",
-                        data=inter.value if isinstance(inter.value, dict) else {"message": str(inter.value)}
+                        content=interrupt_data.get("message", "The agent requires your feedback to proceed."),
+                        data=interrupt_data
                     )
                     yield f"data: {interrupt_event.model_dump_json()}\n\n"
 
@@ -58,6 +52,8 @@ async def event_generator(
     """
     Async generator that yields SSE-formatted strings from LangGraph events.
     """
+    from src.schemas.chat import ChatUpdateEvent # Locally import to avoid circular dependencies if any
+    
     config = {"configurable": {"thread_id": thread_id}}
     
     logger.info(f"Initiating chat stream for user {user_id}, thread {thread_id} (resume: {resume_input is not None})")
@@ -68,8 +64,9 @@ async def event_generator(
         # 1. Prepare inputs
         if resume_input is not None:
             # When resuming, use Command(resume=...). 
-            # If it's just 'approve', we can pass None to continue from a breakpoint/interrupt smoothly.
-            resume_value = None if resume_input.lower() in ["approve", "continue", "yes", "ok"] else resume_input
+            # If it's just 'approve', we can pass "approve" to the interrupt handler.
+            # Our commit_node handles "reject" specifically, so any other value (like "approve") continues.
+            resume_value = resume_input
             initial_state = Command(resume=resume_value)
         else:
             # Fetch user context for fresh starts
@@ -121,6 +118,20 @@ async def event_generator(
                     if node:
                         status_event = ChatStatusEvent(content=f"Agent {node.capitalize()} working...")
                         yield f"data: {status_event.model_dump_json()}\n\n"
+                
+                # Silent Updates on completion
+                elif kind == "on_chain_end":
+                    node = event["metadata"].get("langgraph_node")
+                    if node == "commit":
+                        output = event["data"]["output"]
+                        if isinstance(output, dict) and output.get("last_report_id"):
+                            update_event = ChatUpdateEvent(
+                                update_type="REPORT_COMMITTED",
+                                thread_id=thread_id,
+                                report_id=output.get("last_report_id"),
+                                data=output
+                            )
+                            yield f"data: {update_event.model_dump_json()}\n\n"
             
             # 3. Check for interrupts after the stream loop completes
             async for interrupt_sse in handle_interrupts(graph, config):

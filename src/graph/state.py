@@ -56,3 +56,4 @@ class AgentState(TypedDict):
     agent_interactions: Annotated[List[AgentInteraction], operator.add]
     output: str
     pending_report: NotRequired[PendingReport]
+    last_report_id: NotRequired[int]

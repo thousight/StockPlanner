@@ -36,6 +36,16 @@ class ChatInterruptEvent(ChatBaseEvent):
     content: str
     data: Optional[Dict[str, Any]] = None
 
+class ChatUpdateEvent(ChatBaseEvent):
+    """
+    Event for "Silent Updates" (e.g. background report commits).
+    """
+    type: Literal["update"] = "update"
+    update_type: str
+    thread_id: str
+    report_id: Optional[int] = None
+    data: Optional[Dict[str, Any]] = None
+
 class ChatErrorEvent(ChatBaseEvent):
     """
     Event indicating an error during processing.
@@ -49,4 +59,4 @@ class ChatResumeRequest(BaseModel):
     """
     user_response: str = Field(..., description="The user's response to the interrupt/checkpoint")
 
-ChatSSEEvent = Union[ChatTokenEvent, ChatStatusEvent, ChatInterruptEvent, ChatErrorEvent]
+ChatSSEEvent = Union[ChatTokenEvent, ChatStatusEvent, ChatInterruptEvent, ChatUpdateEvent, ChatErrorEvent]
