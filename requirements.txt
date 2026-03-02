@@ -30,6 +30,7 @@ langchain
 pandas
 beautifulsoup4
 readability-lxml
+textstat
 
 # Lifecycle & Tasks
 apscheduler>=3.10.0
