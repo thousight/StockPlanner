@@ -72,12 +72,15 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 ### Phase 6: Test Coverage
 **Goal:** Implement a comprehensive testing suite covering core financial logic, API endpoints, and agentic workflows.
-**Plans:** [To be planned]
+**Plans:** 4 plans
 
 **Requirements:** REQ-032
 
 **Plans:**
-- [ ] 6-01-PLAN.md — [To be planned]
+- [ ] 6-01-PLAN.md — Foundation & Financial Logic.
+- [ ] 6-02-PLAN.md — Mocking & Database Layer.
+- [ ] 6-03-PLAN.md — API CRUD & Integration.
+- [ ] 6-04-PLAN.md — SSE Streaming & Agent Resilience.
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
