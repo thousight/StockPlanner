@@ -1,88 +1,84 @@
 # Testing Patterns
 
-**Analysis Date:** 2025-02-14
+**Analysis Date:** 2024-05-22
 
 ## Test Framework
 
 **Runner:**
-- `pytest`
-- Config: `pytest.ini`
+- `pytest` (configured in `pytest.ini`)
 
 **Assertion Library:**
-- Native Python `assert` statements.
+- Standard Python `assert` statements.
 
 **Run Commands:**
 ```bash
 pytest                 # Run all tests
-pytest -v              # Run tests with verbose output
-pytest tests/test_crud.py  # Run specific test file
+pytest -v              # Run in verbose mode
+pytest --tb=short      # Show short traceback
 ```
 
 ## Test File Organization
 
 **Location:**
-- Separate `tests/` directory at the project root.
+- Separate `tests/` directory at project root.
 
 **Naming:**
-- Files: `test_*.py`. Example: `tests/test_research_node.py`
-- Classes: `Test*`. Example: `class TestStockOperations`
-- Functions: `test_*`. Example: `def test_add_stock_creates_new_stock`
+- Files: `test_*.py` (e.g., `tests/test_crud.py`, `tests/test_analyst_agent.py`)
+- Functions: `test_snake_case` (e.g., `test_add_buy_transaction`)
+- Classes: `TestPascalCase` (e.g., `TestAnalystAgent`)
 
 **Structure:**
 ```
 tests/
-├── test_analyst_node.py
+├── test_analyst_agent.py
 ├── test_crud.py
-├── test_research_node.py
-└── test_research_utils.py
+├── test_research_tools.py
+└── test_supervisor_agent.py
 ```
 
 ## Test Structure
 
 **Suite Organization:**
 ```python
-class TestResearchNode:
-    """Tests for the research_node function."""
+class TestFeatureName:
+    """Tests for a specific feature."""
     
-    @patch('src.agents.nodes.research.node.get_macro_economic_news')
-    @patch('src.agents.nodes.research.node.resolve_symbol')
-    def test_research_node_returns_research_data(self, mock_resolve, mock_macro):
+    def test_scenario_one(self, fixture):
+        """Docstring describing the test case."""
         # Arrange
-        mock_macro.return_value = [...]
-        state = {"portfolio": [...]}
-        
         # Act
-        result = research_node(state)
-        
         # Assert
-        assert "research_data" in result
+        assert something == expected
 ```
 
 **Patterns:**
-- **Setup pattern:** Using `pytest.fixture` for shared resources like database sessions.
-- **Teardown pattern:** `yield` in fixtures handles cleanup (e.g., closing the session).
-- **Assertion pattern:** Direct equality or containment assertions.
+- **Fixtures:** `pytest.fixture` used for setup (e.g., `db_session` for in-memory DB).
+- **Assertions:** Explicit checks with `assert`.
 
 ## Mocking
 
-**Framework:** `unittest.mock`
+**Framework:** `unittest.mock` (`patch`, `MagicMock`)
 
 **Patterns:**
 ```python
-@patch('path.to.function')
-def test_something(self, mock_func):
-    mock_func.return_value = "mocked value"
-    # test logic
+@patch('src.agents.analyst.agent.create_debate_graph')
+def test_analyst_agent_returns_report(self, mock_create_debate_graph):
+    mock_graph = MagicMock()
+    mock_graph.invoke.return_value = { ... }
+    mock_create_debate_graph.return_value = mock_graph
+    
+    # Run test and verify
+    mock_graph.invoke.assert_called_once_with(...)
 ```
 
 **What to Mock:**
-- External API calls (yfinance, DuckDuckGo, LLM calls).
-- Database sessions (though often tested with in-memory SQLite).
-- Environment-dependent utilities.
+- External API calls (e.g., `ChatOpenAI`).
+- Subgraph creation and invocation (e.g., `create_debate_graph`).
+- Environment variables (`patch.dict('os.environ', ...)`).
 
 **What NOT to Mock:**
-- Pure logic functions that don't have side effects.
-- Data models and simple CRUD operations (tested with in-memory DB).
+- Database operations (use in-memory SQLite instead via `db_session` fixture).
+- Simple utility functions.
 
 ## Fixtures and Factories
 
@@ -90,7 +86,6 @@ def test_something(self, mock_func):
 ```python
 @pytest.fixture
 def db_session():
-    """Create an in-memory SQLite database for testing."""
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -100,43 +95,38 @@ def db_session():
 ```
 
 **Location:**
-- Fixtures are defined within the test files where they are used. No global `conftest.py` found yet.
+- Defined within individual test files (e.g., `tests/test_crud.py`).
 
 ## Coverage
 
-**Requirements:** None enforced in config.
+**Requirements:** None explicitly enforced in the codebase configuration.
 
 **View Coverage:**
 ```bash
-# (Assuming pytest-cov is installed)
-pytest --cov=src
+# Assuming pytest-cov is installed
+pytest --cov=src tests/
 ```
 
 ## Test Types
 
 **Unit Tests:**
-- Focus on individual functions in `crud.py` and `utils.py`.
-- Mock external dependencies rigorously.
+- CRUD operations in `tests/test_crud.py`.
+- Individual agent logic in `tests/test_analyst_agent.py` and `tests/test_supervisor_agent.py`.
 
 **Integration Tests:**
-- Tests for nodes (`analyst_node`, `research_node`) that involve multiple components, though still heavily mocked.
+- Testing agent routing and high-level plan generation (e.g., `test_supervisor_routes_using_llm`).
 
 **E2E Tests:**
-- Not explicitly detected as part of the automated suite. Manual verification via `test_market_manual.py`.
+- Not explicitly detected in the `tests/` directory (likely manual testing of the Streamlit app).
 
 ## Common Patterns
 
 **Async Testing:**
-- No explicit `pytest-asyncio` patterns detected. Threading is handled implicitly in the code being tested.
+- Not observed (logic appears primarily synchronous).
 
 **Error Testing:**
-```python
-def test_handles_exception(self, mock_ticker):
-    mock_ticker.side_effect = Exception("API Error")
-    result = resolve_symbol("INVALID")
-    assert result["current_price"] == 0
-```
+- Testing exception handling or edge cases (e.g., `test_supervisor_loop_detection`).
 
 ---
 
-*Testing analysis: 2025-02-14*
+*Testing analysis: 2024-05-22*

@@ -1,38 +1,44 @@
-# Requirements
+# Requirements - Milestone 1: API Server & Cloud Sync
 
-## Overview
-A personal financial assistant designed for beginners (elderly, young adults) to improve financial health through education and simplified analysis. The system uses a multi-agent architecture to provide data, news, and planning advice in an accessible "Explain Like I'm 5" format.
+This milestone focuses on transforming the StockPlanner agent into a robust, cloud-synced RESTful API backend, ready to support a Flutter mobile frontend.
 
-## User Requirements
-- **Beginner-Friendly:** Users must be able to interact via natural language without understanding financial jargon.
-- **Trust & Safety:** Users must feel safe; the system must clearly distinguish between facts and general educational guidance (no "hot stock picks").
-- **Accessibility:** Text should be large, clear, and easy to read. Complex concepts should be explained with metaphors.
-- **Portfolio Tracking:** Users should be able to input their holdings to get relevant news and performance updates.
+## 1. API Infrastructure
 
-## Functional Requirements
-1.  **Core Agent System (LangGraph):**
-    - **Supervisor Agent:** Routes user queries to the appropriate specialized agent.
-    - **Market Data Agent:** Fetches real-time/delayed stock prices and basic fundamentals (Market Cap, P/E) using Finnhub/yfinance.
-    - **News Agent:** Fetches and summarizes recent news from diverse sources including traditional news (Finnhub/EODHD) and social media (X, Reddit) to capture sentiment and narratives.
-    - **Analyst Agent:** Performs deep-dive analysis on specific stocks. It synthesizes macro-economic trends, fundamentals, and news to build and cache "Stock Profiles". It validates news (checking for fake news), assesses impact duration (short vs. long term), and evaluates narrative consistency (does this ruin the company's story?).
-    - **Planner Agent:** Provides general financial planning principles based on user age and risk tolerance.
-    - **Explanation Agent:** Rewrites technical outputs into simple, plain English (ELI5).
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| **REQ-001** | **FastAPI Framework Implementation**: Implement a modern, asynchronous FastAPI server to replace the Streamlit interface. | P0 | Pending |
+| **REQ-002** | **Asynchronous Architecture**: All API endpoints and agent nodes must be non-blocking (`async`/`await`) to support high-concurrency streaming. | P0 | Pending |
+| **REQ-003** | **Health & Diagnostics**: Implement `/health` and `/docs` (Swagger) endpoints for monitoring and API discovery. | P1 | Pending |
 
-2.  **Data Management:**
-    - **Stock Data:** Integration with Finnhub (primary) and yfinance (history).
-    - **News/Social Data:** Integration with EODHD (financial news), X (Twitter), and Reddit APIs for sentiment analysis.
-    - **Stock Profiles:** Caching mechanism (JSON/DB) to store generated stock profiles (Narrative, Fundamentals, Risk Factors) to avoid re-analyzing unchanged data.
-    - **User Data:** Local SQLite database to store user portfolio (Symbol, Quantity, Avg Cost) and risk profile.
+## 2. Agentic Chat & Streaming
 
-3.  **User Interface:**
-    - **Chat Interface:** Primary mode of interaction.
-    - **Dashboard:** Simple view of portfolio value and "Risk Weather" (volatility indicator).
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| **REQ-010** | **`/chat` Streaming Endpoint**: Implement a POST `/chat` endpoint that supports token-level streaming using Server-Sent Events (SSE). | P0 | Pending |
+| **REQ-011** | **LangGraph Orchestration**: Integrate the existing multi-agent LangGraph workflow into the FastAPI request lifecycle. | P0 | Pending |
+| **REQ-012** | **State Persistence (Checkpointer)**: Use `AsyncPostgresSaver` with Railway to persist conversation threads and agent states across requests. | P0 | Pending |
+| **REQ-013** | **Thread Management**: Support `thread_id` in chat requests to allow multiple concurrent and persistent conversations. | P0 | Pending |
 
-## Non-Functional Requirements
-- **Compliance:** System must include hardcoded disclaimers. It must NOT execute trades or offer personalized investment advice (RIA compliance).
-- **Latency:** Chat responses should be reasonable (streaming tokens preferred).
-- **Cost:** Use free tiers of APIs where possible (Finnhub Free Tier).
+## 3. Financial Data & CRUD
 
-## Constraints
-- **Local Execution:** MVP runs locally (Streamlit/Python).
-- **No Real Money:** No integration with brokerages for trading.
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| **REQ-020** | **Railway Integration**: Transition from local SQLite to a cloud-hosted Railway (PostgreSQL) instance. | P0 | Pending |
+| **REQ-021** | **Portfolio Analytics API**: Implement `GET /investment` to return aggregated portfolio metrics (total value, gain/loss, holdings). | P1 | Pending |
+| **REQ-022** | **Transaction CRUD**: Implement `POST`, `GET`, `PUT`, `DELETE` endpoints for user investment transactions at `/investment/transactions`. | P1 | Pending |
+| **REQ-023** | **SQLAlchemy Models**: Refactor existing models to support PostgreSQL and ensure proper schema mapping for financial data. | P0 | Pending |
+
+## 4. Documentation & Maintenance
+
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| **REQ-030** | **Environment Configuration**: Update `.env` templates to include Railway connection strings and API keys. | P0 | Pending |
+| **REQ-031** | **API Documentation**: Ensure all endpoints are documented with proper request/response schemas in the codebase. | P1 | Pending |
+| **REQ-032** | **Testing Suite**: Update pytest to cover FastAPI endpoints and integration with the cloud database. | P1 | Pending |
+
+## Success Criteria
+
+1.  A user can send a chat message via the `/chat` API and receive a streaming response in real-time.
+2.  Chat history and agent state are preserved across requests via `thread_id`.
+3.  Investments and transactions are persisted to Railway and accessible via REST endpoints.
+4.  The application passes all integration tests for the new API-first architecture.

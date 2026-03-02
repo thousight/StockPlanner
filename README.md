@@ -5,11 +5,11 @@ An AI-powered stock analysis and portfolio management tool. This application use
 ## Features
 
 - **Portfolio Management**: Track your stock holdings, average cost, and performance.
-- **AI Research Agent**: 
+- **AI Research Agent**:
   - Fetches real-time stock data and company info using `yfinance`.
   - Aggregates macro-economic news from multiple sources.
   - Scrapes and summarizes news articles using AI (`gpt-4o`).
-- **AI Analyst Agent**: 
+- **AI Analyst Agent**:
   - Analyzes portfolio performance and valuation.
   - Reviews summarized news for sentiment and impact.
   - Generates comprehensive "Buy", "Sell", or "Hold" reports.
@@ -19,6 +19,7 @@ An AI-powered stock analysis and portfolio management tool. This application use
 ## Architecture
 
 The system is built on a graph-based agent workflow:
+
 1. **Research Node**: Gathers market data and news.
 2. **Analyst Node**: Synthesizes data into a final report.
 3. **Cache Maintenance Node**: Asynchronously cleans up expired news summaries after analysis.
@@ -26,18 +27,21 @@ The system is built on a graph-based agent workflow:
 ## Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd StockPlanner
    ```
 
 2. **Create and activate a virtual environment:**
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    ```
 
 3. **Install dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -52,6 +56,7 @@ The system is built on a graph-based agent workflow:
 ## Usage
 
 **Run the Streamlit App:**
+
 ```bash
 streamlit run src/web/app.py
 ```
@@ -68,9 +73,33 @@ Navigate to `http://localhost:8501` in your browser.
 ## Recent Updates
 
 - **Database Caching**: Implemented a `NewsCache` table to store LLM-generated summaries, improving speed and efficiency.
-- **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling. 
+- **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling.
 
-## TODO
+## Roadmap
 
-- [ ] Converting the workflow and DB operations into serverless APIs on vercel and using them in the streamlit app
-- [ ] Pass in User-Agent string from browser as context to Research Agent, so that 401 and 403 errors from news sites are reduced
+- Milestone 1: API Server
+  - Convert this app into an API server that has the following APIs:
+    - `/chat`: Chat endpoint that uses LangGraph Streaming Schema
+    - `/investment`: GET endpoints for fetching user's investment portfolio out of user's transactions
+    - `/investment/transactions/{transaction_id}`: CRUD endpoints for investment transactions
+  - Use Railway PostgreSQL as the cloud database
+  - Implement proper long-term memory (PostgreSQL) to store user's portfolio
+  - Refactor all documentations
+- Milestone 2: Authentication
+  - Implement proper Google Sign-in, and auth APIs
+  - Implement proper authentication and authorization for each API transaction
+  - Update DB schema to separate user's data
+- Milestone 3: Chat History
+  - Implement proper short-term memory (Redis) to store conversation history
+  - Implement storage for user's conversation history
+  - Implement APIs for fetching user's conversation history
+- Milestone 4: Deep Dive into Agents
+  - Break down research and analyst agents into smaller, more specific and independent agents, so that they handle financial and off-topic queries better
+  - Implement EDGAR research agent for instituition context
+  - Implement social media research agent for social media context
+  - Implement sentiment for each news article
+  - Implement narrative analysis for the market
+  - Break down analyst subagents into its own folder with files, fix any streaming issues
+- Milestone 5: Daily AI Analysis
+  - Implement deep research agent that scrapes and analyzes news articles
+  - Implement daily AI analysis agent that reviews the user's portfolio, deep research news and provides a summary

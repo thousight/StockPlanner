@@ -1,23 +1,32 @@
-# Financial Health Assistant
+# Project: StockPlanner
 
-## Overview
-A multi-agent application built with LangChain/LangGraph designed to help financial planning beginners (elderly and young adults) start their investment journey and achieve better financial health.
+## Vision
 
-## Target Audience
-- **Elderly:** Users who may have fear or hesitation regarding investment.
-- **Young Adults:** Users starting their investment journey for the first time.
+A comprehensive financial planner application that collects user financial information and uses a multi-agent LangGraph orchestration to provide personalized financial suggestions. This repository serves as the RESTful API backend for a Flutter-based mobile UI.
 
-## Core Features
-1.  **Portfolio Management:** Allow users to input their stock holdings (shares, purchase price).
-2.  **Investment Suggestions:** Provide Buy/Sell/Hold recommendations based on:
-    - Stock Performance
-    - News (Company specific)
-    - Fundamentals
-    - Macro-economic trends
-3.  **Financial Planning:** Personalized advice based on age and risk tolerance.
-4.  **Education & Wellbeing:** Tips for financial wellbeing and healthy financial habits.
+## Tech Stack
 
-## Technology Stack
-- **AI/Agents:** LangChain, LangGraph
-- **Data:** yfinance (Stocks), News APIs, Macro-economic sources
-- **UI:** (To be determined, likely Streamlit or simple web interface)
+- **Orchestration**: LangGraph
+- **LLM Integration**: LangChain, OpenAI (GPT-4o)
+- **API Framework**: FastAPI (Targeted for Milestone 1)
+- **Data Layer**: Railway (PostgreSQL)
+- **Market Data**: yfinance, DuckDuckGo Search
+- **Memory**: PostgreSQL (Long-term), Redis (Short-term, targeted for Milestone 3)
+- **Verification**: Pytest
+
+## Core Principles
+
+- **API-First**: Headless RESTful backend designed for high-performance mobile clients.
+- **Cloud-Synced**: Uses Railway for cross-device data persistence.
+- **State-Driven**: Entire workflow and conversation history are managed by structured LangGraph states.
+
+## Key Decisions
+
+- **[2026-02-28] Multi-Agent Architecture**: Moved from single-agent to a supervisor-led multi-agent mesh for better specialization.
+- **[2026-02-28] Financial Planner Pivot**: Expanded scope from stock analysis to general financial planning with a Flutter mobile frontend and Railway cloud integration.
+
+## Constraints
+
+- Dependent on OpenAI API for core reasoning.
+- Market data via yfinance (limited to what Yahoo provides).
+- Railway connection and authentication requirements for mobile clients.

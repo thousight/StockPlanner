@@ -4,100 +4,106 @@
 
 ## Pattern Overview
 
-**Overall:** Layered Agentic Architecture
+**Overall:** Multi-agent Orchestration using LangGraph.
 
 **Key Characteristics:**
-- **Stateful Agent Workflow:** Uses LangGraph to manage a stateful, directed acyclic graph (DAG) of specialized nodes.
-- **Service-Oriented Nodes:** Each node in the graph has a single responsibility (research, analysis, maintenance).
-- **Relational Persistence:** Uses SQLAlchemy for structured data storage and history tracking.
+- **State-Driven Workflow:** Uses a shared `AgentState` object to pass data between nodes in a directed graph.
+- **Supervisor Orchestration:** A central `supervisor` agent determines the routing and delegates tasks to specialized agents.
+- **Mesh Routing:** Agents can route directly to other agents or back to the supervisor, allowing for complex multi-turn reasoning.
+- **Structured Agent Responses:** Agents return structured interactions that include their findings and the next destination in the graph.
 
 ## Layers
 
-**Presentation Layer:**
-- Purpose: Provides a web-based UI for portfolio management and triggering analysis.
-- Location: `src/web/`
-- Contains: Streamlit application logic.
-- Depends on: `src/database/`, `src/agents/`
-- Used by: End user
+**UI/Application Layer:**
+- Purpose: Provides a web interface for portfolio management and AI interaction.
+- Location: `src/app.py`
+- Contains: Streamlit components, state management for the UI, and the entry point for triggering the agent graph.
+- Depends on: `src/graph.py`, `src/database/`
 
 **Orchestration Layer:**
-- Purpose: Defines the execution flow of the AI agents.
-- Location: `src/agents/graph.py`
-- Contains: LangGraph workflow definition and state management.
-- Depends on: `src/agents/state.py`, `src/agents/nodes/`
-- Used by: `src/web/app.py`
+- Purpose: Defines the flow of control and data between agents.
+- Location: `src/graph.py`, `src/state.py`
+- Contains: LangGraph `StateGraph` definition, `AgentState` schema, and routing logic.
+- Depends on: `src/agents/`
 
-**Service/Node Layer:**
-- Purpose: Implements the specific logic for each step in the agent workflow.
-- Location: `src/agents/nodes/`
-- Contains: Research logic (data fetching), Analysis logic (LLM reasoning), and maintenance tasks.
-- Depends on: `src/agents/state.py`, `langchain`, `src/database/`
-- Used by: `src/agents/graph.py`
+**Agent Layer:**
+- Purpose: Contains specialized logic for different tasks (research, analysis, summarization).
+- Location: `src/agents/`
+- Contains: Agent implementations, prompts, and local state management for structured outputs.
+- Depends on: `src/tools/`, `src/utils/`
 
-**Data Access Layer:**
-- Purpose: Abstracts database interactions.
+**Tool Layer:**
+- Purpose: Provides external data access and processing capabilities.
+- Location: `src/tools/`
+- Contains: News scrapers, financial data fetchers, and search tools.
+- Depends on: External APIs (OpenAI, NewsAPI, etc.), `src/utils/`
+
+**Data Layer:**
+- Purpose: Handles persistence of portfolio data and caching.
 - Location: `src/database/`
-- Contains: SQLAlchemy models, session management, and CRUD operations.
-- Depends on: `sqlalchemy`
-- Used by: `src/web/app.py`, `src/agents/nodes/`
+- Contains: SQLAlchemy models, CRUD operations, and database initialization.
+- Depends on: `src/utils/`
 
 ## Data Flow
 
-**Portfolio Analysis Flow:**
+**Standard Analysis Flow:**
 
-1. **Trigger:** User clicks "Run Portfolio Analysis" in the Streamlit UI (`src/web/app.py`).
-2. **State Initialization:** The UI fetches the current portfolio from the DB via `src/database/crud.py` and initializes the `AgentState`.
-3. **Graph Execution:** The UI invokes the compiled LangGraph (`src/agents/graph.py`).
-4. **Research Phase:** The `research_node` (`src/agents/nodes/research/node.py`) fetches market news and stock data in parallel using `ThreadPoolExecutor`.
-5. **Analysis Phase:** The `analyst_node` (`src/agents/nodes/analyst/node.py`) formats the gathered data and uses `ChatOpenAI` (GPT-4o) to generate an investment report.
-6. **Maintenance Phase:** The `cache_maintenance_node` (`src/agents/nodes/nodes.py`) performs cleanup tasks like removing expired news entries.
-7. **Result Delivery:** The final state is returned to the UI, which displays the generated `analysis_report`.
+1. **User Input:** User triggers analysis or asks a question via `src/app.py`.
+2. **State Initialization:** `run_agent_graph` creates an initial `AgentState` with user holdings and input.
+3. **Supervisor Node:** The graph starts at the `supervisor` node (`src/agents/supervisor/agent.py`), which analyzes the request and routes to a specialized agent (e.g., `research`).
+4. **Specialized Agent Execution:** The selected agent executes its logic, often calling tools from `src/tools/`.
+5. **Mesh Routing:** The agent determines the next step (e.g., routing to `analyst` or back to `supervisor`).
+6. **Summarization:** When the task is complete, the flow moves to the `summarizer` agent (`src/agents/summarizer/agent.py`) to produce the final output.
+7. **UI Update:** `src/app.py` streams the updates from the graph and displays the final report to the user.
 
 **State Management:**
-- Handled by `AgentState` (`src/agents/state.py`), a `TypedDict` that stores messages, portfolio data, research results, and the final analysis report.
+- Handled by `src/state.py`.
+- `AgentState` uses `Annotated[List[AgentInteraction], operator.add]` to maintain a history of all agent activities.
+- `session_context` tracks chat history and metadata.
 
 ## Key Abstractions
 
 **AgentState:**
-- Purpose: The shared memory/context passed between nodes in the graph.
-- Examples: `src/agents/state.py`
-- Pattern: TypedDict with LangGraph Annotations.
+- Purpose: The shared memory of the entire graph.
+- Examples: `src/state.py`
+- Pattern: TypedDict with LangGraph annotations.
 
-**Workflow Graph:**
-- Purpose: Defines the sequence and logic of agent operations.
-- Examples: `src/agents/graph.py`
-- Pattern: LangGraph StateGraph.
+**AgentInteraction:**
+- Purpose: Represents a single unit of work performed by an agent.
+- Examples: `src/state.py`
+- Pattern: TypedDict for structured logging and routing.
 
-**SQLAlchemy Models:**
-- Purpose: Define the schema for stocks, transactions, and snapshots.
-- Examples: `src/database/models.py`
-- Pattern: Declarative Base.
+**BaseAgentResponse:**
+- Purpose: Base class for structured LLM outputs to ensure routing information is always present.
+- Examples: `src/agents/base.py`
+- Pattern: Pydantic Model.
 
 ## Entry Points
 
 **Streamlit Web App:**
-- Location: `src/web/app.py`
-- Triggers: Manual user interaction.
-- Responsibilities: UI rendering, session state management, DB connection, agent invocation.
+- Location: `src/app.py`
+- Triggers: User interaction via the browser.
+- Responsibilities: Initializing the database, managing the UI state, and invoking the agent graph.
 
-**Graph Creator:**
-- Location: `src/agents/graph.py`
-- Triggers: Called by the UI to instantiate the agent system.
-- Responsibilities: Compiling the LangGraph workflow.
+**LangGraph Workflow:**
+- Location: `src/graph.py`
+- Triggers: Called by `run_agent_graph` in `src/app.py`.
+- Responsibilities: Compiling and executing the agent state machine.
 
 ## Error Handling
 
-**Strategy:** Localized try-except blocks with fallback responses.
+**Strategy:** Resilience through status updates and fallback routing.
 
 **Patterns:**
-- **Node-level Try-Except:** Nodes like `analyst_node` catch LLM exceptions and return an error message in the state rather than crashing the graph.
-- **DB Session Management:** `get_db` generator in `src/database/database.py` ensures sessions are closed even if errors occur.
+- **Try-Except Blocks:** Used around graph execution in `src/app.py` to capture and display errors in the UI.
+- **Default Routing:** The `create_mesh_router` in `src/graph.py` includes fallbacks to the `summarizer` if an invalid `next_agent` is specified.
+- **Tool Level Resilience:** Individual tools in `src/agents/research/agent.py` are executed in a thread pool with error trapping to prevent a single tool failure from crashing the agent.
 
 ## Cross-Cutting Concerns
 
-**Logging:** Standard output prints for debugging (e.g., in `analyst_node`).
-**Validation:** Basic type checking via `TypedDict` in `AgentState`.
-**Authentication:** API Key management via environment variables and Streamlit sidebar input.
+**Logging:** Handled by a `@with_logging` decorator in `src/agents/utils.py`.
+**Validation:** Pydantic is used for structured LLM outputs and model definitions.
+**Authentication:** Environment variables loaded via `dotenv`, managed in `src/app.py`.
 
 ---
 
