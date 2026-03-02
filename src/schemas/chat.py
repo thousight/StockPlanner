@@ -43,4 +43,10 @@ class ChatErrorEvent(ChatBaseEvent):
     type: Literal["error"] = "error"
     content: str
 
+class ChatResumeRequest(BaseModel):
+    """
+    Schema for resuming an interrupted chat.
+    """
+    user_response: str = Field(..., description="The user's response to the interrupt/checkpoint")
+
 ChatSSEEvent = Union[ChatTokenEvent, ChatStatusEvent, ChatInterruptEvent, ChatErrorEvent]

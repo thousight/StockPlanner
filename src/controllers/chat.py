@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from src.database.session import get_db
 from src.database.models import ChatThread
-from src.schemas.chat import ChatRequest, ChatTokenEvent, ChatStatusEvent, ChatErrorEvent
+from src.schemas.chat import ChatRequest, ChatTokenEvent, ChatStatusEvent, ChatErrorEvent, ChatInterruptEvent, ChatResumeRequest
 from src.graph.graph import create_graph
 from src.graph.persistence import get_checkpointer
 from src.services.context_injection import get_user_context_data
@@ -21,47 +21,82 @@ from src.services.titler import update_thread_title_background
 router = APIRouter(tags=["Chat"])
 logger = logging.getLogger(__name__)
 
+async def handle_interrupts(graph, config) -> AsyncGenerator[str, None]:
+    """
+    Checks the current graph state for interrupts and yields corresponding SSE events.
+    """
+    state = await graph.get_state(config)
+    if state.next:
+        # Check for interrupt_before breakpoints (e.g., 'commit')
+        if "commit" in state.next:
+            interrupt_event = ChatInterruptEvent(
+                content="Safety Check: Final verification required before committing results. Please approve to continue.",
+                data={"node": "commit"}
+            )
+            yield f"data: {interrupt_event.model_dump_json()}
+
+"
+        
+        # Check for explicit interrupt() calls inside nodes
+        for task in state.tasks:
+            if task.interrupts:
+                for inter in task.interrupts:
+                    interrupt_event = ChatInterruptEvent(
+                        content="The agent requires your feedback to proceed.",
+                        data=inter.value if isinstance(inter.value, dict) else {"message": str(inter.value)}
+                    )
+                    yield f"data: {interrupt_event.model_dump_json()}
+
+"
+
 async def event_generator(
     request: Request, 
     user_id: str, 
-    payload: ChatRequest, 
+    payload_message: Optional[str], 
     db: AsyncSession,
     background_tasks: BackgroundTasks,
     thread_id: str,
-    is_new_thread: bool = False
+    is_new_thread: bool = False,
+    resume_input: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """
     Async generator that yields SSE-formatted strings from LangGraph events.
     """
+    from langgraph.types import Command
     config = {"configurable": {"thread_id": thread_id}}
     
-    logger.info(f"Initiating chat stream for user {user_id}, thread {thread_id}")
+    logger.info(f"Initiating chat stream for user {user_id}, thread {thread_id} (resume: {resume_input is not None})")
     
     full_response_content = ""
     
     try:
-        # 1. Fetch user context
-        user_context_data = await get_user_context_data(db, user_id)
+        # 1. Prepare inputs
+        if resume_input is not None:
+            # When resuming, use Command(resume=...). 
+            # If it's just 'approve', we can pass None to continue from a breakpoint/interrupt smoothly.
+            resume_value = None if resume_input.lower() in ["approve", "continue", "yes", "ok"] else resume_input
+            initial_state = Command(resume=resume_value)
+        else:
+            # Fetch user context for fresh starts
+            user_context_data = await get_user_context_data(db, user_id)
+            initial_state = {
+                "session_context": {
+                    "messages": [("user", payload_message)],
+                    "current_datetime": datetime.now(timezone.utc).isoformat(),
+                    "user_agent": "StockPlanner-FastAPI",
+                    "revision_count": 0
+                },
+                "user_context": {
+                    "user_id": user_id,
+                    "portfolio_summary": user_context_data.get("portfolio_summary", "N/A"),
+                    "portfolio": []
+                },
+                "user_input": payload_message,
+                "agent_interactions": [],
+                "output": ""
+            }
         
-        # 2. Prepare initial state
-        initial_state = {
-            "session_context": {
-                "messages": [("user", payload.message)],
-                "current_datetime": datetime.now(timezone.utc).isoformat(),
-                "user_agent": "StockPlanner-FastAPI",
-                "revision_count": 0
-            },
-            "user_context": {
-                "user_id": user_id,
-                "portfolio_summary": user_context_data.get("portfolio_summary", "N/A"),
-                "portfolio": []
-            },
-            "user_input": payload.message,
-            "agent_interactions": [],
-            "output": ""
-        }
-        
-        # 3. Stream graph events
+        # 2. Stream graph events
         async with get_checkpointer() as checkpointer:
             graph = create_graph(checkpointer=checkpointer)
             
@@ -95,19 +130,22 @@ async def event_generator(
                         yield f"data: {status_event.model_dump_json()}
 
 "
+            
+            # 3. Check for interrupts after the stream loop completes
+            async for interrupt_sse in handle_interrupts(graph, config):
+                yield interrupt_sse
 
         # 4. Trigger background titling if it's the first exchange
-        if is_new_thread and full_response_content:
+        if is_new_thread and full_response_content and payload_message:
             background_tasks.add_task(
                 update_thread_title_background,
                 thread_id,
-                payload.message,
+                payload_message,
                 full_response_content
             )
 
     except asyncio.CancelledError:
         logger.info(f"Chat stream cancelled for thread {thread_id}")
-        # Note: Do not yield here as the connection is likely already closed
         raise
     except Exception as e:
         logger.error(f"Error in chat stream: {e}", exc_info=True)
@@ -146,6 +184,49 @@ async def chat(
         await db.commit()
     
     return StreamingResponse(
-        event_generator(request, x_user_id, payload, db, background_tasks, thread_id, is_new_thread),
+        event_generator(
+            request, 
+            x_user_id, 
+            payload.message, 
+            db, 
+            background_tasks, 
+            thread_id, 
+            is_new_thread
+        ),
+        media_type="text/event-stream"
+    )
+
+@router.post("/chat/{thread_id}/resume")
+async def resume_chat(
+    request: Request,
+    thread_id: str,
+    payload: ChatResumeRequest,
+    background_tasks: BackgroundTasks,
+    x_user_id: str = Header(..., alias="X-User-ID"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Continues a suspended graph execution after a safety interrupt.
+    Accepts user approval or feedback to resume.
+    """
+    # Ensure thread exists
+    result = await db.execute(select(ChatThread).where(ChatThread.id == thread_id))
+    thread = result.scalar_one_or_none()
+    
+    if not thread:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Thread not found")
+        
+    return StreamingResponse(
+        event_generator(
+            request,
+            x_user_id,
+            None, # No new message
+            db,
+            background_tasks,
+            thread_id,
+            is_new_thread=False,
+            resume_input=payload.user_response
+        ),
         media_type="text/event-stream"
     )
