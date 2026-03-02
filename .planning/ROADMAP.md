@@ -10,17 +10,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 | **Phase 1** | **API Scaffolding** | Setup FastAPI, health checks, and async architecture. | Completed |
 | **Phase 2** | **Data & Persistence** | Railway integration, PostgreSQL schemas, and LangGraph checkpointer. | Completed |
 | **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | Completed |
-### Phase 4: Agentic Chat Streaming
-**Goal:** Streaming SSE `/chat` endpoint and thread management.
-**Plans:** 4 plans
-
-**Requirements:** REQ-010, REQ-011, REQ-013
-
-**Plans:**
-- [ ] 4-01-PLAN.md — Persistence & Graph Orchestration (Context injection, thread state).
-- [ ] 4-02-PLAN.md — Streaming Chat Core (FastAPI StreamingResponse, astream_events).
-- [ ] 4-03-PLAN.md — Thread Lifecycle & History (Auto-titling, paginated history).
-- [ ] 4-04-PLAN.md — Human-in-the-Loop & Interrupts (Breakpoints, user confirmation).
+| **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Completed |
 
 ### Phase 1: API Scaffolding
 **Goal:** Setup FastAPI, health checks, and async architecture for a Railway-hosted PostgreSQL backend.
@@ -62,10 +52,10 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Requirements:** REQ-010, REQ-011, REQ-012, REQ-013
 
 **Plans:**
-- [ ] 4-01-PLAN.md — Persistence & Graph Orchestration (AsyncPostgresSaver, Context Injection).
-- [ ] 4-02-PLAN.md — Streaming Chat Core (FastAPI /chat, SSE Generator, Disconnect Handling).
-- [ ] 4-03-PLAN.md — Thread Lifecycle & History (Auto-Titling, Paginated History API).
-- [ ] 4-04-PLAN.md — Human-in-the-Loop & Interrupts (Safety Breakpoints, Resume Endpoint).
+- [x] 4-01-PLAN.md — Persistence & Graph Orchestration (AsyncPostgresSaver, Context Injection).
+- [x] 4-02-PLAN.md — Streaming Chat Core (FastAPI /chat, SSE Generator, Disconnect Handling).
+- [x] 4-03-PLAN.md — Thread Lifecycle & History (Auto-Titling, Paginated History API).
+- [x] 4-04-PLAN.md — Human-in-the-Loop & Interrupts (Safety Breakpoints, Resume Endpoint).
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
