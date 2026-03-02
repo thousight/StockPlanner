@@ -1,6 +1,6 @@
 import enum
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Date, Text, Numeric, Enum, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Date, Text, Numeric, Enum, Boolean, Computed, Index
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from src.database.session import Base
@@ -15,6 +15,13 @@ class AssetType(enum.Enum):
     FUND = "FUND"
     METAL = "METAL"
     GENERIC = "GENERIC"
+
+class ReportCategory(enum.Enum):
+    STOCK = "STOCK"
+    REAL_ESTATE = "REAL_ESTATE"
+    MACRO = "MACRO"
+    FUND = "FUND"
+    GENERAL = "GENERAL"
 
 class Asset(Base):
     __tablename__ = "assets"
@@ -109,6 +116,22 @@ class Report(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, index=True)
     thread_id = Column(String, index=True)
-    symbol = Column(String, index=True)
+    title = Column(String, nullable=False)
+    topic = Column(String, index=True, nullable=False)
+    symbol = Column(String, index=True, nullable=True)
+    category = Column(Enum(ReportCategory), default=ReportCategory.GENERAL, nullable=False)
+    tags = Column(JSONB, nullable=True)
     content = Column(Text)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    search_vector = Column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', coalesce(title, '') || ' ' || coalesce(topic, '') || ' ' || coalesce(content, ''))",
+            persisted=True
+        )
+    )
+
+    __table_args__ = (
+        Index("ix_report_search_vector", "search_vector", postgresql_using="gin"),
+    )
