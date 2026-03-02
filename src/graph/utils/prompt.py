@@ -57,6 +57,13 @@ def convert_state_to_prompt(state: AgentState) -> str:
     # 5. Revision Count
     if "revision_count" in session_ctx:
         context.append(f"Revision Count: {session_ctx['revision_count']}")
+
+    # 6. User Portfolio Summary
+    user_ctx = state.get("user_context", {})
+    if "portfolio_summary" in user_ctx and user_ctx["portfolio_summary"]:
+        context.append("--- USER PORTFOLIO SUMMARY ---")
+        context.append(user_ctx["portfolio_summary"])
+        context.append("--- END USER PORTFOLIO SUMMARY ---")
     
     return "\n".join(context)
 

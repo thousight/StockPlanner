@@ -27,6 +27,8 @@ class SessionContext(TypedDict):
 
 class UserContext(TypedDict):
     portfolio: List[Dict[str, Any]]
+    portfolio_summary: NotRequired[str]
+    user_id: NotRequired[str]
 
 class AgentState(TypedDict):
     session_context: SessionContext
