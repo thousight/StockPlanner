@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from src.database.models import FXRate
+from src.database.models import FXRate, Asset, AssetType
 import yfinance as yf
 
 def get_historical_fx_rate(db: Session, source: str, target: str = "USD", transaction_date: date = None) -> Decimal:
@@ -91,5 +91,46 @@ def validate_transaction_price(symbol: str, transaction_date: date, price: Decim
     except Exception as e:
         print(f"Error validating price for {symbol}: {e}")
         return True # Fallback to true if API fails
+
+def get_current_price(db: Session, asset: Asset) -> Decimal:
+    """
+    Fetch the latest market price for an asset.
+    - For STOCK, use yfinance.
+    - For others, use the last transaction price as the "current" price.
+    """
+    if asset.type == AssetType.STOCK:
+        try:
+            ticker = yf.Ticker(asset.symbol)
+            # Use 'fast_info' for quick access to the latest price if available, 
+            # otherwise use the last closing price.
+            # In newer yfinance versions, 'fast_info' is a good source for 'last_price'.
+            price = Decimal(str(ticker.fast_info['last_price']))
+            if price > 0:
+                return price
+        except Exception as e:
+            print(f"Error fetching current price for {asset.symbol}: {e}")
+            # Fallback to history
+            try:
+                hist = ticker.history(period="1d")
+                if not hist.empty:
+                    return Decimal(str(hist['Close'].iloc[-1]))
+            except:
+                pass
+
+    # Fallback for all assets: use the last transaction price from the database
+    # Join Asset with Transaction, filter by asset_id, sort by date desc
+    from src.database.models import Transaction
+    stmt = (
+        select(Transaction.price_base)
+        .where(Transaction.asset_id == asset.id, Transaction.is_deleted == False)
+        .order_by(Transaction.date.desc())
+        .limit(1)
+    )
+    last_price = db.execute(stmt).scalar_one_or_none()
+    
+    if last_price:
+        return Decimal(str(last_price))
+    
+    return Decimal("0")
 
 from datetime import timedelta

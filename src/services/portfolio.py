@@ -1,6 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from src.database.models import Asset, Transaction, Holding, NewsCache, AssetType
 from src.schemas.transactions import TransactionCreate, TransactionAction
 from src.services.market_data import get_historical_fx_rate
@@ -182,6 +182,122 @@ def recalculate_holding(db: Session, user_id: str, asset_id: int):
     holding.quantity_held = qty
     holding.avg_cost_basis = (total_cost_base / qty) if qty > 0 else Decimal("0")
     db.flush()
+
+from src.schemas.portfolio import PortfolioSummary, SectorAllocation
+
+def get_portfolio_summary(db: Session, user_id: str) -> PortfolioSummary:
+    """
+    Calculate the overall portfolio summary for a user.
+    """
+    from src.services.market_data import get_current_price
+    from collections import defaultdict
+    
+    # 1. Get all holdings for the user
+    stmt = (
+        select(Holding)
+        .join(Asset)
+        .where(Holding.user_id == user_id, Holding.quantity_held > 0)
+    )
+    holdings = db.execute(stmt).scalars().all()
+    
+    total_value_usd = Decimal("0")
+    total_cost_basis_usd = Decimal("0")
+    sector_values = defaultdict(Decimal)
+    
+    # For Daily PNL
+    net_cash_flow_today = Decimal("0")
+    # Fetch today's transactions
+    today = datetime.now(timezone.utc).date()
+    stmt_tx_today = (
+        select(Transaction)
+        .where(
+            Transaction.user_id == user_id, 
+            Transaction.is_deleted == False,
+            func.date(Transaction.date) == today
+        )
+    )
+    tx_today = db.execute(stmt_tx_today).scalars().all()
+    for tx in tx_today:
+        # For cash flow, we want the net amount of money put in/taken out
+        if tx.action == TransactionAction.BUY:
+            net_cash_flow_today += tx.total_base
+        else:
+            net_cash_flow_today -= tx.total_base
+
+    # We also need Value_At_Start_Of_Day
+    # This is: sum ( (Current_Qty - Today_Net_Qty) * Yesterday_Price )
+    # But for now, let's simplify and use Current_Price for the daily PNL 
+    # if we don't have a good way to get Yesterday_Price for everything.
+    # Actually, let's try to get Yesterday_Price for stocks.
+    
+    value_at_start_of_day = Decimal("0")
+
+    for h in holdings:
+        asset = h.asset
+        current_price = get_current_price(db, asset)
+        
+        current_val = h.quantity_held * current_price
+        total_value_usd += current_val
+        total_cost_basis_usd += h.quantity_held * h.avg_cost_basis
+        
+        # Sector allocation
+        sector = asset.sector or "Unknown"
+        sector_values[sector] += current_val
+        
+        # Calculate Value_At_Start_Of_Day for this asset
+        # Net Qty today for this asset
+        asset_net_qty_today = Decimal("0")
+        for tx in tx_today:
+            if tx.asset_id == asset.id:
+                if tx.action == TransactionAction.BUY:
+                    asset_net_qty_today += tx.quantity
+                else:
+                    asset_net_qty_today -= tx.quantity
+        
+        qty_at_start = h.quantity_held - asset_net_qty_today
+        
+        # Try to get yesterday's price
+        yesterday_price = current_price # Default
+        if asset.type == AssetType.STOCK:
+            try:
+                ticker = yf.Ticker(asset.symbol)
+                # Get last 2 days to be sure to have yesterday's close
+                hist = ticker.history(period="2d")
+                if len(hist) >= 2:
+                    yesterday_price = Decimal(str(hist['Close'].iloc[-2]))
+                elif not hist.empty:
+                    yesterday_price = Decimal(str(hist['Close'].iloc[0]))
+            except:
+                pass
+        
+        value_at_start_of_day += qty_at_start * yesterday_price
+
+    total_gain_loss_usd = total_value_usd - total_cost_basis_usd
+    total_gain_loss_pct = (total_gain_loss_usd / total_cost_basis_usd * 100) if total_cost_basis_usd > 0 else Decimal("0")
+    
+    # Daily PNL = Current_Value - (Value_At_Start_Of_Day + Net_Cash_Flow_Today)
+    daily_pnl_usd = total_value_usd - (value_at_start_of_day + net_cash_flow_today)
+    daily_pnl_pct = (daily_pnl_usd / value_at_start_of_day * 100) if value_at_start_of_day > 0 else Decimal("0")
+    
+    # Sector allocation formatting
+    sector_allocation = []
+    if total_value_usd > 0:
+        for sector, val in sector_values.items():
+            sector_allocation.append(SectorAllocation(
+                sector=sector,
+                value_usd=val,
+                percentage=(val / total_value_usd * 100)
+            ))
+    
+    return PortfolioSummary(
+        total_value_usd=total_value_usd,
+        total_cost_basis_usd=total_cost_basis_usd,
+        total_gain_loss_usd=total_gain_loss_usd,
+        total_gain_loss_pct=total_gain_loss_pct,
+        daily_pnl_usd=daily_pnl_usd,
+        daily_pnl_pct=daily_pnl_pct,
+        sector_allocation=sector_allocation
+    )
 
 def get_valid_cache(db: Session, url: str) -> Optional[str]:
     stmt = select(NewsCache).where(NewsCache.url == url)
