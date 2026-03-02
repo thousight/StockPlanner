@@ -2,9 +2,9 @@
 
 ## Current Position
 - **Milestone:** Milestone 1: API Server & Cloud Sync
-- **Phase:** Phase 5: Agentic Flow Refinement
-- **Status:** Milestone 1 successfully completed. Phase 5 finished.
-- **Last Activity:** [2026-03-02] — Phase 5 completed. Implemented generalized reports, conditional interrupts with full previews, and optimized commit logic.
+- **Phase:** Phase 6: Test Coverage
+- **Status:** Phase 5 complete, starting Phase 6.
+- **Last Activity:** [2026-03-02] — Added Phase 6: Test Coverage to the roadmap to implement comprehensive testing.
 
 ## Planning Context
 - **Vision:** Financial planner with LangGraph agents and Flutter UI.

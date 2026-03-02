@@ -12,6 +12,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 | **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | Completed |
 | **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Completed |
 | **Phase 5** | **Agentic Flow Refinement** | Conditional interrupts and report commit optimization. | Completed |
+| **Phase 6** | **Test Coverage** | Comprehensive unit and integration testing. | Pending |
 
 ### Phase 1: API Scaffolding
 **Goal:** Setup FastAPI, health checks, and async architecture for a Railway-hosted PostgreSQL backend.
@@ -68,6 +69,15 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 - [x] 5-01-PLAN.md — Data Foundation & Search API.
 - [x] 5-02-PLAN.md — Complexity Analysis & Metadata Logic.
 - [x] 5-03-PLAN.md — Conditional Flow & SSE Refinement.
+
+### Phase 6: Test Coverage
+**Goal:** Implement a comprehensive testing suite covering core financial logic, API endpoints, and agentic workflows.
+**Plans:** [To be planned]
+
+**Requirements:** REQ-032
+
+**Plans:**
+- [ ] 6-01-PLAN.md — [To be planned]
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
