@@ -21,7 +21,7 @@ def create_mesh_router(allowed_destinations: list):
         return next_agent
     return router
 
-def create_graph():
+def create_graph(checkpointer=None):
     workflow = StateGraph(AgentState)
     
     # Add nodes
@@ -75,4 +75,4 @@ def create_graph():
     workflow.add_edge("summarizer", "commit")
     workflow.add_edge("commit", END)
     
-    return workflow.compile()
+    return workflow.compile(checkpointer=checkpointer)
