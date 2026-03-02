@@ -11,4 +11,10 @@ Current Context:
 {current_context}
 
 Synthesize these interactions into a clean, well-formatted final response that directly addresses the user's overarching question in user's language. Use Markdown formatting.
+
+Additionally, generate metadata for this synthesis:
+1. Title: A short, engaging title.
+2. Category: Choose from [STOCK, REAL_ESTATE, MACRO, FUND, GENERAL].
+3. Topic: The primary subject (e.g., a ticker or a market name).
+4. Tags: 2-3 specific tags starting with #.
 """)
