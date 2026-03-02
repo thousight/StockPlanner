@@ -11,6 +11,14 @@ class Settings(BaseSettings):
     # Database configuration
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/stockplanner"
     
+    @property
+    def ASYNC_DATABASE_URL(self) -> str:
+        """Ensures the database URL uses the asyncpg driver."""
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+    
     # Security & Third-party APIs
     OPENAI_API_KEY: Optional[str] = None
     
