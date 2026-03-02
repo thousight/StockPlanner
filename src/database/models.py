@@ -89,6 +89,16 @@ class NewsCache(Base):
     summary = Column(Text)
     expire_at = Column(DateTime)
 
+class ChatThread(Base):
+    __tablename__ = "chat_threads"
+
+    id = Column(String, primary_key=True, index=True) # UUID as string
+    user_id = Column(String, index=True)
+    title = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    is_deleted = Column(Boolean, default=False)
+
 class Report(Base):
     __tablename__ = "reports"
 

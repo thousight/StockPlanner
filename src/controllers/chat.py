@@ -5,15 +5,18 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, Request, Header, Depends
+from fastapi import APIRouter, Request, Header, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from src.database.session import get_db
+from src.database.models import ChatThread
 from src.schemas.chat import ChatRequest, ChatTokenEvent, ChatStatusEvent, ChatErrorEvent
 from src.graph.graph import create_graph
 from src.graph.persistence import get_checkpointer
 from src.services.context_injection import get_user_context_data
+from src.services.titler import update_thread_title_background
 
 router = APIRouter(tags=["Chat"])
 logger = logging.getLogger(__name__)
@@ -22,15 +25,19 @@ async def event_generator(
     request: Request, 
     user_id: str, 
     payload: ChatRequest, 
-    db: AsyncSession
+    db: AsyncSession,
+    background_tasks: BackgroundTasks,
+    thread_id: str,
+    is_new_thread: bool = False
 ) -> AsyncGenerator[str, None]:
     """
     Async generator that yields SSE-formatted strings from LangGraph events.
     """
-    thread_id = payload.thread_id or str(uuid4())
     config = {"configurable": {"thread_id": thread_id}}
     
     logger.info(f"Initiating chat stream for user {user_id}, thread {thread_id}")
+    
+    full_response_content = ""
     
     try:
         # 1. Fetch user context
@@ -74,6 +81,7 @@ async def event_generator(
                 if kind == "on_chat_model_stream":
                     content = event["data"]["chunk"].content
                     if content:
+                        full_response_content += content
                         token_event = ChatTokenEvent(content=content)
                         yield f"data: {token_event.model_dump_json()}
 
@@ -87,6 +95,15 @@ async def event_generator(
                         yield f"data: {status_event.model_dump_json()}
 
 "
+
+        # 4. Trigger background titling if it's the first exchange
+        if is_new_thread and full_response_content:
+            background_tasks.add_task(
+                update_thread_title_background,
+                thread_id,
+                payload.message,
+                full_response_content
+            )
 
     except asyncio.CancelledError:
         logger.info(f"Chat stream cancelled for thread {thread_id}")
@@ -103,13 +120,32 @@ async def event_generator(
 async def chat(
     request: Request,
     payload: ChatRequest,
+    background_tasks: BackgroundTasks,
     x_user_id: str = Header(..., alias="X-User-ID"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Streaming chat endpoint that provides real-time agent tokens and status updates using SSE.
     """
+    # Determine thread_id
+    thread_id = payload.thread_id or str(uuid4())
+    
+    # Ensure thread exists in database
+    result = await db.execute(select(ChatThread).where(ChatThread.id == thread_id))
+    thread = result.scalar_one_or_none()
+    
+    is_new_thread = False
+    if not thread:
+        is_new_thread = True
+        thread = ChatThread(
+            id=thread_id,
+            user_id=x_user_id,
+            title="New Conversation"
+        )
+        db.add(thread)
+        await db.commit()
+    
     return StreamingResponse(
-        event_generator(request, x_user_id, payload, db),
+        event_generator(request, x_user_id, payload, db, background_tasks, thread_id, is_new_thread),
         media_type="text/event-stream"
     )
