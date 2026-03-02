@@ -47,7 +47,7 @@ async def update_thread_title_background(thread_id: str, user_msg: str, ai_msg: 
             thread = result.scalar_one_or_none()
             if thread:
                 thread.title = title
-                thread.updated_at = datetime.now(timezone.utc)
+                thread.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 await session.commit()
                 logger.info(f"Updated title for thread {thread_id}: {title}")
             else:
