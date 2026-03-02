@@ -14,6 +14,7 @@ from src.database import models  # Ensure models are registered
 from src.controllers.health import router as health_router
 from src.controllers.transactions import router as transactions_router
 from src.controllers.portfolio import router as portfolio_router
+from src.controllers.chat import router as chat_router
 from src.lifecycle.tasks import cleanup_checkpoints, cleanup_news_cache
 from src.graph.persistence import get_checkpointer
 
@@ -126,6 +127,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(transactions_router)
 app.include_router(portfolio_router)
+app.include_router(chat_router)
 
 @app.get("/")
 async def root():
