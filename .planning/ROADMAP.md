@@ -41,9 +41,21 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Requirements:** REQ-021, REQ-022, REQ-023
 
 **Plans:**
-- [ ] 3-01-PLAN.md — Refine Financial Schema & Polymorphic Metadata.
-- [ ] 3-02-PLAN.md — Transaction CRUD with Strict Consistency & FX.
-- [ ] 3-03-PLAN.md — Portfolio Analytics & Performance Metrics.
+- [x] 3-01-PLAN.md — Refine Financial Schema & Polymorphic Metadata.
+- [x] 3-02-PLAN.md — Transaction CRUD with Strict Consistency & FX.
+- [x] 3-03-PLAN.md — Portfolio Analytics & Performance Metrics.
+
+### Phase 4: Agentic Chat Streaming
+**Goal:** Implement real-time SSE chat endpoint, LangGraph multi-agent orchestration integration, and human-in-the-loop patterns.
+**Plans:** 4 plans
+
+**Requirements:** REQ-010, REQ-011, REQ-012, REQ-013
+
+**Plans:**
+- [ ] 4-01-PLAN.md — Persistence & Graph Orchestration (AsyncPostgresSaver, Context Injection).
+- [ ] 4-02-PLAN.md — Streaming Chat Core (FastAPI /chat, SSE Generator, Disconnect Handling).
+- [ ] 4-03-PLAN.md — Thread Lifecycle & History (Auto-Titling, Paginated History API).
+- [ ] 4-04-PLAN.md — Human-in-the-Loop & Interrupts (Safety Breakpoints, Resume Endpoint).
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
