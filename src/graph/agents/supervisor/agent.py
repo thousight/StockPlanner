@@ -8,7 +8,7 @@ from src.graph.agents.supervisor.next_agents import get_supervisor_next_agents_p
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 
 @with_logging
-def supervisor_agent(state: AgentState):
+async def supervisor_agent(state: AgentState):
     """
     Strategic Investment Planner: Decides the initial step and routes to the appropriate agent.
     """
@@ -39,7 +39,7 @@ def supervisor_agent(state: AgentState):
             }]
         }
     
-    plan_output = structured_llm.invoke(messages)
+    plan_output = await structured_llm.ainvoke(messages)
     
     return {
         "session_context": {"revision_count": 1},

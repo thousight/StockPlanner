@@ -24,12 +24,8 @@ async def get_user_context_data(db: AsyncSession, user_id: str) -> Dict[str, Any
     """
     Fetches the portfolio summary for a user and returns a dictionary 
     suitable for updating the AgentState.user_context.
-    Uses run_sync to execute the sync get_portfolio_summary service.
     """
-    def sync_wrapper(sync_db):
-        return get_portfolio_summary(sync_db, user_id)
-    
-    summary = await db.run_sync(sync_wrapper)
+    summary = await get_portfolio_summary(db, user_id)
     formatted_summary = format_portfolio_for_llm(summary)
     
     return {

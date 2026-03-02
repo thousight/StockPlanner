@@ -1,19 +1,18 @@
 from decimal import Decimal
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import yfinance as yf
 from src.schemas.portfolio import BenchmarkComparison
-from datetime import datetime, timedelta, timezone
 
-def get_spy_performance(db: Session, portfolio_gain_pct: Decimal) -> BenchmarkComparison:
+async def get_spy_performance(db: AsyncSession, portfolio_gain_pct: Decimal) -> BenchmarkComparison:
     """
     Fetch SPY performance for benchmarking.
     For simplicity in this MVP, we compare against the Year-to-Date (YTD) performance of SPY.
-    Ideally, we should compare over the same period as the portfolio's existence.
     """
     benchmark_name = "S&P 500 (SPY)"
     try:
         spy = yf.Ticker("SPY")
         # Get YTD performance
+        # Note: yfinance history() is synchronous
         hist = spy.history(period="ytd")
         if not hist.empty:
             start_price = Decimal(str(hist['Close'].iloc[0]))

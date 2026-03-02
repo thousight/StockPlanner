@@ -2,11 +2,10 @@ from fastapi import APIRouter, Header, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from src.database.session import get_db
-from src.database.models import ChatThread
+from src.database.models import ChatThread, RecordStatus
 from src.schemas.threads import ThreadListResponse, ThreadBase, ThreadHistoryResponse, MessageSchema
 from src.graph.persistence import get_checkpointer
 from src.graph.graph import create_graph
-from typing import List
 import logging
 from datetime import datetime, timezone
 
@@ -27,7 +26,7 @@ async def get_threads(
         # Count total threads for this user
         count_query = select(func.count()).select_from(ChatThread).where(
             ChatThread.user_id == x_user_id,
-            ChatThread.is_deleted == False
+            ChatThread.status == RecordStatus.ACTIVE
         )
         total_result = await db.execute(count_query)
         total = total_result.scalar()
@@ -35,7 +34,7 @@ async def get_threads(
         # Fetch threads
         query = select(ChatThread).where(
             ChatThread.user_id == x_user_id,
-            ChatThread.is_deleted == False
+            ChatThread.status == RecordStatus.ACTIVE
         ).order_by(ChatThread.updated_at.desc()).offset(offset).limit(limit)
         
         result = await db.execute(query)
@@ -67,15 +66,16 @@ async def delete_thread(
         query = select(ChatThread).where(
             ChatThread.id == thread_id,
             ChatThread.user_id == x_user_id,
-            ChatThread.is_deleted == False
+            ChatThread.status == RecordStatus.ACTIVE
         )
         result = await db.execute(query)
         thread = result.scalar_one_or_none()
-        
+
         if not thread:
             raise HTTPException(status_code=404, detail="Thread not found")
-        
-        thread.is_deleted = True
+
+        thread.status = RecordStatus.INACTIVE
+
         await db.commit()
         
         return {"status": "success", "message": "Thread deleted"}
@@ -101,7 +101,7 @@ async def get_thread_history(
         result = await db.execute(select(ChatThread).where(
             ChatThread.id == thread_id,
             ChatThread.user_id == x_user_id,
-            ChatThread.is_deleted == False
+            ChatThread.status == RecordStatus.ACTIVE
         ))
         thread = result.scalar_one_or_none()
         

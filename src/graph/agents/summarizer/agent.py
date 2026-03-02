@@ -7,7 +7,7 @@ from src.graph.utils.agents import get_next_interaction_id, with_logging
 from src.graph.utils.prompt import convert_state_to_prompt
 
 @with_logging
-def summarizer_agent(state: AgentState):
+async def summarizer_agent(state: AgentState):
     """
     Summarizer Agent: Reviews all agent interactions and synthesizes a final answer.
     """
@@ -17,7 +17,7 @@ def summarizer_agent(state: AgentState):
         current_context=convert_state_to_prompt(state)
     ))
         
-    response = llm.invoke([system_msg])
+    response = await llm.ainvoke([system_msg])
     final_content = response.content
     
     # Try to extract the symbol from user_input (basic regex for UPPERCASE 1-5 letters)

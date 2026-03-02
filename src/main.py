@@ -10,7 +10,6 @@ import logging
 from src.config import settings
 from src.middleware import ExcludeNoneRoute
 from src.database.session import engine
-from src.database import models  # Ensure models are registered
 from src.controllers.health import router as health_router
 from src.controllers.transactions import router as transactions_router
 from src.controllers.portfolio import router as portfolio_router
@@ -32,8 +31,7 @@ async def lifespan(app: FastAPI):
     
     # Initialize LangGraph checkpointer tables
     try:
-        checkpointer = get_checkpointer()
-        async with checkpointer:
+        async with get_checkpointer() as checkpointer:
             # setup() creates the tables if they don't exist
             await checkpointer.setup()
         logger.info("LangGraph persistence tables initialized")

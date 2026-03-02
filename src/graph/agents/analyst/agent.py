@@ -5,7 +5,7 @@ from src.graph.agents.analyst.subgraph import create_debate_graph
 from src.graph.utils.agents import with_logging
 
 @with_logging
-def analyst_agent(state: AgentState, config: RunnableConfig):
+async def analyst_agent(state: AgentState, config: RunnableConfig):
     """
     Adversarial Analyst: Orchestrates a 'Bull vs. Bear' debate and synthesizes a final investment report.
     """
@@ -24,7 +24,7 @@ def analyst_agent(state: AgentState, config: RunnableConfig):
         "agent_interactions": state.get("agent_interactions", [])
     }
     
-    debate_results = debate_graph.invoke(debate_input, config=config)
+    debate_results = await debate_graph.ainvoke(debate_input, config=config)
     report = debate_results.get("final_report", "")
     
     # Safety Check: Detect high-risk recommendations
@@ -35,7 +35,7 @@ def analyst_agent(state: AgentState, config: RunnableConfig):
 
     if is_high_risk:
         # Surface interrupt to the user
-        interrupt_msg = f"SAFETY CHECK: The analyst has proposed specific trade recommendations. Please review and type 'approve' to continue, or provide feedback/cancellation."
+        interrupt_msg = "SAFETY CHECK: The analyst has proposed specific trade recommendations. Please review and type 'approve' to continue, or provide feedback/cancellation."
         
         # LangGraph 0.2 interrupt: pauses here and returns the user input upon resumption
         # If the node is re-run, this will return the previously provided response instead of pausing again.

@@ -56,7 +56,7 @@ async def cleanup_news_cache():
                 # Delete rows where expire_at is in the past
                 await cur.execute(
                     "DELETE FROM news_cache WHERE expire_at < %s", 
-                    (datetime.now(timezone.utc),)
+                    (datetime.now(timezone.utc).replace(tzinfo=None),)
                 )
                 deleted_count = cur.rowcount
                 

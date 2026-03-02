@@ -1,5 +1,5 @@
 import inspect
-from typing import List, Callable, Dict, Any
+from typing import List, Callable, Dict
 from langchain_core.prompts import ChatPromptTemplate
 from src.graph.state import AgentState
 
@@ -32,11 +32,16 @@ def convert_state_to_prompt(state: AgentState) -> str:
     if messages:
         context.append("--- CHAT HISTORY ---")
         for msg in messages:
-            # Determine role based on message type
-            if getattr(msg, "type", "") in ["human", "user"]:
-                context.append(f"User: {msg.content}")
+            # Handle both BaseMessage objects and tuples
+            if isinstance(msg, tuple):
+                role, content = msg
+                role_label = "User" if role in ["human", "user"] else "AI"
+                context.append(f"{role_label}: {content}")
             else:
-                context.append(f"AI: {msg.content}")
+                role = getattr(msg, "type", "")
+                content = getattr(msg, "content", str(msg))
+                role_label = "User" if role in ["human", "user"] else "AI"
+                context.append(f"{role_label}: {content}")
         context.append("--- END CHAT HISTORY ---")
     else:
         context.append("Chat History: None.")

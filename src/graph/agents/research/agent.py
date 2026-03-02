@@ -1,5 +1,5 @@
 import inspect
-import concurrent.futures
+import asyncio
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.graph.state import AgentState
@@ -21,7 +21,7 @@ TOOLS_LIST = [
 AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)
 
 @with_logging
-def research_agent(state: AgentState):
+async def research_agent(state: AgentState):
     """
     Research agent: Plan a research based on the research question, and execute the research tools.
     """
@@ -37,19 +37,19 @@ def research_agent(state: AgentState):
         HumanMessage(content=RESEARCH_PLANNER_PLAN_PROMPT.format(dummy=""))
     ]
     
-    local_plan = structured_llm.invoke(messages)
+    local_plan = await structured_llm.ainvoke(messages)
     research_data = ""
 
     # Extract user_agent for downstream tool propagation
     client_ua = state.get("session_context", {}).get("user_agent", "")
 
-    # Run tool calls in parallel using ThreadPoolExecutor
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(execute_tool, step, client_ua) for step in local_plan.steps]
-        for future in concurrent.futures.as_completed(futures):
-            result_str = future.result()
-            if result_str:
-                research_data += result_str + "\n"
+    # Run tool calls in parallel using asyncio.gather
+    tasks = [execute_tool(step, client_ua) for step in local_plan.steps]
+    results = await asyncio.gather(*tasks)
+    
+    for result_str in results:
+        if result_str:
+            research_data += result_str + "\n"
 
     return {
         "agent_interactions": [{
@@ -60,7 +60,7 @@ def research_agent(state: AgentState):
         }]
     }
     
-def execute_tool(step, user_agent=""):
+async def execute_tool(step, user_agent=""):
     # Build a lookup mapping for tool names from the actual function list
     tool_map = {tool.__name__: tool for tool in TOOLS_LIST}
     tool = tool_map.get(step.tool_name)
@@ -88,7 +88,11 @@ def execute_tool(step, user_agent=""):
                     step.tool_params["queries"] = ["latest market news"]
                 
             # Execute standard function with unpacked dictionary parameters
-            result = tool(**step.tool_params)
+            if inspect.iscoroutinefunction(tool):
+                result = await tool(**step.tool_params)
+            else:
+                result = tool(**step.tool_params)
+                
             if isinstance(result, str):
                 return result
             return str(result) + "\n"

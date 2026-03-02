@@ -1,9 +1,13 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, Text, Numeric, Enum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Date, Text, Numeric, Enum, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from src.database.session import Base
+
+class RecordStatus(enum.Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
 
 class AssetType(enum.Enum):
     STOCK = "STOCK"
@@ -32,7 +36,7 @@ class Transaction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, index=True)
-    date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    date = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     asset_id = Column(Integer, ForeignKey("assets.id"))
     action = Column(String)  # BUY, SELL
     quantity = Column(Numeric(precision=20, scale=10))
@@ -44,7 +48,7 @@ class Transaction(Base):
     price_base = Column(Numeric(precision=20, scale=10))
     total_base = Column(Numeric(precision=20, scale=10))
     asset_metadata = Column(JSONB, nullable=True)
-    is_deleted = Column(Boolean, default=False)
+    status = Column(Enum(RecordStatus), default=RecordStatus.ACTIVE, nullable=False)
     
     asset = relationship("Asset", back_populates="transactions")
 
@@ -95,9 +99,9 @@ class ChatThread(Base):
     id = Column(String, primary_key=True, index=True) # UUID as string
     user_id = Column(String, index=True)
     title = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    status = Column(Enum(RecordStatus), default=RecordStatus.ACTIVE, nullable=False)
 
 class Report(Base):
     __tablename__ = "reports"
@@ -107,4 +111,4 @@ class Report(Base):
     thread_id = Column(String, index=True)
     symbol = Column(String, index=True)
     content = Column(Text)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

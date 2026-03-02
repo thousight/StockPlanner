@@ -1,23 +1,28 @@
-from typing import Optional, List
-from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, func
-from src.database.models import Asset, Transaction, Holding, NewsCache, AssetType
+from typing import Optional
+from collections import defaultdict
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from src.database.models import Asset, Transaction, Holding, NewsCache, AssetType, RecordStatus
 from src.schemas.transactions import TransactionCreate, TransactionAction
-from src.services.market_data import get_historical_fx_rate
+from src.schemas.portfolio import PortfolioSummary, SectorAllocation
+from src.services.market_data import get_historical_fx_rate, get_current_price
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import HTTPException
+import yfinance as yf
 
-def get_or_create_asset(db: Session, user_id: str, symbol: str, asset_type: AssetType = AssetType.STOCK, name: str = None) -> Asset:
+async def get_or_create_asset(db: AsyncSession, user_id: str, symbol: str, asset_type: AssetType = AssetType.STOCK, name: str = None) -> Asset:
     stmt = select(Asset).where(Asset.user_id == user_id, Asset.symbol == symbol)
-    asset = db.execute(stmt).scalar_one_or_none()
+    result = await db.execute(stmt)
+    asset = result.scalar_one_or_none()
     if not asset:
         asset = Asset(user_id=user_id, symbol=symbol, type=asset_type, name=name or symbol)
         db.add(asset)
-        db.flush() # Ensure asset has an ID
+        await db.flush() # Ensure asset has an ID
     return asset
 
-def create_transaction(db: Session, user_id: str, t_data: TransactionCreate) -> Transaction:
+async def create_transaction(db: AsyncSession, user_id: str, t_data: TransactionCreate) -> Transaction:
     """
     Implement Transaction Creation with Strict Consistency.
     - Fetch historical FX rate.
@@ -26,8 +31,8 @@ def create_transaction(db: Session, user_id: str, t_data: TransactionCreate) -> 
     - Update Holding (ACB for BUY, quantity for SELL).
     """
     # 1. Fetch historical FX rate for transaction date
-    t_date = t_data.date or datetime.now(timezone.utc)
-    fx_rate = get_historical_fx_rate(db, t_data.currency, "USD", t_date.date())
+    t_date = t_data.date or datetime.now(timezone.utc).replace(tzinfo=None)
+    fx_rate = await get_historical_fx_rate(db, t_data.currency, "USD", t_date.date())
     
     # 2. Normalize price and fees to USD base currency
     price_base = t_data.price_per_share * fx_rate
@@ -46,7 +51,8 @@ def create_transaction(db: Session, user_id: str, t_data: TransactionCreate) -> 
         .where(Holding.user_id == user_id, Holding.asset_id == t_data.asset_id)
         .with_for_update()
     )
-    holding = db.execute(stmt).scalar_one_or_none()
+    result = await db.execute(stmt)
+    holding = result.scalar_one_or_none()
 
     if not holding:
         if t_data.action == TransactionAction.SELL:
@@ -90,55 +96,54 @@ def create_transaction(db: Session, user_id: str, t_data: TransactionCreate) -> 
     )
     db.add(transaction)
     
-    # Commit is handled by the caller or by a middleware (but for Task 1 we should ensure it's atomic)
-    # The plan says "Wrap in a single atomic transaction"
-    # SQLAlchemy's Session.begin() or transaction management should handle this.
-    # In FastAPI, we usually use a dependency for the session that handles commit/rollback.
-    
     return transaction
 
-def get_holdings(db: Session, user_id: str):
+async def get_holdings(db: AsyncSession, user_id: str):
     """
     Retrieve holdings for a user.
     """
     stmt = select(Holding).where(Holding.user_id == user_id, Holding.quantity_held > 0)
-    return db.execute(stmt).scalars().all()
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
-def get_transactions(db: Session, user_id: str, asset_id: Optional[int] = None, limit: int = 20, offset: int = 0):
-    stmt = select(Transaction).where(Transaction.user_id == user_id, Transaction.is_deleted == False)
+async def get_transactions(db: AsyncSession, user_id: str, asset_id: Optional[int] = None, limit: int = 20, offset: int = 0):
+    stmt = select(Transaction).where(Transaction.user_id == user_id, Transaction.status == RecordStatus.ACTIVE)
     if asset_id:
         stmt = stmt.where(Transaction.asset_id == asset_id)
     stmt = stmt.order_by(Transaction.date.desc()).limit(limit).offset(offset)
-    return db.execute(stmt).scalars().all()
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
-def get_transaction(db: Session, user_id: str, transaction_id: int) -> Optional[Transaction]:
-    stmt = select(Transaction).where(Transaction.user_id == user_id, Transaction.id == transaction_id, Transaction.is_deleted == False)
-    return db.execute(stmt).scalar_one_or_none()
+async def get_transaction(db: AsyncSession, user_id: str, transaction_id: int) -> Optional[Transaction]:
+    stmt = select(Transaction).where(Transaction.user_id == user_id, Transaction.id == transaction_id, Transaction.status == RecordStatus.ACTIVE)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
 
-def delete_transaction(db: Session, user_id: str, transaction_id: int):
+async def delete_transaction(db: AsyncSession, user_id: str, transaction_id: int):
     """
     Soft-delete transaction and revert impact on Holding.
     For simplicity, we'll recalculate the whole holding from scratch after deletion.
     """
-    transaction = get_transaction(db, user_id, transaction_id)
+    transaction = await get_transaction(db, user_id, transaction_id)
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    transaction.is_deleted = True
-    db.flush()
+    transaction.status = RecordStatus.INACTIVE
+    await db.flush()
     
     # Recalculate holding for this asset
-    recalculate_holding(db, user_id, transaction.asset_id)
+    await recalculate_holding(db, user_id, transaction.asset_id)
     return transaction
 
-def recalculate_holding(db: Session, user_id: str, asset_id: int):
+async def recalculate_holding(db: AsyncSession, user_id: str, asset_id: int):
     """
     Recalculates Holding (quantity and ACB) for a specific asset by re-processing
     all non-deleted transactions in chronological order.
     """
     # Lock the holding
     stmt_lock = select(Holding).where(Holding.user_id == user_id, Holding.asset_id == asset_id).with_for_update()
-    holding = db.execute(stmt_lock).scalar_one_or_none()
+    result_lock = await db.execute(stmt_lock)
+    holding = result_lock.scalar_one_or_none()
     
     if not holding:
         holding = Holding(user_id=user_id, asset_id=asset_id, quantity_held=Decimal("0"), avg_cost_basis=Decimal("0"))
@@ -147,10 +152,11 @@ def recalculate_holding(db: Session, user_id: str, asset_id: int):
     # Get all active transactions for this asset ordered by date
     stmt_tx = (
         select(Transaction)
-        .where(Transaction.user_id == user_id, Transaction.asset_id == asset_id, Transaction.is_deleted == False)
+        .where(Transaction.user_id == user_id, Transaction.asset_id == asset_id, Transaction.status == RecordStatus.ACTIVE)
         .order_by(Transaction.date.asc())
     )
-    transactions = db.execute(stmt_tx).scalars().all()
+    result_tx = await db.execute(stmt_tx)
+    transactions = result_tx.scalars().all()
     
     qty = Decimal("0")
     total_cost_base = Decimal("0")
@@ -162,12 +168,7 @@ def recalculate_holding(db: Session, user_id: str, asset_id: int):
         else:
             # SELL
             if qty < t.quantity:
-                # This should normally not happen if consistency was enforced, 
-                # but could happen if a previous BUY was deleted.
-                # In this case, we might need to error out or handle it.
-                # For now, let's cap it at 0.
-                t.quantity = qty # ADJUSTING transaction quantity if it's now invalid? 
-                # Better: raise error?
+                # This should normally not happen if consistency was enforced
                 raise HTTPException(status_code=400, detail=f"Consistency error: Deleting/Updating this transaction would result in negative holdings at {t.date}")
             
             # ACB doesn't change on sell, but total_cost does (proportionally)
@@ -181,24 +182,20 @@ def recalculate_holding(db: Session, user_id: str, asset_id: int):
     
     holding.quantity_held = qty
     holding.avg_cost_basis = (total_cost_base / qty) if qty > 0 else Decimal("0")
-    db.flush()
+    await db.flush()
 
-from src.schemas.portfolio import PortfolioSummary, SectorAllocation
-
-def get_portfolio_summary(db: Session, user_id: str) -> PortfolioSummary:
+async def get_portfolio_summary(db: AsyncSession, user_id: str) -> PortfolioSummary:
     """
     Calculate the overall portfolio summary for a user.
     """
-    from src.services.market_data import get_current_price
-    from collections import defaultdict
-    
     # 1. Get all holdings for the user
     stmt = (
         select(Holding)
-        .join(Asset)
+        .options(selectinload(Holding.asset))
         .where(Holding.user_id == user_id, Holding.quantity_held > 0)
     )
-    holdings = db.execute(stmt).scalars().all()
+    result_holdings = await db.execute(stmt)
+    holdings = result_holdings.scalars().all()
     
     total_value_usd = Decimal("0")
     total_cost_basis_usd = Decimal("0")
@@ -207,16 +204,17 @@ def get_portfolio_summary(db: Session, user_id: str) -> PortfolioSummary:
     # For Daily PNL
     net_cash_flow_today = Decimal("0")
     # Fetch today's transactions
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(timezone.utc).replace(tzinfo=None).date()
     stmt_tx_today = (
         select(Transaction)
         .where(
             Transaction.user_id == user_id, 
-            Transaction.is_deleted == False,
+            Transaction.status == RecordStatus.ACTIVE,
             func.date(Transaction.date) == today
         )
     )
-    tx_today = db.execute(stmt_tx_today).scalars().all()
+    result_tx_today = await db.execute(stmt_tx_today)
+    tx_today = result_tx_today.scalars().all()
     for tx in tx_today:
         # For cash flow, we want the net amount of money put in/taken out
         if tx.action == TransactionAction.BUY:
@@ -224,17 +222,11 @@ def get_portfolio_summary(db: Session, user_id: str) -> PortfolioSummary:
         else:
             net_cash_flow_today -= tx.total_base
 
-    # We also need Value_At_Start_Of_Day
-    # This is: sum ( (Current_Qty - Today_Net_Qty) * Yesterday_Price )
-    # But for now, let's simplify and use Current_Price for the daily PNL 
-    # if we don't have a good way to get Yesterday_Price for everything.
-    # Actually, let's try to get Yesterday_Price for stocks.
-    
     value_at_start_of_day = Decimal("0")
 
     for h in holdings:
         asset = h.asset
-        current_price = get_current_price(db, asset)
+        current_price = await get_current_price(db, asset)
         
         current_val = h.quantity_held * current_price
         total_value_usd += current_val
@@ -267,7 +259,7 @@ def get_portfolio_summary(db: Session, user_id: str) -> PortfolioSummary:
                     yesterday_price = Decimal(str(hist['Close'].iloc[-2]))
                 elif not hist.empty:
                     yesterday_price = Decimal(str(hist['Close'].iloc[0]))
-            except:
+            except Exception:
                 pass
         
         value_at_start_of_day += qty_at_start * yesterday_price
@@ -299,22 +291,25 @@ def get_portfolio_summary(db: Session, user_id: str) -> PortfolioSummary:
         sector_allocation=sector_allocation
     )
 
-def get_valid_cache(db: Session, url: str) -> Optional[str]:
+async def get_valid_cache(db: AsyncSession, url: str) -> Optional[str]:
     stmt = select(NewsCache).where(NewsCache.url == url)
-    entry = db.execute(stmt).scalar_one_or_none()
+    result = await db.execute(stmt)
+    entry = result.scalar_one_or_none()
     if entry and entry.expire_at > datetime.now(timezone.utc).replace(tzinfo=None):
         return entry.summary
     return None
 
-def save_cache(db: Session, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 168):
+async def save_cache(db: AsyncSession, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 168):
     if expire_at is None:
         expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
-    
+
     stmt = select(NewsCache).where(NewsCache.url == url)
-    entry = db.execute(stmt).scalar_one_or_none()
+    result = await db.execute(stmt)
+    entry = result.scalar_one_or_none()
     if entry:
         entry.summary = summary
         entry.expire_at = expire_at
     else:
         entry = NewsCache(url=url, summary=summary, expire_at=expire_at)
         db.add(entry)
+    await db.commit()

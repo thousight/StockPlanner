@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from decimal import Decimal
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 class SectorAllocation(BaseModel):
     sector: str

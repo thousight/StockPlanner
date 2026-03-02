@@ -59,11 +59,15 @@ class TransactionBase(BaseModel):
 class TransactionCreate(TransactionBase):
     pass
 
+class RecordStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+
 class TransactionRead(TransactionBase):
     id: int
     user_id: str
     price_base: Decimal
     total_base: Decimal
-    is_deleted: bool
+    status: RecordStatus
     
     model_config = ConfigDict(from_attributes=True)

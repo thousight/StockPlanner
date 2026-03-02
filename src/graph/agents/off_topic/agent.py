@@ -8,7 +8,7 @@ from src.graph.agents.off_topic.off_topic_answer import OffTopicAnswer
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 
 @with_logging
-def off_topic_agent(state: AgentState):
+async def off_topic_agent(state: AgentState):
     """
     Off-Topic Agent: ONLY handles casual conversation, greetings (like "hi" or "hello"), or queries entirely unrelated to finance. DO NOT route any market, economy, or stock questions here, even if they are broad or in a foreign language.
     """
@@ -21,7 +21,7 @@ def off_topic_agent(state: AgentState):
     ))
     
     # We pass the history and the current question
-    response = structured_llm.invoke([system_msg])
+    response = await structured_llm.ainvoke([system_msg])
     
     return {
         "agent_interactions": [{

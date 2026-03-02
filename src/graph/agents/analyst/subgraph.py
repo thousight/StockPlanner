@@ -3,7 +3,7 @@ from typing import TypedDict, Optional, Annotated, List
 import operator
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage
 from pydantic import BaseModel, Field
 from src.graph.agents.analyst.prompts import INSTRUCTION_GENERATOR_PROMPT, BULL_PROMPT, BEAR_PROMPT, SYNTHESIS_PROMPT
 from src.graph.utils.prompt import convert_state_to_prompt

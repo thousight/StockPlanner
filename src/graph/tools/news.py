@@ -1,30 +1,32 @@
 import yfinance as yf
+import asyncio
 from typing import List
-from concurrent.futures import ThreadPoolExecutor
 from src.graph.utils.news import get_summary_result, fetch_yfinance_news_urls, fetch_ddgs_urls, _parse_yf_news_item
 
-def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
+async def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
     """
     Fetch and summarize the latest news for a specific stock ticker.
     """
     results = []
     try:
         stock = yf.Ticker(symbol)
+        # yfinance news is synchronous, but fast enough for this wrapper
         news_items = stock.news
         
         if not news_items:
              return None
 
+        tasks = []
         for item in news_items[:max_results]:
             parsed = _parse_yf_news_item(item)
             if not parsed:
                 continue
                 
-            # Passing user_agent into the item dict for get_summary_result to pick up
             parsed["user_agent"] = kwargs.get("user_agent", "")
-            result = get_summary_result(parsed)
-            if result:
-                results.append(result)
+            tasks.append(get_summary_result(parsed))
+            
+        all_results = await asyncio.gather(*tasks)
+        results = [r for r in all_results if r]
                 
         if not results:
              return None
@@ -38,19 +40,18 @@ def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
         print(f"Error fetching news for {symbol}: {e}")
         return f"Error fetching news for {symbol}: {e}\n"
 
-def get_macro_economic_news(**kwargs) -> str:
+async def get_macro_economic_news(**kwargs) -> str:
     """
     Fetch and summarize the latest global macroeconomic news and indicators.
     """
     title_and_urls = []
 
-    # 1. Collect URLs from yfinance tickers in parallel
+    # 1. Collect URLs from yfinance tickers
     tickers = ["^GSPC", "^VIX", "^TNX", "DX-Y.NYB"]
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        for result in executor.map(fetch_yfinance_news_urls, tickers):
-            title_and_urls.extend(result)
+    for ticker in tickers:
+        title_and_urls.extend(fetch_yfinance_news_urls(ticker))
     
-    # 2. Collect URLs from DuckDuckGo queries in parallel
+    # 2. Collect URLs from DuckDuckGo queries
     queries = [
         "Macroeconomics news today",
         "US economy outlook today",
@@ -58,9 +59,8 @@ def get_macro_economic_news(**kwargs) -> str:
         "US employment report news",
         "US inflation cpi report news",
     ]
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        for result in executor.map(fetch_ddgs_urls, queries):
-            title_and_urls.extend(result)
+    for query in queries:
+        title_and_urls.extend(fetch_ddgs_urls(query))
             
     # 3. Deduplicate by URL
     seen_urls = set()
@@ -72,8 +72,8 @@ def get_macro_economic_news(**kwargs) -> str:
             seen_urls.add(item["link"])
             
     # 4. Fetch summaries in parallel
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        all_results = list(executor.map(get_summary_result, unique_candidates))
+    tasks = [get_summary_result(item) for item in unique_candidates]
+    all_results = await asyncio.gather(*tasks)
         
     valid_results = [r for r in all_results if r]
     if not valid_results:
@@ -85,15 +85,14 @@ def get_macro_economic_news(**kwargs) -> str:
         
     return "\n".join(result_lines) + "\n"
 
-def web_search(queries: List[str], **kwargs) -> str:
+async def web_search(queries: List[str], **kwargs) -> str:
     """
     Perform web search and get title and page summary by the queries.
     Returns a formatted markdown string of the results grouped by query.
     """
-    # 1. Fetch URLs for each query in parallel
-    # list(executor.map) returns results in the exact same order as the input queries
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        query_results = list(executor.map(fetch_ddgs_urls, queries))
+    # 1. Fetch URLs for each query
+    # fetch_ddgs_urls is synchronous but we wrap it in basic loop for now
+    query_results = [fetch_ddgs_urls(q) for q in queries]
     
     # 2. Collect unique candidate URLs to speed up summary extraction
     unique_candidates = {}
@@ -106,8 +105,8 @@ def web_search(queries: List[str], **kwargs) -> str:
                 
     # 3. Fetch summaries in parallel for unique candidates
     candidate_list = list(unique_candidates.values())
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        summarized_results = list(executor.map(get_summary_result, candidate_list))
+    tasks = [get_summary_result(item) for item in candidate_list]
+    summarized_results = await asyncio.gather(*tasks)
         
     # Create a lookup mapping from URL to the summarized result
     summary_map = {}

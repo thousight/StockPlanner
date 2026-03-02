@@ -1,22 +1,19 @@
-import os
 import yfinance as yf
 from ddgs import DDGS
 from typing import Dict, List, Any, Optional
-import requests
+import httpx
 from bs4 import BeautifulSoup
 import re
 from readability import Document
-from datetime import datetime, timedelta
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from src.database.database import SessionLocal
-from src.services.portfolio import get_valid_cache, save_cache
+from src.database.session import AsyncSessionLocal
 from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
 
-def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
+async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""
     user_agent = item.get("user_agent", "")
-    summary = get_summary(item['link'], user_agent)
+    summary = await get_summary(item['link'], user_agent)
     if summary:
         return {
             "title": item["title"],
@@ -57,7 +54,7 @@ def fetch_ddgs_urls(query: str) -> List[Dict[str, str]]:
         print(f"Error for query {query}: {e}")
     return results
 
-def get_summary(url: str, user_agent: str = "") -> Optional[str]:
+async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
     """
     Get news summary from cache or fetch and summarize.
     TTL: 7 days.
@@ -65,29 +62,31 @@ def get_summary(url: str, user_agent: str = "") -> Optional[str]:
     if not url:
         return None
         
-    db = SessionLocal()
-    try:
-        # Check cache
-        cached_summary = get_valid_cache(db, url)
-        if cached_summary:
-            return cached_summary
+    async with AsyncSessionLocal() as db:
+        try:
+            # Check cache
+            # Note: get_valid_cache and save_cache might need to be async too
+            # Assuming they are refactored or wrapped
+            from src.services.portfolio import get_valid_cache, save_cache
             
-        # Cache miss
-        content = fetch_article_content(url, user_agent)
-        if content:
-            summary = summarize_content(content, url)
-            if summary and "Error" not in summary:
-                # Use default TTL from save_cache (168 hours / 7 days)
-                save_cache(db, url, summary)
-                return summary
-    except Exception as e:
-        print(f"Error in get_summary: {e}")
-    finally:
-        db.close()
-        
+            cached_summary = await get_valid_cache(db, url)
+            if cached_summary:
+                return cached_summary
+                
+            # Cache miss
+            content = await fetch_article_content(url, user_agent)
+            if content:
+                summary = await summarize_content(content, url)
+                if summary and "Error" not in summary:
+                    # Use default TTL from save_cache (168 hours / 7 days)
+                    await save_cache(db, url, summary)
+                    return summary
+        except Exception as e:
+            print(f"Error in get_summary: {e}")
+            
     return None
 
-def fetch_article_content(url: str, user_agent: str = "") -> str:
+async def fetch_article_content(url: str, user_agent: str = "") -> Optional[str]:
     """Fetch and extract main text content from a URL."""
     try:
         final_ua = user_agent if user_agent else "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
@@ -95,30 +94,32 @@ def fetch_article_content(url: str, user_agent: str = "") -> str:
         headers = {
             "User-Agent": final_ua
         }
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        # Silently skip any failing responses
-        if response.status_code >= 400:
-            return None
-        
-        clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', response.text)
-        doc = Document(clean_html)
-        html_content = doc.summary()
-        
-        soup = BeautifulSoup(html_content, 'html.parser')
-        text = soup.get_text(separator=' ', strip=True)
-        
-        if text:
-            text = str(text)
-            text = re.sub(r'\s+', ' ', text).strip()
-        else:
-            text = "No readable text found."
-        return text
+        async with httpx.AsyncClient(headers=headers, timeout=10.0, follow_redirects=True) as client:
+            response = await client.get(url)
+            
+            # Silently skip any failing responses
+            if response.status_code >= 400:
+                return None
+            
+            text_content = response.text
+            clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text_content)
+            doc = Document(clean_html)
+            html_content = doc.summary()
+            
+            soup = BeautifulSoup(html_content, 'html.parser')
+            text = soup.get_text(separator=' ', strip=True)
+            
+            if text:
+                text = str(text)
+                text = re.sub(r'\s+', ' ', text).strip()
+            else:
+                text = "No readable text found."
+            return text
     except Exception:
         # Silently skip any connection errors, parsing errors, etc.
         return None
 
-def summarize_content(content: str, url: str) -> str:
+async def summarize_content(content: str, url: str) -> Optional[str]:
     """Summarize content using an LLM."""
     if not content or len(content) < 100:
         return None
@@ -130,7 +131,7 @@ def summarize_content(content: str, url: str) -> str:
             SystemMessage(content="You are a helpful financial research assistant."),
             HumanMessage(content=prompt)
         ]
-        response = llm.invoke(messages)
+        response = await llm.ainvoke(messages)
         return response.content.strip()
     except Exception as e:
         print(f"Error summarizing content: {e}")

@@ -1,19 +1,33 @@
 from typing import Dict, Any, Callable
 import traceback
 from functools import wraps
+import asyncio
 
 def with_logging(func: Callable) -> Callable:
-    """Decorator to catch, log, and re-throw exceptions in agent functions."""
+    """Decorator to catch, log, and re-throw exceptions in agent functions. Async-aware."""
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    async def async_wrapper(*args, **kwargs):
         agent_name = func.__name__.replace('_agent', '').upper()
-        print(f"--- {agent_name}: Starting ---")
+        print(f"\n--- {agent_name}: Starting ---")
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            print(f"Error in {func.__name__}: {e}\n{traceback.format_exc()}")
+            raise
+
+    @wraps(func)
+    def sync_wrapper(*args, **kwargs):
+        agent_name = func.__name__.replace('_agent', '').upper()
+        print(f"\n--- {agent_name}: Starting ---")
         try:
             return func(*args, **kwargs)
         except Exception as e:
             print(f"Error in {func.__name__}: {e}\n{traceback.format_exc()}")
             raise
-    return wrapper
+
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    return sync_wrapper
 
 def get_next_interaction_id(state: Dict[str, Any]) -> int:
     """Returns the next sequential interaction ID."""
