@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas.portfolio import PortfolioSummary
 from src.services.portfolio import get_portfolio_summary
 
@@ -20,12 +20,16 @@ def format_portfolio_for_llm(summary: PortfolioSummary) -> str:
 - Daily Change: ${summary.daily_pnl_usd:,.2f} ({summary.daily_pnl_pct:.2f}%)
 - Top Sectors: {sector_str if sector_str else 'N/A'}"""
 
-def get_user_context_data(db: Session, user_id: str) -> Dict[str, Any]:
+async def get_user_context_data(db: AsyncSession, user_id: str) -> Dict[str, Any]:
     """
     Fetches the portfolio summary for a user and returns a dictionary 
     suitable for updating the AgentState.user_context.
+    Uses run_sync to execute the sync get_portfolio_summary service.
     """
-    summary = get_portfolio_summary(db, user_id)
+    def sync_wrapper(sync_db):
+        return get_portfolio_summary(sync_db, user_id)
+    
+    summary = await db.run_sync(sync_wrapper)
     formatted_summary = format_portfolio_for_llm(summary)
     
     return {
