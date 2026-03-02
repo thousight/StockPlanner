@@ -2,6 +2,7 @@ from typing import Dict, Any, Callable
 import traceback
 from functools import wraps
 import asyncio
+import inspect
 
 def with_logging(func: Callable) -> Callable:
     """Decorator to catch, log, and re-throw exceptions in agent functions. Async-aware."""
@@ -25,7 +26,7 @@ def with_logging(func: Callable) -> Callable:
             print(f"Error in {func.__name__}: {e}\n{traceback.format_exc()}")
             raise
 
-    if asyncio.iscoroutinefunction(func):
+    if inspect.iscoroutinefunction(func):
         return async_wrapper
     return sync_wrapper
 
