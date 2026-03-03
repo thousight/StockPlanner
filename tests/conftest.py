@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from httpx import AsyncClient, Response, ASGITransport
 from unittest.mock import create_autospec
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ class TraceableAsyncClient(AsyncClient):
     """
     AsyncClient that stores the last response to extract Request IDs on failure.
     """
-    last_response: Response | None = None
+    last_response: Optional[Response] = None
 
     async def request(self, *args, **kwargs) -> Response:
         self.last_response = await super().request(*args, **kwargs)
