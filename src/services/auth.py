@@ -182,7 +182,7 @@ async def revoke_refresh_token(db: AsyncSession, refresh_token: str):
         # Already invalid or malformed, ignore
         pass
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/signin")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/signin")
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db),

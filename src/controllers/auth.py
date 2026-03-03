@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status, Request, Header
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from src.database.session import get_db
@@ -33,15 +34,18 @@ async def signup(data: UserSignUp, db: AsyncSession = Depends(get_db)):
 
 @router.post("/signin", response_model=TokenResponse)
 async def signin(
-    data: UserSignIn, 
     request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     user_agent: Optional[str] = Header(None, alias="User-Agent"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Authenticate and receive Access + Refresh tokens.
+    Supports standard OAuth2 form data (username/password) for Swagger compatibility.
     """
-    user = await authenticate_user(db, data)
+    # Map OAuth2 'username' to our 'email'
+    signin_data = UserSignIn(email=form_data.username, password=form_data.password)
+    user = await authenticate_user(db, signin_data)
     
     access_token = create_access_token(user.id)
     refresh_token = await create_refresh_token(db, user.id, user_agent)

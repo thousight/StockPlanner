@@ -15,6 +15,7 @@ python-dotenv>=1.0.0
 argon2-cffi
 uuid-utils
 email-validator
+python-multipart
 PyJWT
 
 # Diagnostics & Tracking

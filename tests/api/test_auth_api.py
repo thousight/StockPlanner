@@ -116,8 +116,9 @@ async def test_signin_success(mock_db, client):
     
     app.dependency_overrides[get_db] = lambda: mock_db
     
-    payload = {"email": "test@example.com", "password": "StrongPass123!"}
-    response = await client.post("/auth/signin", json=payload)
+    # OAuth2PasswordRequestForm expects form data (username/password)
+    payload = {"username": "test@example.com", "password": "StrongPass123!"}
+    response = await client.post("/auth/signin", data=payload)
     
     assert response.status_code == 200
     assert "access_token" in response.json()
