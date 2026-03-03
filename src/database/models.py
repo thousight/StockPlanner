@@ -110,12 +110,19 @@ class User(Base):
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid7.uuid7()))
     email = Column(String, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
-    full_name = Column(String, nullable=True)
-    status = Column(Enum(UserStatus), default=UserStatus.PENDING, nullable=False)
-    risk_tolerance = Column(Enum(RiskTolerance), default=RiskTolerance.MODERATE, nullable=False)
     
     # Profile fields
-    preferred_currency = Column(String(3), default="USD")
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    middle_name = Column(String, nullable=True)
+    display_name = Column(String, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
+    
+    status = Column(Enum(UserStatus), default=UserStatus.PENDING, nullable=False)
+    risk_tolerance = Column(Enum(RiskTolerance), default=RiskTolerance.MODERATE, nullable=False)
+    base_currency = Column(String(3), default="USD")
     timezone = Column(String, default="UTC")
     
     # Audit fields
@@ -132,6 +139,20 @@ class User(Base):
             postgresql_where=(deleted_at == None)
         ),
     )
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid7.uuid7()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, index=True) # SHA-256 hash of the JTI
+    user_agent = Column(String, nullable=True)
+    parent_token_id = Column(String, ForeignKey("refresh_tokens.id"), nullable=True)
+    rotated_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    user = relationship("User", backref="refresh_tokens")
 
 class NewsCache(Base):
     __tablename__ = "news_cache"
