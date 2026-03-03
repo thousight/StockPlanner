@@ -28,8 +28,8 @@ def mock_ticker_data():
 
 @pytest.mark.asyncio
 async def test_get_stock_financials(mock_ticker_data):
-    with patch("src.graph.tools.research.yf.Ticker", return_value=mock_ticker_data):
-        result = get_stock_financials("AAPL")
+    with patch("src.services.market_data.get_ticker", return_value=mock_ticker_data):
+        result = await get_stock_financials("AAPL")
         assert "**Financial Data for AAPL**" in result
         assert "Market Cap: $2,000,000,000" in result
         assert "P/E Ratio: 15.5" in result
@@ -37,7 +37,7 @@ async def test_get_stock_financials(mock_ticker_data):
 
 @pytest.mark.asyncio
 async def test_get_stock_news(mock_ticker_data):
-    with patch("src.graph.tools.news.yf.Ticker", return_value=mock_ticker_data), \
+    with patch("src.services.market_data.get_ticker", return_value=mock_ticker_data), \
          patch("src.graph.utils.news.get_summary", new_callable=AsyncMock) as mock_get_summary:
         mock_get_summary.return_value = "Mock summary content."
         result = await get_stock_news("AAPL")
@@ -51,7 +51,7 @@ async def test_get_macro_economic_news(mock_ticker_data):
         {"title": "Mock DDG Title", "href": "https://example.com/mock-ddg"}
     ]
     
-    with patch("src.graph.utils.news.yf.Ticker", return_value=mock_ticker_data), \
+    with patch("src.services.market_data.get_ticker", return_value=mock_ticker_data), \
          patch("src.graph.utils.news.DDGS") as mock_ddgs_class, \
          patch("src.graph.utils.news.get_summary", new_callable=AsyncMock) as mock_get_summary:
         
@@ -83,13 +83,13 @@ async def test_web_search():
 
 @pytest.mark.asyncio
 async def test_get_stock_financials_error():
-    with patch("src.graph.tools.research.yf.Ticker", side_effect=Exception("API Error")):
-        result = get_stock_financials("AAPL")
+    with patch("src.services.market_data.get_ticker", side_effect=Exception("API Error")):
+        result = await get_stock_financials("AAPL")
         assert "Failed to fetch financial data for AAPL: API Error" in result
 
 @pytest.mark.asyncio
 async def test_get_stock_news_no_results(mock_ticker_data):
     mock_ticker_data.news = []
-    with patch("src.graph.tools.news.yf.Ticker", return_value=mock_ticker_data):
+    with patch("src.services.market_data.get_ticker", return_value=mock_ticker_data):
         result = await get_stock_news("AAPL")
         assert result is None

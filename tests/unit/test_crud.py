@@ -12,9 +12,12 @@ from src.services.portfolio import (
     get_transactions,
     get_transaction,
     delete_transaction,
-    recalculate_holding,
+    recalculate_holding
+)
+from src.services.market_data import (
     get_valid_cache,
-    save_cache
+    save_cache,
+    get_historical_fx_rate
 )
 from src.database.models import Asset, Transaction, Holding, AssetType, RecordStatus, NewsCache
 from src.schemas.transactions import TransactionCreate, TransactionAction
