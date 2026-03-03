@@ -13,6 +13,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 | **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Completed |
 | **Phase 5** | **Agentic Flow Refinement** | Conditional interrupts and report commit optimization. | Completed |
 | **Phase 6** | **Test Coverage** | Comprehensive unit and integration testing. | Completed |
+| **Phase 7** | **Simplification & Cleanup** | Audit and simplify project structure and logic. | Pending |
 
 ### Phase 1: API Scaffolding
 **Goal:** Setup FastAPI, health checks, and async architecture for a Railway-hosted PostgreSQL backend.
@@ -81,6 +82,15 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 - [x] 6-02-PLAN.md — Mocking & Database Layer.
 - [x] 6-03-PLAN.md — API CRUD & Integration.
 - [x] 6-04-PLAN.md — SSE Streaming & Agent Resilience.
+
+### Phase 7: Simplification & Cleanup
+**Goal:** Audit the project for redundant logic, unused components, and areas where the code structure can be simplified for long-term maintainability.
+**Plans:** [To be planned]
+
+**Requirements:** [Audit]
+
+**Plans:**
+- [ ] 7-01-PLAN.md — [To be planned]
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.

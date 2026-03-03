@@ -2,9 +2,9 @@
 
 ## Current Position
 - **Milestone:** Milestone 1: API Server & Cloud Sync
-- **Phase:** Phase 6: Test Coverage
-- **Status:** Milestone 1 successfully completed. All 6 phases finished.
-- **Last Activity:** [2026-03-02] — Phase 6 completed. Implemented 51 unit and integration tests with 100% mocked dependencies.
+- **Phase:** Phase 7: Simplification & Cleanup
+- **Status:** Phase 6 complete, starting Phase 7.
+- **Last Activity:** [2026-03-02] — Added Phase 7: Simplification & Cleanup to the roadmap.
 
 ## Planning Context
 - **Vision:** Financial planner with LangGraph agents and Flutter UI.
