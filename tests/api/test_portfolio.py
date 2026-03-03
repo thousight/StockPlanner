@@ -47,7 +47,7 @@ async def test_get_portfolio_summary(client, mock_session):
         assert data["total_value_usd"] == "10000.00"
         assert data["total_gain_loss_pct"] == "0.25"
         assert len(data["sector_allocation"]) == 2
-        assert data["benchmark"]["benchmark_name"] == "SPY"
+        assert data["benchmark"]["benchmark_name"] == "S&P 500 (SPY)"
         
         mock_get_summary.assert_called_once_with(mock_session, "user123")
 

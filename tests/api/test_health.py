@@ -1,10 +1,20 @@
 import pytest
 from httpx import AsyncClient
+from main import app
+from src.database.session import get_db
+from unittest.mock import AsyncMock
 
-async def test_health_check(client: AsyncClient):
+@pytest.fixture(autouse=True)
+def override_db(mock_session):
+    app.dependency_overrides[get_db] = lambda: mock_session
+    yield
+    app.dependency_overrides.clear()
+
+async def test_health_check(client: AsyncClient, mock_session):
     """
     Verifies that the health check endpoint returns 200 OK.
     """
+    mock_session.execute.return_value = AsyncMock()
     response = await client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
