@@ -5,6 +5,8 @@ from httpx import AsyncClient, Response, ASGITransport
 from unittest.mock import create_autospec
 from sqlalchemy.ext.asyncio import AsyncSession
 from main import app
+from src.services.auth import create_access_token
+from src.database.models import User, UserStatus, RiskTolerance
 
 class TraceableAsyncClient(AsyncClient):
     """
@@ -33,6 +35,25 @@ def mock_session():
     Provides a mock SQLAlchemy AsyncSession.
     """
     return create_autospec(AsyncSession)
+
+@pytest.fixture
+def test_user():
+    """Provides a consistent test user object."""
+    return User(
+        id="019cb265-1862-76d0-8ebb-10273b096f66",
+        email="test@example.com",
+        first_name="Test",
+        last_name="User",
+        status=UserStatus.ACTIVE,
+        risk_tolerance=RiskTolerance.MODERATE,
+        base_currency="USD"
+    )
+
+@pytest.fixture
+def auth_headers(test_user):
+    """Provides auth headers for the primary test user."""
+    token = create_access_token(test_user.id)
+    return {"Authorization": f"Bearer {token}"}
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):

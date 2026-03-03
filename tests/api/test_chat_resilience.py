@@ -6,7 +6,7 @@ from main import app
 from src.database.session import get_db
 
 @pytest.mark.asyncio
-async def test_chat_manual_is_disconnected_mock(client, mocker):
+async def test_chat_manual_is_disconnected_mock(client, mocker, test_user, auth_headers):
     """
     Verify the logic specifically when request.is_disconnected() returns True.
     """
@@ -14,10 +14,15 @@ async def test_chat_manual_is_disconnected_mock(client, mocker):
     mock_db = AsyncMock()
     app.dependency_overrides[get_db] = lambda: mock_db
     
+    # Mock user for auth
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = test_user
+    
     # Mock ChatThread check
-    mock_result = MagicMock()
-    mock_db.execute.return_value = mock_result
-    mock_result.scalar_one_or_none.return_value = MagicMock(id="test-id")
+    mock_thread_result = MagicMock()
+    mock_thread_result.scalar_one_or_none.return_value = MagicMock(id="test-id", user_id=test_user.id)
+    
+    mock_db.execute.side_effect = [mock_user_result, mock_thread_result]
     
     mocker.patch("src.controllers.chat.get_user_context_data", return_value={})
     
@@ -38,14 +43,10 @@ async def test_chat_manual_is_disconnected_mock(client, mocker):
     mock_graph.astream_events.side_effect = mock_astream_events
     
     # 2. Mock the request object's is_disconnected to return True immediately
-    # We need to patch where it's used. It's passed to event_generator.
-    # In controllers/chat.py, it's the 'request' parameter.
-    
-    # We'll use a wrapper to intercept the call to event_generator
     real_gen = importlib.import_module("src.controllers.chat").event_generator
     
     async def mock_event_generator(*args, **kwargs):
-        # The 'request' object is the first positional arg
+        # request is first, user is second
         req = args[0]
         # Force it to return True after 2 calls
         req.is_disconnected = AsyncMock(side_effect=[False, False, True, True, True])
@@ -56,10 +57,9 @@ async def test_chat_manual_is_disconnected_mock(client, mocker):
 
     # 3. Execute
     payload = {"message": "test"}
-    headers = {"X-User-ID": "user-1"}
     
     response_tokens = []
-    async with client.stream("POST", "/chat", json=payload, headers=headers) as response:
+    async with client.stream("POST", "/chat", json=payload, headers=auth_headers) as response:
         assert response.status_code == 200
         async for line in response.aiter_lines():
             if line.startswith("data: "):

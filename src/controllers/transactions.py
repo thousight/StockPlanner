@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
@@ -11,8 +11,9 @@ from src.services.portfolio import (
     get_transaction, 
     recalculate_holding
 )
-from src.database.models import Asset
+from src.database.models import Asset, User
 from src.services.market_data import get_historical_fx_rate
+from src.services.auth import set_user_context
 
 router = APIRouter(prefix="/investment/transactions", tags=["transactions"])
 
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/investment/transactions", tags=["transactions"])
 async def add_transaction_endpoint(
     t_data: TransactionCreate, 
     db: AsyncSession = Depends(get_db),
-    x_user_id: str = Header(..., alias="X-User-ID")
+    current_user: User = Depends(set_user_context)
 ):
     """
     Create a new transaction.
@@ -28,10 +29,10 @@ async def add_transaction_endpoint(
     # Check if asset exists
     asset = await db.get(Asset, t_data.asset_id)
     if not asset:
-        raise HTTPException(status_code=404, detail=f"Asset ID {t_data.asset_id} not found")
+        raise HTTPException(status_code=404, detail="Asset not found")
 
     try:
-        new_tx = await create_transaction(db, x_user_id, t_data)
+        new_tx = await create_transaction(db, current_user.id, t_data)
         await db.commit()
         await db.refresh(new_tx)
         return new_tx
@@ -48,20 +49,20 @@ async def list_transactions_endpoint(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-    x_user_id: str = Header(..., alias="X-User-ID")
+    current_user: User = Depends(set_user_context)
 ):
     """
     List transactions with pagination and optional filtering by asset_id.
     """
-    return await get_transactions(db, x_user_id, asset_id=asset_id, limit=limit, offset=offset)
+    return await get_transactions(db, current_user.id, asset_id=asset_id, limit=limit, offset=offset)
 
 @router.get("/{transaction_id}", response_model=TransactionRead)
 async def read_transaction_endpoint(
     transaction_id: int, 
     db: AsyncSession = Depends(get_db),
-    x_user_id: str = Header(..., alias="X-User-ID")
+    current_user: User = Depends(set_user_context)
 ):
-    tx = await get_transaction(db, x_user_id, transaction_id)
+    tx = await get_transaction(db, current_user.id, transaction_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return tx
@@ -70,13 +71,13 @@ async def read_transaction_endpoint(
 async def delete_transaction_endpoint(
     transaction_id: int, 
     db: AsyncSession = Depends(get_db),
-    x_user_id: str = Header(..., alias="X-User-ID")
+    current_user: User = Depends(set_user_context)
 ):
     """
     Soft-delete a transaction and recalculate holding.
     """
     try:
-        await delete_transaction(db, x_user_id, transaction_id)
+        await delete_transaction(db, current_user.id, transaction_id)
         await db.commit()
         return {"status": "success", "message": "Transaction deleted and holding recalculated"}
     except HTTPException as e:
@@ -91,17 +92,21 @@ async def update_transaction_endpoint(
     transaction_id: int, 
     t_data: TransactionCreate, 
     db: AsyncSession = Depends(get_db),
-    x_user_id: str = Header(..., alias="X-User-ID")
+    current_user: User = Depends(set_user_context)
 ):
     """
     Update a transaction's details. Requires recalculating Holding/ACB.
     """
-    tx = await get_transaction(db, x_user_id, transaction_id)
+    tx = await get_transaction(db, current_user.id, transaction_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
     # Re-verify asset_id if changed?
     if tx.asset_id != t_data.asset_id:
+        # Check if new asset exists
+        new_asset = await db.get(Asset, t_data.asset_id)
+        if not new_asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
         old_asset_id = tx.asset_id
         tx.asset_id = t_data.asset_id
     else:
@@ -133,9 +138,9 @@ async def update_transaction_endpoint(
     try:
         await db.flush()
         # Recalculate holding for the asset(s)
-        await recalculate_holding(db, x_user_id, tx.asset_id)
+        await recalculate_holding(db, current_user.id, tx.asset_id)
         if old_asset_id:
-            await recalculate_holding(db, x_user_id, old_asset_id)
+            await recalculate_holding(db, current_user.id, old_asset_id)
         
         await db.commit()
         await db.refresh(tx)

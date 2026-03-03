@@ -1,11 +1,11 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr
 from typing import Optional
 from datetime import date, datetime
 import re
 from src.database.models import RiskTolerance, UserStatus
 
 class UserSignUp(BaseModel):
-    email: str
+    email: EmailStr
     password: str = Field(..., min_length=8)
     first_name: str
     last_name: str
@@ -56,3 +56,15 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_login_at: Optional[datetime] = None
+
+class UserSignIn(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str

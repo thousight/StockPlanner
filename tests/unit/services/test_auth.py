@@ -48,7 +48,7 @@ async def test_create_user_success(mock_session):
     # Verify
     assert user.email == "test@example.com"
     assert verify_password(user.hashed_password, "StrongPass123!") is True
-    assert user.status == UserStatus.PENDING
+    assert user.status == UserStatus.ACTIVE
     mock_session.add.assert_called_once()
     mock_session.commit.assert_called_once()
     mock_session.refresh.assert_called_once()

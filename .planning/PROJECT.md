@@ -20,9 +20,12 @@ A comprehensive financial planner application that collects user financial infor
 - **Verification:** 95+ tests ensure system stability and financial logic correctness.
 
 ## Next Milestone Goals (Milestone 2)
-- **Security:** Implement Google Sign-in and JWT authentication.
-- **Isolation:** Ensure strict row-level security and user data isolation.
-- **Onboarding:** Ready the backend for the first waves of mobile client integration.
+- **Authentication:** Implement basic sign-up and sign-in APIs with JWT tokens.
+- **User Management:** Create a dedicated User database table with secure password hashing (bcrypt).
+- **Authorization:** Protect all financial and chat endpoints using JWT middleware.
+- **Isolation:** Ensure all data operations are strictly scoped to the authenticated user ID.
+
+*Note: Google Sign-in integration has been deferred to Milestone 6.*
 
 ## Core Principles
 

@@ -67,12 +67,12 @@ def process_transactions_chronologically(transactions: list[Transaction]) -> tup
     final_acb = (total_cost_base / qty) if qty > 0 else Decimal("0")
     return qty, final_acb
 
-async def get_or_create_asset(db: AsyncSession, user_id: str, symbol: str, asset_type: AssetType = AssetType.STOCK, name: str = None) -> Asset:
-    stmt = select(Asset).where(Asset.user_id == user_id, Asset.symbol == symbol)
+async def get_or_create_asset(db: AsyncSession, symbol: str, asset_type: AssetType = AssetType.STOCK, name: str = None) -> Asset:
+    stmt = select(Asset).where(Asset.symbol == symbol)
     result = await db.execute(stmt)
     asset = result.scalar_one_or_none()
     if not asset:
-        asset = Asset(user_id=user_id, symbol=symbol, type=asset_type, name=name or symbol)
+        asset = Asset(symbol=symbol, type=asset_type, name=name or symbol)
         db.add(asset)
         await db.flush() # Ensure asset has an ID
     return asset

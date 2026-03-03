@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Header, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from src.database.session import get_db
-from src.database.models import ChatThread, RecordStatus
+from src.database.models import ChatThread, RecordStatus, User
 from src.schemas.threads import ThreadListResponse, ThreadBase, ThreadHistoryResponse, MessageSchema
 from src.graph.persistence import get_checkpointer
 from src.graph.graph import create_graph
+from src.services.auth import set_user_context
 import logging
 from datetime import datetime, timezone
 
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 async def get_threads(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    x_user_id: str = Header(..., alias="X-User-ID"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
 ):
     """
     Returns a paginated list of chat threads for the current user.
@@ -25,7 +26,7 @@ async def get_threads(
     try:
         # Count total threads for this user
         count_query = select(func.count()).select_from(ChatThread).where(
-            ChatThread.user_id == x_user_id,
+            ChatThread.user_id == current_user.id,
             ChatThread.status == RecordStatus.ACTIVE
         )
         total_result = await db.execute(count_query)
@@ -33,7 +34,7 @@ async def get_threads(
 
         # Fetch threads
         query = select(ChatThread).where(
-            ChatThread.user_id == x_user_id,
+            ChatThread.user_id == current_user.id,
             ChatThread.status == RecordStatus.ACTIVE
         ).order_by(ChatThread.updated_at.desc()).offset(offset).limit(limit)
         
@@ -50,14 +51,14 @@ async def get_threads(
             total=total
         )
     except Exception as e:
-        logger.error(f"Error fetching threads for user {x_user_id}: {e}")
+        logger.error(f"Error fetching threads for user {current_user.id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.delete("/threads/{thread_id}")
 async def delete_thread(
     thread_id: str,
-    x_user_id: str = Header(..., alias="X-User-ID"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
 ):
     """
     Soft-deletes a chat thread.
@@ -65,7 +66,7 @@ async def delete_thread(
     try:
         query = select(ChatThread).where(
             ChatThread.id == thread_id,
-            ChatThread.user_id == x_user_id,
+            ChatThread.user_id == current_user.id,
             ChatThread.status == RecordStatus.ACTIVE
         )
         result = await db.execute(query)
@@ -90,8 +91,8 @@ async def get_thread_history(
     thread_id: str,
     limit: int = Query(50, ge=1, le=100),
     # before_timestamp: Optional[datetime] = Query(None), # For future pagination
-    x_user_id: str = Header(..., alias="X-User-ID"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
 ):
     """
     Returns a simplified history of messages for a chat thread.
@@ -100,7 +101,7 @@ async def get_thread_history(
         # Verify thread ownership
         result = await db.execute(select(ChatThread).where(
             ChatThread.id == thread_id,
-            ChatThread.user_id == x_user_id,
+            ChatThread.user_id == current_user.id,
             ChatThread.status == RecordStatus.ACTIVE
         ))
         thread = result.scalar_one_or_none()

@@ -6,17 +6,21 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from src.database.session import get_db
 
 @pytest.mark.asyncio
-async def test_input_stress_long_message():
+async def test_input_stress_long_message(client, mock_session, test_user, auth_headers):
     """
     Test handling of extremely long messages.
     """
     long_msg = "A" * 15000
-    user_id = "stress-user"
     
-    mock_db = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = MagicMock()
-    mock_db.execute.return_value = mock_result
+    # Mock user for auth
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = test_user
+    
+    # Mock thread lookup
+    mock_thread_result = MagicMock()
+    mock_thread_result.scalar_one_or_none.return_value = MagicMock(id="long-msg", user_id=test_user.id)
+    
+    mock_session.execute.side_effect = [mock_user_result, mock_thread_result]
 
     with patch("src.controllers.chat.get_checkpointer") as mock_cp_ctx:
         mock_cp_ctx.return_value.__aenter__.return_value = AsyncMock()
@@ -29,25 +33,27 @@ async def test_input_stress_long_message():
             mock_graph.astream_events.side_effect = fast_stream
             mock_create.return_value = mock_graph
             
-            app.dependency_overrides[get_db] = lambda: mock_db
+            app.dependency_overrides[get_db] = lambda: mock_session
 
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                headers = {"X-User-ID": user_id}
-                response = await ac.post("/chat", json={"message": long_msg}, headers=headers)
-                assert response.status_code == 200
+            response = await client.post("/chat", json={"message": long_msg}, headers=auth_headers)
+            assert response.status_code == 200
                 
             app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
-async def test_llm_timeout_resilience():
+async def test_llm_timeout_resilience(client, mock_session, test_user, auth_headers):
     """
     Test that the API handles underlying timeouts without crashing.
     """
-    user_id = "timeout-user"
-    mock_db = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = MagicMock()
-    mock_db.execute.return_value = mock_result
+    # Mock user for auth
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = test_user
+    
+    # Mock thread lookup
+    mock_thread_result = MagicMock()
+    mock_thread_result.scalar_one_or_none.return_value = MagicMock(id="timeout", user_id=test_user.id)
+    
+    mock_session.execute.side_effect = [mock_user_result, mock_thread_result]
 
     with patch("src.controllers.chat.get_checkpointer") as mock_cp_ctx:
         mock_cp_ctx.return_value.__aenter__.return_value = AsyncMock()
@@ -62,21 +68,19 @@ async def test_llm_timeout_resilience():
             mock_graph.astream_events.side_effect = timeout_stream
             mock_create.return_value = mock_graph
             
-            app.dependency_overrides[get_db] = lambda: mock_db
+            app.dependency_overrides[get_db] = lambda: mock_session
 
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                headers = {"X-User-ID": user_id}
-                response = await ac.post("/chat", json={"message": "fail"}, headers=headers)
-                
-                # It's a StreamingResponse, so status code 200 is sent immediately.
-                # The error is yielded as an SSE event.
-                assert response.status_code == 200
-                
-                # Check for error event in stream
-                content = ""
-                async for line in response.aiter_lines():
-                    content += line
-                
-                assert "unexpected error" in content or "error" in content.lower()
+            response = await client.post("/chat", json={"message": "fail"}, headers=auth_headers)
+            
+            # It's a StreamingResponse, so status code 200 is sent immediately.
+            # The error is yielded as an SSE event.
+            assert response.status_code == 200
+            
+            # Check for error event in stream
+            content = ""
+            async for line in response.aiter_lines():
+                content += line
+            
+            assert "unexpected error" in content or "error" in content.lower()
                 
             app.dependency_overrides.clear()

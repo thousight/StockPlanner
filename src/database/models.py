@@ -38,8 +38,7 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, index=True)
-    symbol = Column(String, index=True, nullable=True)
+    symbol = Column(String, index=True, nullable=False, unique=True)
     name = Column(String)
     type = Column(Enum(AssetType), default=AssetType.STOCK)
     sector = Column(String, nullable=True)

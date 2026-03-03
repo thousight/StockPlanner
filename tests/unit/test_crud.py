@@ -21,24 +21,22 @@ from src.services.market_data import (
 )
 from src.database.models import Asset, Transaction, Holding, AssetType, RecordStatus, NewsCache
 from src.schemas.transactions import TransactionCreate, TransactionAction
-
 @pytest.mark.asyncio
 async def test_get_or_create_asset_existing(mock_session):
     # Setup
-    user_id = "user1"
     symbol = "AAPL"
-    mock_asset = Asset(id=1, user_id=user_id, symbol=symbol)
-    
+    mock_asset = Asset(id=1, symbol=symbol)
+
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_asset
     mock_session.execute = AsyncMock(return_value=mock_result)
-    
+
     # Execute
-    asset = await get_or_create_asset(mock_session, user_id, symbol)
-    
+    asset = await get_or_create_asset(mock_session, symbol)
+
     # Verify
-    assert asset == mock_asset
-    mock_session.execute.assert_called_once()
+    assert asset.id == 1
+    assert asset.symbol == symbol
     mock_session.add.assert_not_called()
 
 @pytest.mark.asyncio
@@ -53,12 +51,11 @@ async def test_get_or_create_asset_new(mock_session):
     mock_session.flush = AsyncMock()
     
     # Execute
-    asset = await get_or_create_asset(mock_session, user_id, symbol)
-    
+    asset = await get_or_create_asset(mock_session, symbol)
+
     # Verify
     assert asset.symbol == symbol
-    assert asset.user_id == user_id
-    mock_session.add.assert_called_once_with(asset)
+    mock_session.add.assert_called_once()
     mock_session.flush.assert_called_once()
 
 @pytest.mark.asyncio

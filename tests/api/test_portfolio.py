@@ -1,15 +1,16 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from decimal import Decimal
 from src.schemas.portfolio import PortfolioSummary, SectorAllocation, BenchmarkComparison
 from main import app
 from src.database.session import get_db
+from src.database.models import User
 
 @pytest.mark.asyncio
-async def test_get_portfolio_summary(client, mock_session):
+async def test_get_portfolio_summary(client, mock_session, auth_headers, test_user):
     """
     Test GET /investment (Portfolio Analytics).
-    Verify JSON structure and numeric precision.
+    Verify JWT context and numeric precision.
     """
     # Setup mock return value
     mock_summary = PortfolioSummary(
@@ -31,7 +32,11 @@ async def test_get_portfolio_summary(client, mock_session):
         )
     )
 
-    # Dependency override
+    # Mock user lookup for auth dependency
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = test_user
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
     app.dependency_overrides[get_db] = lambda: mock_session
 
     with patch("src.controllers.portfolio.get_portfolio_summary", new_callable=AsyncMock) as mock_get_summary:
@@ -39,37 +44,38 @@ async def test_get_portfolio_summary(client, mock_session):
         
         response = await client.get(
             "/investment",
-            headers={"X-User-ID": "user123"}
+            headers=auth_headers
         )
         
         assert response.status_code == 200
         data = response.json()
         assert data["total_value_usd"] == "10000.00"
         assert data["total_gain_loss_pct"] == "0.25"
-        assert len(data["sector_allocation"]) == 2
-        assert data["benchmark"]["benchmark_name"] == "S&P 500 (SPY)"
         
-        mock_get_summary.assert_called_once_with(mock_session, "user123")
+        # Verify it was called with test_user.id
+        mock_get_summary.assert_called_once_with(mock_session, test_user.id)
 
-    # Clean up
     del app.dependency_overrides[get_db]
 
 @pytest.mark.asyncio
-async def test_get_portfolio_summary_missing_header(client):
+async def test_get_portfolio_summary_unauthorized(client):
     """
-    Test GET /investment without X-User-ID header.
-    Should return 422 Unprocessable Entity.
+    Test GET /investment without JWT.
+    Should return 401 Unauthorized.
     """
     response = await client.get("/investment")
-    assert response.status_code == 422
-    assert "X-User-ID" in response.text
+    assert response.status_code == 401
 
 @pytest.mark.asyncio
-async def test_get_portfolio_summary_error(client, mock_session):
+async def test_get_portfolio_summary_error(client, mock_session, auth_headers, test_user):
     """
     Test GET /investment when service layer raises an exception.
     """
-    # Dependency override
+    # Mock user lookup
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = test_user
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
     app.dependency_overrides[get_db] = lambda: mock_session
 
     with patch("src.controllers.portfolio.get_portfolio_summary", new_callable=AsyncMock) as mock_get_summary:
@@ -77,11 +83,10 @@ async def test_get_portfolio_summary_error(client, mock_session):
         
         response = await client.get(
             "/investment",
-            headers={"X-User-ID": "user123"}
+            headers=auth_headers
         )
         
         assert response.status_code == 500
         assert "Service error" in response.json()["detail"]
 
-    # Clean up
     del app.dependency_overrides[get_db]

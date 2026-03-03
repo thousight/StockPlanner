@@ -5,25 +5,26 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 from langgraph.types import Command
 
-from fastapi import APIRouter, Request, Header, Depends, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Request, Depends, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from src.database.session import get_db
-from src.database.models import ChatThread
+from src.database.models import ChatThread, User
 from src.schemas.chat import ChatRequest, ChatTokenEvent, ChatStatusEvent, ChatErrorEvent
 from src.graph.graph import create_graph
 from src.graph.persistence import get_checkpointer
 from src.services.context_injection import get_user_context_data
 from src.services.titler import update_thread_title_background
+from src.services.auth import set_user_context
 
 router = APIRouter(tags=["Chat"])
 logger = logging.getLogger(__name__)
 
 async def event_generator(
     request: Request, 
-    user_id: str, 
+    user: User, 
     payload_message: str, 
     db: AsyncSession,
     background_tasks: BackgroundTasks,
@@ -35,13 +36,13 @@ async def event_generator(
     """
     config = {"configurable": {"thread_id": thread_id}}
     
-    logger.info(f"Initiating chat stream for user {user_id}, thread {thread_id}")
+    logger.info(f"Initiating chat stream for user {user.id}, thread {thread_id}")
     
     full_response_content = ""
     
     try:
         # 1. Prepare inputs
-        user_context_data = await get_user_context_data(db, user_id)
+        user_context_data = await get_user_context_data(db, user.id)
         initial_state = {
             "session_context": {
                 "messages": [("user", payload_message)],
@@ -50,7 +51,10 @@ async def event_generator(
                 "revision_count": 0
             },
             "user_context": {
-                "user_id": user_id,
+                "user_id": user.id,
+                "first_name": user.first_name,
+                "risk_tolerance": user.risk_tolerance.value if hasattr(user.risk_tolerance, "value") else str(user.risk_tolerance),
+                "base_currency": user.base_currency,
                 "portfolio_summary": user_context_data.get("portfolio_summary", "N/A"),
                 "portfolio": []
             },
@@ -112,8 +116,8 @@ async def chat(
     request: Request,
     payload: ChatRequest,
     background_tasks: BackgroundTasks,
-    x_user_id: str = Header(..., alias="X-User-ID"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
 ):
     """
     Streaming chat endpoint that provides real-time agent tokens and status updates using SSE.
@@ -130,16 +134,21 @@ async def chat(
         is_new_thread = True
         thread = ChatThread(
             id=thread_id,
-            user_id=x_user_id,
+            user_id=current_user.id,
             title="New Conversation"
         )
         db.add(thread)
         await db.commit()
+    else:
+        # Ownership check (Stealth 404)
+        if thread.user_id != current_user.id:
+            logger.warning(f"User {current_user.id} attempted to access thread {thread_id} owned by {thread.user_id}")
+            raise HTTPException(status_code=404, detail="Not Found")
     
     return StreamingResponse(
         event_generator(
             request, 
-            x_user_id, 
+            current_user, 
             payload.message, 
             db, 
             background_tasks, 

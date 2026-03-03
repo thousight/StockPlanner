@@ -3,10 +3,10 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 from main import app
 from src.database.session import get_db
-from src.schemas.chat import ChatTokenEvent, ChatStatusEvent, ChatUpdateEvent
+from src.schemas.chat import ChatTokenEvent, ChatStatusEvent
 
 @pytest.mark.asyncio
-async def test_chat_streaming_success(client, mocker):
+async def test_chat_streaming_success(client, mocker, test_user, auth_headers):
     """
     Verify that /chat SSE stream yields expected content from mocked graph events.
     """
@@ -14,11 +14,15 @@ async def test_chat_streaming_success(client, mocker):
     mock_db = AsyncMock()
     app.dependency_overrides[get_db] = lambda: mock_db
     
+    # Mock user for auth
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = test_user
+    
     # Mock thread check in database
-    mock_result = MagicMock()
-    mock_db.execute.return_value = mock_result
-    # thread = result.scalar_one_or_none()
-    mock_result.scalar_one_or_none.return_value = MagicMock(id="test-thread-id")
+    mock_thread_result = MagicMock()
+    mock_thread_result.scalar_one_or_none.return_value = MagicMock(id="test-thread-id", user_id=test_user.id)
+    
+    mock_db.execute.side_effect = [mock_user_result, mock_thread_result]
     
     # Mock context injection
     mocker.patch("src.controllers.chat.get_user_context_data", return_value={"portfolio_summary": "Mocked Summary"})
@@ -34,7 +38,6 @@ async def test_chat_streaming_success(client, mocker):
     
     # Mock astream_events
     async def mock_astream_events(*args, **kwargs):
-        # We need events that match what event_generator expects
         events = [
             {
                 "event": "on_chain_start", 
@@ -48,32 +51,21 @@ async def test_chat_streaming_success(client, mocker):
             {
                 "event": "on_chat_model_stream", 
                 "data": {"chunk": MagicMock(content=" world!")}
-            },
-            {
-                "event": "on_chain_end", 
-                "metadata": {"langgraph_node": "commit"}, 
-                "data": {"output": {"last_report_id": 123}}
             }
         ]
         for event in events:
             yield event
             
     mock_graph.astream_events.side_effect = mock_astream_events
-    
-    # Mock aget_state for handle_interrupts (called after astream_events)
-    mock_state = MagicMock()
-    mock_state.next = [] # No interrupts
-    mock_graph.aget_state = AsyncMock(return_value=mock_state)
 
     # 2. Execute request
     payload = {
         "message": "Hi",
         "thread_id": "test-thread-id"
     }
-    headers = {"X-User-ID": "user-1"}
     
     events = []
-    async with client.stream("POST", "/chat", json=payload, headers=headers) as response:
+    async with client.stream("POST", "/chat", json=payload, headers=auth_headers) as response:
         assert response.status_code == 200
         assert "text/event-stream" in response.headers["content-type"]
         assert response.headers["X-Thread-ID"] == "test-thread-id"
@@ -84,23 +76,18 @@ async def test_chat_streaming_success(client, mocker):
                 events.append(event_data)
 
     # 3. Verify events
-    # Expected: 1 status, 2 tokens
     assert len(events) == 3
-
-    # Check types and content
     assert events[0]["type"] == "status"
     assert "Supervisor" in events[0]["content"]
-
     assert events[1]["type"] == "token"
     assert events[1]["content"] == "Hello"
-
     assert events[2]["type"] == "token"
     assert events[2]["content"] == " world!"
-    # Cleanup
+    
     app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
-async def test_chat_streaming_error(client, mocker):
+async def test_chat_streaming_error(client, mocker, test_user, auth_headers):
     """
     Verify that explicit error events are yielded when the graph fails.
     """
@@ -108,9 +95,13 @@ async def test_chat_streaming_error(client, mocker):
     mock_db = AsyncMock()
     app.dependency_overrides[get_db] = lambda: mock_db
     
-    mock_result = MagicMock()
-    mock_db.execute.return_value = mock_result
-    mock_result.scalar_one_or_none.return_value = MagicMock(id="test-thread-id")
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = test_user
+    
+    mock_thread_result = MagicMock()
+    mock_thread_result.scalar_one_or_none.return_value = MagicMock(id="test-thread-id", user_id=test_user.id)
+    
+    mock_db.execute.side_effect = [mock_user_result, mock_thread_result]
     
     mocker.patch("src.controllers.chat.get_user_context_data", return_value={})
     
@@ -121,9 +112,7 @@ async def test_chat_streaming_error(client, mocker):
     mock_graph = MagicMock()
     mocker.patch("src.controllers.chat.create_graph", return_value=mock_graph)
     
-    # Mock astream_events to raise an exception
     async def mock_astream_events_error(*args, **kwargs):
-        # Yield one token then crash
         yield {
             "event": "on_chat_model_stream", 
             "data": {"chunk": MagicMock(content="Wait...")}
@@ -134,10 +123,9 @@ async def test_chat_streaming_error(client, mocker):
 
     # 2. Execute request
     payload = {"message": "Crashing test"}
-    headers = {"X-User-ID": "user-1"}
     
     events = []
-    async with client.stream("POST", "/chat", json=payload, headers=headers) as response:
+    async with client.stream("POST", "/chat", json=payload, headers=auth_headers) as response:
         assert response.status_code == 200
         async for line in response.aiter_lines():
             if line.startswith("data: "):
@@ -150,5 +138,4 @@ async def test_chat_streaming_error(client, mocker):
     assert events[1]["type"] == "error"
     assert "An unexpected error occurred" in events[1]["content"]
 
-    # Cleanup
     app.dependency_overrides.clear()
