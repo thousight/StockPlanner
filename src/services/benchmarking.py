@@ -1,7 +1,7 @@
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
-import yfinance as yf
 from src.schemas.portfolio import BenchmarkComparison
+from src.services.market_data import get_historical_prices_async
 
 async def get_spy_performance(db: AsyncSession, portfolio_gain_pct: Decimal) -> BenchmarkComparison:
     """
@@ -10,10 +10,8 @@ async def get_spy_performance(db: AsyncSession, portfolio_gain_pct: Decimal) -> 
     """
     benchmark_name = "S&P 500 (SPY)"
     try:
-        spy = yf.Ticker("SPY")
         # Get YTD performance
-        # Note: yfinance history() is synchronous
-        hist = spy.history(period="ytd")
+        hist = await get_historical_prices_async("SPY", period="ytd")
         if not hist.empty:
             start_price = Decimal(str(hist['Close'].iloc[0]))
             end_price = Decimal(str(hist['Close'].iloc[-1]))

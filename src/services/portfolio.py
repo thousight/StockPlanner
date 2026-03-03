@@ -1,16 +1,15 @@
 from typing import Optional
 from collections import defaultdict
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from src.database.models import Asset, Transaction, Holding, NewsCache, AssetType, RecordStatus
+from src.database.models import Asset, Transaction, Holding, AssetType, RecordStatus
 from src.schemas.transactions import TransactionCreate, TransactionAction
 from src.schemas.portfolio import PortfolioSummary, SectorAllocation
-from src.services.market_data import get_historical_fx_rate, get_current_price
+from src.services.market_data import get_historical_fx_rate, get_current_price, get_historical_prices_async
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import HTTPException
-import yfinance as yf
 
 def calculate_new_acb(old_qty: Decimal, old_acb: Decimal, tx_qty: Decimal, tx_total_base: Decimal) -> Decimal:
     """
@@ -284,9 +283,8 @@ async def get_portfolio_summary(db: AsyncSession, user_id: str) -> PortfolioSumm
         yesterday_price = current_price # Default
         if asset.type == AssetType.STOCK:
             try:
-                ticker = yf.Ticker(asset.symbol)
                 # Get last 2 days to be sure to have yesterday's close
-                hist = ticker.history(period="2d")
+                hist = await get_historical_prices_async(asset.symbol, period="2d")
                 if len(hist) >= 2:
                     yesterday_price = Decimal(str(hist['Close'].iloc[-2]))
                 elif not hist.empty:
@@ -318,26 +316,3 @@ async def get_portfolio_summary(db: AsyncSession, user_id: str) -> PortfolioSumm
         daily_pnl_pct=daily_pnl_pct,
         sector_allocation=sector_allocation
     )
-
-async def get_valid_cache(db: AsyncSession, url: str) -> Optional[str]:
-    stmt = select(NewsCache).where(NewsCache.url == url)
-    result = await db.execute(stmt)
-    entry = result.scalar_one_or_none()
-    if entry and entry.expire_at > datetime.now(timezone.utc).replace(tzinfo=None):
-        return entry.summary
-    return None
-
-async def save_cache(db: AsyncSession, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 168):
-    if expire_at is None:
-        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
-
-    stmt = select(NewsCache).where(NewsCache.url == url)
-    result = await db.execute(stmt)
-    entry = result.scalar_one_or_none()
-    if entry:
-        entry.summary = summary
-        entry.expire_at = expire_at
-    else:
-        entry = NewsCache(url=url, summary=summary, expire_at=expire_at)
-        db.add(entry)
-    await db.commit()
