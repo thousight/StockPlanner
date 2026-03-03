@@ -20,25 +20,6 @@ class AgentInteraction(TypedDict):
     next_agent: str
     debate_output: NotRequired[Dict[str, Any]]
 
-class PendingReport(TypedDict):
-    """
-    Represents a report that is ready to be committed to the database.
-    - title: Explicit title for the report.
-    - category: Explicit category (e.g. STOCK, REAL_ESTATE, MACRO, FUND, GENERAL).
-    - topic: Unified subject field (e.g. 'NVDA', 'Seattle Housing').
-    - symbol: Optional ticker symbol.
-    - tags: List of generated tags (e.g. #growth, #risk).
-    - content: The full Markdown content of the report.
-    - complexity_score: Normalized score (0-100) indicating text depth/risk.
-    """
-    title: str
-    category: str
-    topic: str
-    symbol: NotRequired[str]
-    tags: List[str]
-    content: str
-    complexity_score: float
-
 class SessionContext(TypedDict):
     current_datetime: str
     user_agent: str
@@ -56,5 +37,3 @@ class AgentState(TypedDict):
     user_input: str
     agent_interactions: Annotated[List[AgentInteraction], operator.add]
     output: str
-    pending_report: NotRequired[PendingReport]
-    last_report_id: NotRequired[int]

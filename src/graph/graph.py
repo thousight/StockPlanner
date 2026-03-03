@@ -1,6 +1,5 @@
 from langgraph.graph import StateGraph, END
 from src.graph.state import AgentState
-from src.graph.nodes import commit_node
 from src.graph.agents.supervisor.agent import supervisor_agent
 from src.graph.agents.research.agent import research_agent
 from src.graph.agents.analyst.agent import analyst_agent
@@ -30,7 +29,6 @@ def create_graph(checkpointer=None):
     workflow.add_node("analyst", analyst_agent)
     workflow.add_node("off_topic", off_topic_agent)
     workflow.add_node("summarizer", summarizer_agent)
-    workflow.add_node("commit", commit_node)
     
     # Set entry point
     workflow.set_entry_point("supervisor")
@@ -72,7 +70,6 @@ def create_graph(checkpointer=None):
         }
     )
 
-    workflow.add_edge("summarizer", "commit")
-    workflow.add_edge("commit", END)
+    workflow.add_edge("summarizer", END)
     
     return workflow.compile(checkpointer=checkpointer)
