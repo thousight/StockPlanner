@@ -1,29 +1,42 @@
 from typing import Dict, Any, Callable
 import traceback
 from functools import wraps
-import asyncio
 import inspect
+import logging
+from asgi_correlation_id import correlation_id
+
+logger = logging.getLogger(__name__)
 
 def with_logging(func: Callable) -> Callable:
     """Decorator to catch, log, and re-throw exceptions in agent functions. Async-aware."""
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
         agent_name = func.__name__.replace('_agent', '').upper()
-        print(f"\n--- {agent_name}: Starting ---")
+        thread_id = "N/A"
+        
+        # Try to extract thread_id from config if available in kwargs
+        config = kwargs.get("config")
+        if config and isinstance(config, dict):
+            thread_id = config.get("configurable", {}).get("thread_id", "N/A")
+        
+        request_id = correlation_id.get() or "N/A"
+        
+        logger.info(f"[{agent_name}] [Thread: {thread_id}] [Request: {request_id}] Starting...")
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            print(f"Error in {func.__name__}: {e}\n{traceback.format_exc()}")
+            logger.error(f"[{agent_name}] [Thread: {thread_id}] [Request: {request_id}] Error: {e}\n{traceback.format_exc()}")
             raise
 
     @wraps(func)
     def sync_wrapper(*args, **kwargs):
         agent_name = func.__name__.replace('_agent', '').upper()
-        print(f"\n--- {agent_name}: Starting ---")
+        # Note: sync wrapper is legacy and doesn't easily access context headers
+        logger.info(f"[{agent_name}] Starting (sync)...")
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"Error in {func.__name__}: {e}\n{traceback.format_exc()}")
+            logger.error(f"[{agent_name}] Error (sync): {e}\n{traceback.format_exc()}")
             raise
 
     if inspect.iscoroutinefunction(func):

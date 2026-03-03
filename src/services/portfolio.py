@@ -7,7 +7,7 @@ from src.database.models import Asset, Transaction, Holding, AssetType, RecordSt
 from src.schemas.transactions import TransactionCreate, TransactionAction
 from src.schemas.portfolio import PortfolioSummary, SectorAllocation
 from src.services.market_data import get_historical_fx_rate, get_current_price, get_historical_prices_async
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import HTTPException
 

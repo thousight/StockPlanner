@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Date, Text, Numeric, Enum, Boolean, Computed, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Date, Text, Numeric, Enum, Computed, Index
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone

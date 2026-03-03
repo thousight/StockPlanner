@@ -1,5 +1,5 @@
 from ddgs import DDGS
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 import httpx
 from bs4 import BeautifulSoup
 import re
