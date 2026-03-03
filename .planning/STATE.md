@@ -1,10 +1,10 @@
 # Project State - StockPlanner API Backend
 
 ## Current Position
-- **Milestone:** Milestone 1: API Server & Cloud Sync
-- **Phase:** Phase 8: Test Coverage Expansion
-- **Status:** Phase 8 complete. Milestone 1 complete.
-- **Last Activity:** [2026-03-02] — Cleaned up unused safety interrupt and report commit logic. All 95 tests verified passed with 0 warnings.
+- **Milestone:** Milestone 2: Authentication & User Isolation
+- **Phase:** Phase 9: Auth Scaffolding
+- **Status:** Milestone 1 complete (v1.0). Starting Milestone 2.
+- **Last Activity:** [2026-03-02] — Archived Milestone 1 and prepared roadmap for Milestone 2 (Auth & Isolation).
 
 ## Planning Context
 - **Vision:** Financial planner with LangGraph agents and Flutter UI.

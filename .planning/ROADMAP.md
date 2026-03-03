@@ -2,113 +2,24 @@
 
 This roadmap outlines the evolution of the StockPlanner backend into a robust, cloud-synced financial planner API.
 
-## Milestone 1: API Server & Cloud Sync (Current)
-**Goal:** Establish the foundation for a RESTful, cloud-powered backend with real-time agent streaming.
+## Milestone History
+- [v1: API Server & Cloud Sync](.planning/milestones/v1-ROADMAP.md) — Established async foundation, LangGraph persistence, and financial CRUD. (Completed 2026-03-02)
+
+## Milestone 2: Authentication & User Isolation (Current)
+**Goal:** Secure the API and ensure individual users can safely manage their own financial data.
 
 | Phase | Title | Focus | Status |
 |---|---|---|---|
-| **Phase 1** | **API Scaffolding** | Setup FastAPI, health checks, and async architecture. | Completed |
-| **Phase 2** | **Data & Persistence** | Railway integration, PostgreSQL schemas, and LangGraph checkpointer. | Completed |
-| **Phase 3** | **Financial APIs** | Portfolio analytics and transaction CRUD operations. | Completed |
-| **Phase 4** | **Agentic Chat Streaming** | Streaming SSE `/chat` endpoint and thread management. | Completed |
-| **Phase 5** | **Agentic Flow Refinement** | Conditional interrupts and report commit optimization. | Completed |
-| **Phase 6** | **Test Coverage** | Comprehensive unit and integration testing. | Completed |
-| **Phase 7** | **Simplification & Cleanup** | Audit and simplify project structure and logic. | Completed |
-| **Phase 8** | **Test Coverage Expansion** | Reach 80% test coverage across all subsystems. | Pending |
+| **Phase 9** | **Auth Scaffolding** | Setup Google Sign-in and JWT verification. | Pending |
+| **Phase 10** | **User Isolation** | Schema updates and row-level security logic. | Pending |
 
-### Phase 1: API Scaffolding
-**Goal:** Setup FastAPI, health checks, and async architecture for a Railway-hosted PostgreSQL backend.
-**Plans:** 3 plans
-
-**Requirements:** REQ-001, REQ-002, REQ-003, REQ-020, REQ-023, REQ-030
-
-**Plans:**
-- [x] 1-01-PLAN.md — Reorganize project structure and setup dependencies.
-- [x] 1-02-PLAN.md — Implement core FastAPI infrastructure and middleware.
-- [x] 1-03-PLAN.md — Implement async database and health diagnostics.
-
-### Phase 2: Data & Persistence
-**Goal:** Finalize PostgreSQL schemas, implement Alembic migrations, LangGraph checkpointer, and automated data lifecycle.
-**Plans:** 3 plans
-
-**Requirements:** REQ-012, REQ-020, REQ-023
-
-**Plans:**
-- [x] 2-01-PLAN.md — Schema Foundation & Migrations (Alembic async, Reports table).
-- [x] 2-02-PLAN.md — Persistence & Lifecycle (AsyncPostgresSaver, APScheduler TTL).
-- [x] 2-03-PLAN.md — Transaction Integrity (Propose-Commit pattern, concurrency).
-
-### Phase 3: Financial APIs
-**Goal:** Implement portfolio analytics and transaction CRUD operations with multi-currency support, fractional shares, and strict consistency.
-**Plans:** 3 plans
-
-**Requirements:** REQ-021, REQ-022, REQ-023
-
-**Plans:**
-- [x] 3-01-PLAN.md — Refine Financial Schema & Polymorphic Metadata.
-- [x] 3-02-PLAN.md — Transaction CRUD with Strict Consistency & FX.
-- [x] 3-03-PLAN.md — Portfolio Analytics & Performance Metrics.
-
-### Phase 4: Agentic Chat Streaming
-**Goal:** Implement real-time SSE chat endpoint, LangGraph multi-agent orchestration integration, and human-in-the-loop patterns.
-**Plans:** 4 plans
-
-**Requirements:** REQ-010, REQ-011, REQ-012, REQ-013
-
-**Plans:**
-- [x] 4-01-PLAN.md — Persistence & Graph Orchestration (AsyncPostgresSaver, Context Injection).
-- [x] 4-02-PLAN.md — Streaming Chat Core (FastAPI /chat, SSE Generator, Disconnect Handling).
-- [x] 4-03-PLAN.md — Thread Lifecycle & History (Auto-Titling, Paginated History API).
-- [x] 4-04-PLAN.md — Human-in-the-Loop & Interrupts (Safety Breakpoints, Resume Endpoint).
-
-### Phase 5: Agentic Flow Refinement
-**Goal:** Make breakpoints conditional and optimize the report committing process to improve UX for non-financial chats.
-**Plans:** 3 plans
-
-**Requirements:** REQ-011, REQ-013
-
-**Plans:**
-- [x] 5-01-PLAN.md — Data Foundation & Search API.
-- [x] 5-02-PLAN.md — Complexity Analysis & Metadata Logic.
-- [x] 5-03-PLAN.md — Conditional Flow & SSE Refinement.
-
-### Phase 6: Test Coverage
-**Goal:** Implement a comprehensive testing suite covering core financial logic, API endpoints, and agentic workflows.
-**Plans:** 4 plans
-
-**Requirements:** REQ-032
-
-**Plans:**
-- [x] 6-01-PLAN.md — Foundation & Financial Logic.
-- [x] 6-02-PLAN.md — Mocking & Database Layer.
-- [x] 6-03-PLAN.md — API CRUD & Integration.
-- [x] 6-04-PLAN.md — SSE Streaming & Agent Resilience.
-
-### Phase 7: Simplification & Cleanup
-**Goal:** Audit the project for redundant logic, unused components, and areas where the code structure can be simplified for long-term maintainability.
-**Plans:** 3 plans
-
-**Requirements:** [Audit]
-
-**Plans:**
-- [x] 7-01-PLAN.md — Unified Market Data Service & Async Safety.
-- [x] 7-02-PLAN.md — Standardized Logging & Legacy Artifact Removal.
-- [x] 7-03-PLAN.md — Final Code Audit & Logic Separation.
-
-### Phase 8: Test Coverage Expansion
-**Goal:** Increase total project test coverage to 80%+, focusing on agentic reasoning nodes, lifecycle tasks, and edge cases in the service layer.
+### Phase 9: Auth Scaffolding
+**Goal:** Setup Google Sign-in integration and JWT-based authentication middleware.
 **Plans:** [To be planned]
 
-**Requirements:** REQ-032
-
-**Plans:**
-- [ ] 8-01-PLAN.md — [To be planned]
-
-## Milestone 2: Authentication & User Isolation
-**Goal:** Secure the API and ensure individual users can safely manage their own financial data.
-- Google Sign-in integration.
-- JWT-based authentication for all endpoints.
-- Database schema updates to isolate user-specific data.
+### Phase 10: User Isolation
+**Goal:** Update database schemas and API logic to ensure data is strictly isolated by user ID.
+**Plans:** [To be planned]
 
 ## Milestone 3: Conversation History & Memory
 **Goal:** Enhance the user experience with persistent chat history and fast short-term memory.

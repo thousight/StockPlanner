@@ -14,6 +14,16 @@ A comprehensive financial planner application that collects user financial infor
 - **Memory**: PostgreSQL (Long-term), Redis (Short-term, targeted for Milestone 3)
 - **Verification**: Pytest
 
+## Current State
+- **Shipped:** v1.0 (2026-03-02) — API Server & Cloud Sync.
+- **Foundation:** FastAPI, Railway PostgreSQL, and persistent LangGraph SSE streaming are fully operational.
+- **Verification:** 95+ tests ensure system stability and financial logic correctness.
+
+## Next Milestone Goals (Milestone 2)
+- **Security:** Implement Google Sign-in and JWT authentication.
+- **Isolation:** Ensure strict row-level security and user data isolation.
+- **Onboarding:** Ready the backend for the first waves of mobile client integration.
+
 ## Core Principles
 
 - **API-First**: Headless RESTful backend designed for high-performance mobile clients.
