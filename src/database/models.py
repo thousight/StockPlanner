@@ -1,4 +1,5 @@
 import enum
+import uuid_utils as uuid7
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Date, Text, Numeric, Enum, Computed, Index
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import relationship
@@ -8,6 +9,16 @@ from src.database.session import Base
 class RecordStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
+
+class UserStatus(enum.Enum):
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
+    DEACTIVATED = "DEACTIVATED"
+
+class RiskTolerance(enum.Enum):
+    CONSERVATIVE = "CONSERVATIVE"
+    MODERATE = "MODERATE"
+    AGGRESSIVE = "AGGRESSIVE"
 
 class AssetType(enum.Enum):
     STOCK = "STOCK"
@@ -92,6 +103,35 @@ class FXRate(Base):
     target = Column(String(3))
     rate = Column(Numeric(precision=20, scale=10))
     date = Column(Date, index=True)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid7.uuid7()))
+    email = Column(String, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    status = Column(Enum(UserStatus), default=UserStatus.PENDING, nullable=False)
+    risk_tolerance = Column(Enum(RiskTolerance), default=RiskTolerance.MODERATE, nullable=False)
+    
+    # Profile fields
+    preferred_currency = Column(String(3), default="USD")
+    timezone = Column(String, default="UTC")
+    
+    # Audit fields
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    last_login_at = Column(DateTime, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index(
+            "ix_user_email_unique", 
+            "email", 
+            unique=True, 
+            postgresql_where=(deleted_at == None)
+        ),
+    )
 
 class NewsCache(Base):
     __tablename__ = "news_cache"
