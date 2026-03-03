@@ -15,6 +15,7 @@ from src.controllers.transactions import router as transactions_router
 from src.controllers.portfolio import router as portfolio_router
 from src.controllers.chat import router as chat_router
 from src.controllers.reports import router as reports_router
+from src.controllers.threads import router as threads_router
 from src.lifecycle.tasks import cleanup_checkpoints, cleanup_news_cache
 from src.graph.persistence import get_checkpointer
 
@@ -128,6 +129,7 @@ app.include_router(transactions_router)
 app.include_router(portfolio_router)
 app.include_router(chat_router)
 app.include_router(reports_router)
+app.include_router(threads_router)
 
 @app.get("/")
 async def root():
