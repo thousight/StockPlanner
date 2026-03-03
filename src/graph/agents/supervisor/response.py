@@ -1,5 +1,5 @@
-from src.graph.agents.base import BaseAgentResponse
+from pydantic import BaseModel, Field
 
-class SupervisorResponse(BaseAgentResponse):
+class SupervisorResponse(BaseModel):
     """The response from the supervisor agent, determining the next step."""
-    pass
+    next_agent: str = Field(description="The next specialized agent to call")

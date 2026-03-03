@@ -1,5 +1,5 @@
-from pydantic import Field
-from src.graph.agents.base import BaseAgentResponse
+from pydantic import BaseModel, Field
 
-class OffTopicAnswer(BaseAgentResponse):
+class OffTopicAnswer(BaseModel):
+    next_agent: str = Field(description="The next specialized agent to call")
     answer: str = Field(description="Your answer to the user's question.")
