@@ -2,9 +2,9 @@
 
 ## Current Position
 - **Milestone:** Milestone 1: API Server & Cloud Sync
-- **Phase:** Phase 7: Simplification & Cleanup
-- **Status:** Milestone 1 officially complete. All cleanup and simplification tasks finalized.
-- **Last Activity:** [2026-03-02] — Phase 7 completed. Consolidated yfinance calls, standardized agent logging, and purged legacy artifacts.
+- **Phase:** Phase 8: Test Coverage Expansion
+- **Status:** Phase 7 complete, starting Phase 8.
+- **Last Activity:** [2026-03-02] — Added Phase 8: Test Coverage Expansion to the roadmap.
 
 ## Planning Context
 - **Vision:** Financial planner with LangGraph agents and Flutter UI.

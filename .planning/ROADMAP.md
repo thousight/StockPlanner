@@ -14,6 +14,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 | **Phase 5** | **Agentic Flow Refinement** | Conditional interrupts and report commit optimization. | Completed |
 | **Phase 6** | **Test Coverage** | Comprehensive unit and integration testing. | Completed |
 | **Phase 7** | **Simplification & Cleanup** | Audit and simplify project structure and logic. | Completed |
+| **Phase 8** | **Test Coverage Expansion** | Reach 80% test coverage across all subsystems. | Pending |
 
 ### Phase 1: API Scaffolding
 **Goal:** Setup FastAPI, health checks, and async architecture for a Railway-hosted PostgreSQL backend.
@@ -93,6 +94,15 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 - [x] 7-01-PLAN.md — Unified Market Data Service & Async Safety.
 - [x] 7-02-PLAN.md — Standardized Logging & Legacy Artifact Removal.
 - [x] 7-03-PLAN.md — Final Code Audit & Logic Separation.
+
+### Phase 8: Test Coverage Expansion
+**Goal:** Increase total project test coverage to 80%+, focusing on agentic reasoning nodes, lifecycle tasks, and edge cases in the service layer.
+**Plans:** [To be planned]
+
+**Requirements:** REQ-032
+
+**Plans:**
+- [ ] 8-01-PLAN.md — [To be planned]
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
