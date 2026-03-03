@@ -1,4 +1,3 @@
-import yfinance as yf
 from ddgs import DDGS
 from typing import Dict, List, Any, Optional
 import httpx
@@ -9,6 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.database.session import AsyncSessionLocal
 from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
+from src.services.market_data import get_valid_cache, save_cache
 
 async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""
@@ -21,21 +21,6 @@ async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
             "url": item["link"]
         }
     return None
-
-def fetch_yfinance_news_urls(ticker: str) -> List[Dict[str, str]]:
-    """Fetch news URLs for a single ticker."""
-    results = []
-    try:
-        stock = yf.Ticker(ticker)
-        news_items = stock.news
-        if news_items:
-            for item in news_items:
-                parsed = _parse_yf_news_item(item)
-                if parsed:
-                    results.append(parsed)
-    except Exception as e:
-        print(f"Error fetching news for {ticker}: {e}")
-    return results
 
 def fetch_ddgs_urls(query: str) -> List[Dict[str, str]]:
     """Fetch news URLs for a single query."""
@@ -65,10 +50,6 @@ async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
     async with AsyncSessionLocal() as db:
         try:
             # Check cache
-            # Note: get_valid_cache and save_cache might need to be async too
-            # Assuming they are refactored or wrapped
-            from src.services.portfolio import get_valid_cache, save_cache
-            
             cached_summary = await get_valid_cache(db, url)
             if cached_summary:
                 return cached_summary
@@ -136,25 +117,3 @@ async def summarize_content(content: str, url: str) -> Optional[str]:
     except Exception as e:
         print(f"Error summarizing content: {e}")
         return None
-
-def _parse_yf_news_item(item: Dict[str, Any]) -> Optional[Dict[str, str]]:
-    """Parse a yfinance news item."""
-    try:
-        if 'content' in item:
-            content = item['content']
-            title = content.get('title')
-            link = None
-            if 'clickThroughUrl' in content and content['clickThroughUrl']:
-                link = content['clickThroughUrl'].get('url')
-            if not link and 'canonicalUrl' in content and content['canonicalUrl']:
-                link = content['canonicalUrl'].get('url')
-            if title and link:
-                return {"title": title, "link": link}
-        elif 'title' in item and 'link' in item:
-            return {
-                "title": item.get('title'),
-                "link": item.get('link'),
-            }
-    except Exception as e:
-        print(f"Error parsing news item: {e}")
-    return None

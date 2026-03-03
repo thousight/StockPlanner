@@ -1,7 +1,7 @@
-import yfinance as yf
 import asyncio
 from typing import List
-from src.graph.utils.news import get_summary_result, fetch_yfinance_news_urls, fetch_ddgs_urls, _parse_yf_news_item
+from src.graph.utils.news import get_summary_result, fetch_ddgs_urls
+from src.services.market_data import fetch_yfinance_news_urls, _parse_yf_news_item, get_stock_news_data
 
 async def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
     """
@@ -9,9 +9,7 @@ async def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
     """
     results = []
     try:
-        stock = yf.Ticker(symbol)
-        # yfinance news is synchronous, but fast enough for this wrapper
-        news_items = stock.news
+        news_items = await get_stock_news_data(symbol)
         
         if not news_items:
              return None
@@ -49,7 +47,7 @@ async def get_macro_economic_news(**kwargs) -> str:
     # 1. Collect URLs from yfinance tickers
     tickers = ["^GSPC", "^VIX", "^TNX", "DX-Y.NYB"]
     for ticker in tickers:
-        title_and_urls.extend(fetch_yfinance_news_urls(ticker))
+        title_and_urls.extend(await fetch_yfinance_news_urls(ticker))
     
     # 2. Collect URLs from DuckDuckGo queries
     queries = [

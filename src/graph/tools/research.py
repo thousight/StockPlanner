@@ -1,12 +1,11 @@
-import yfinance as yf
+from src.services.market_data import get_stock_financials_data
 
-def get_stock_financials(symbol: str) -> str:
+async def get_stock_financials(symbol: str) -> str:
     """
     Fetch fundamental financial data (PE, Market Cap, EPS, etc.) for a specific ticker.
     """
     try:
-        stock = yf.Ticker(symbol)
-        info = stock.info
+        info = await get_stock_financials_data(symbol)
         
         # Build markdown bulleted string
         md_lines = [f"**Financial Data for {symbol}**"]
