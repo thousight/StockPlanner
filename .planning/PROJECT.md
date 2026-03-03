@@ -16,16 +16,14 @@ A comprehensive financial planner application that collects user financial infor
 
 ## Current State
 - **Shipped:** v1.0 (2026-03-02) — API Server & Cloud Sync.
-- **Foundation:** FastAPI, Railway PostgreSQL, and persistent LangGraph SSE streaming are fully operational.
-- **Verification:** 95+ tests ensure system stability and financial logic correctness.
+- **Shipped:** v2.0 (2026-03-02) — Basic Authentication & User Management.
+- **Security:** Argon2id hashing, JWT Access/Refresh tokens with rotation, and strict multi-tenant isolation ("Stealth 404") are fully operational.
+- **Verification:** 121 tests ensure system stability, financial logic, and cross-user security.
 
-## Next Milestone Goals (Milestone 2)
-- **Authentication:** Implement basic sign-up and sign-in APIs with JWT tokens.
-- **User Management:** Create a dedicated User database table with secure password hashing (bcrypt).
-- **Authorization:** Protect all financial and chat endpoints using JWT middleware.
-- **Isolation:** Ensure all data operations are strictly scoped to the authenticated user ID.
-
-*Note: Google Sign-in integration has been deferred to Milestone 6.*
+## Next Milestone Goals (Milestone 3)
+- **Memory:** Integrate Redis for high-speed, short-term agent memory.
+- **History:** Establish permanent storage for user-agent conversation logs.
+- **UX:** Provide APIs for users to manage their chat history.
 
 ## Core Principles
 

@@ -1,21 +1,18 @@
 # Project State - StockPlanner API Backend
 
 ## Current Position
-- **Milestone:** Milestone 2: Basic Authentication & User Management
-- **Phase:** Milestone 2 Complete
-- **Status:** Milestone 2 complete. Authentication established and isolation enforced.
-- **Last Activity:** [2026-03-02] — Completed Phase 11: Authenticated Isolation. Refactored all controllers to use JWT context, implemented stealth 404s, and personalized LangGraph agents. 121 tests verified.
+- **Milestone:** Milestone 3: Conversation History & Memory
+- **Phase:** Phase 12: Memory Refactor
+- **Status:** Milestone 2 complete (v2.0). Starting Milestone 3.
+- **Last Activity:** [2026-03-02] — Archived Milestone 2 and prepared roadmap for Milestone 3 (Redis & History).
 
 ## Planning Context
-- **Vision:** Secure, multi-user financial planner API with JWT protection.
-- **Goal:** Establish a complete authentication flow and enforce data isolation.
-- **Constraints:** FastAPI, PyJWT, Argon2id, UUIDv7, PostgreSQL.
+- **Vision:** Persistent, personalized financial planner with high-speed memory.
+- **Goal:** Enhance agent memory with Redis and establish permanent history storage.
+- **Constraints:** FastAPI, Redis, PostgreSQL, LangGraph.
 
 ## Accumulated Context
-- **Infrastructure:** v1.0 established robust async foundations and LangGraph persistence.
-- **Key Pivot:** Deferred Google Sign-in to Milestone 6 to focus on core security first.
-- **Research Findings:** 
-  - `argon2-cffi` is the recommended modern hashing library.
-  - `PyJWT` is the stable choice for token management.
-  - Database-backed Refresh Token Rotation provides best-in-class session security for mobile.
-  - UUIDv7 provides sortable, non-enumerable user identifiers.
+- **Infrastructure:** v1.0 established robust async foundations.
+- **Security:** v2.0 established secure JWT authentication and strict multi-tenant isolation.
+- **Database:** Standardized on UUIDv7 for users and global assets for performance.
+- **Verification:** 121 verified tests covering logic, security, and integration.
