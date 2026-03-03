@@ -193,7 +193,8 @@ async def chat(
             thread_id, 
             is_new_thread
         ),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
+        headers={"X-Thread-ID": thread_id}
     )
 
 @router.post("/chat/{thread_id}/resume")
@@ -227,5 +228,6 @@ async def resume_chat(
             is_new_thread=False,
             resume_input=payload.user_response
         ),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
+        headers={"X-Thread-ID": thread_id}
     )

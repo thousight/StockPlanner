@@ -76,6 +76,7 @@ async def test_chat_streaming_success(client, mocker):
     async with client.stream("POST", "/chat", json=payload, headers=headers) as response:
         assert response.status_code == 200
         assert "text/event-stream" in response.headers["content-type"]
+        assert response.headers["X-Thread-ID"] == "test-thread-id"
         
         async for line in response.aiter_lines():
             if line.startswith("data: "):
