@@ -15,7 +15,10 @@ import pandas as pd
 
 @pytest.fixture
 def mock_db():
-    return AsyncMock()
+    db = AsyncMock()
+    # db.add is a synchronous method in AsyncSession
+    db.add = MagicMock()
+    return db
 
 @pytest.mark.asyncio
 async def test_get_historical_fx_rate_same_currency(mock_db):

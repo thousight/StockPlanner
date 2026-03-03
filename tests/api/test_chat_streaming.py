@@ -84,23 +84,18 @@ async def test_chat_streaming_success(client, mocker):
                 events.append(event_data)
 
     # 3. Verify events
-    # Expected: 1 status, 2 tokens, 1 update
-    assert len(events) == 4
-    
+    # Expected: 1 status, 2 tokens
+    assert len(events) == 3
+
     # Check types and content
     assert events[0]["type"] == "status"
     assert "Supervisor" in events[0]["content"]
-    
+
     assert events[1]["type"] == "token"
     assert events[1]["content"] == "Hello"
-    
+
     assert events[2]["type"] == "token"
     assert events[2]["content"] == " world!"
-    
-    assert events[3]["type"] == "update"
-    assert events[3]["update_type"] == "REPORT_COMMITTED"
-    assert events[3]["report_id"] == 123
-
     # Cleanup
     app.dependency_overrides.clear()
 

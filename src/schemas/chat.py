@@ -28,22 +28,13 @@ class ChatStatusEvent(ChatBaseEvent):
     type: Literal["status"] = "status"
     content: str
 
-class ChatInterruptEvent(ChatBaseEvent):
-    """
-    Event indicating the graph is paused and waiting for user input.
-    """
-    type: Literal["interrupt"] = "interrupt"
-    content: str
-    data: Optional[Dict[str, Any]] = None
-
 class ChatUpdateEvent(ChatBaseEvent):
     """
-    Event for "Silent Updates" (e.g. background report commits).
+    Event for "Silent Updates".
     """
     type: Literal["update"] = "update"
     update_type: str
     thread_id: str
-    report_id: Optional[int] = None
     data: Optional[Dict[str, Any]] = None
 
 class ChatErrorEvent(ChatBaseEvent):
@@ -53,10 +44,4 @@ class ChatErrorEvent(ChatBaseEvent):
     type: Literal["error"] = "error"
     content: str
 
-class ChatResumeRequest(BaseModel):
-    """
-    Schema for resuming an interrupted chat.
-    """
-    user_response: str = Field(..., description="The user's response to the interrupt/checkpoint")
-
-ChatSSEEvent = Union[ChatTokenEvent, ChatStatusEvent, ChatInterruptEvent, ChatUpdateEvent, ChatErrorEvent]
+ChatSSEEvent = Union[ChatTokenEvent, ChatStatusEvent, ChatUpdateEvent, ChatErrorEvent]

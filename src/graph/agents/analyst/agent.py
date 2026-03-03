@@ -27,38 +27,7 @@ async def analyst_agent(state: AgentState, config: RunnableConfig):
     debate_results = await debate_graph.ainvoke(debate_input, config=config)
     report = debate_results.get("final_report", "")
     
-    # Safety Check: Detect high-risk recommendations
-    risk_keywords = ["BUY", "SELL", "RECOMENDATION", "TRADE", "PORTFOLIO CHANGE"]
-    is_high_risk = any(kw in report.upper() for kw in risk_keywords)
-    
     initial_interactions_count = len(state.get("agent_interactions", []))
-
-    if is_high_risk:
-        # Surface interrupt to the user
-        interrupt_msg = "SAFETY CHECK: The analyst has proposed specific trade recommendations. Please review and type 'approve' to continue, or provide feedback/cancellation."
-        
-        # LangGraph 0.2 interrupt: pauses here and returns the user input upon resumption
-        # If the node is re-run, this will return the previously provided response instead of pausing again.
-        user_response = interrupt({
-            "type": "safety_check",
-            "message": interrupt_msg,
-            "report_preview": report[:300] + "..."
-        })
-        
-        # Handle rejection or correction upon resumption
-        if isinstance(user_response, str) and any(kw in user_response.lower() for kw in ["cancel", "reject", "no", "stop"]):
-            return {
-                "agent_interactions": [{
-                    "id": initial_interactions_count + 1,
-                    "agent": "analyst",
-                    "answer": f"The analyst's recommendations were cancelled by the user: {user_response}",
-                    "next_agent": "summarizer"
-                }]
-            }
-        
-        # If corrected, we might want to add that to the state or just proceed
-        if isinstance(user_response, str) and user_response.lower() != "approve":
-            report = f"{report}\n\n[USER CORRECTION]: {user_response}"
 
     # Get the newly generated interactions from subgraph
     new_interactions = debate_results.get("agent_interactions", [])[initial_interactions_count:]
