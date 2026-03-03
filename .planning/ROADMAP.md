@@ -85,12 +85,14 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 ### Phase 7: Simplification & Cleanup
 **Goal:** Audit the project for redundant logic, unused components, and areas where the code structure can be simplified for long-term maintainability.
-**Plans:** [To be planned]
+**Plans:** 3 plans
 
 **Requirements:** [Audit]
 
 **Plans:**
-- [ ] 7-01-PLAN.md — [To be planned]
+- [ ] 7-01-PLAN.md — Unified Market Data Service & Async Safety.
+- [ ] 7-02-PLAN.md — Standardized Logging & Legacy Artifact Removal.
+- [ ] 7-03-PLAN.md — Final Code Audit & Logic Separation.
 
 ## Milestone 2: Authentication & User Isolation
 **Goal:** Secure the API and ensure individual users can safely manage their own financial data.
