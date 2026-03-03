@@ -1,9 +1,17 @@
+import asyncio
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from typing import List, Dict, Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database.models import FXRate, Asset, AssetType, Transaction, RecordStatus
+from src.database.models import FXRate, Asset, AssetType, Transaction, RecordStatus, NewsCache
 import yfinance as yf
+
+def get_ticker(symbol: str) -> yf.Ticker:
+    """
+    Returns a yfinance Ticker object.
+    """
+    return yf.Ticker(symbol)
 
 async def get_historical_fx_rate(db: AsyncSession, source: str, target: str = "USD", transaction_date: date = None) -> Decimal:
     """
@@ -32,12 +40,15 @@ async def get_historical_fx_rate(db: AsyncSession, source: str, target: str = "U
     # 2. If not in cache or not exact date, try to fetch from yfinance
     ticker_symbol = f"{source}{target}=X"
     try:
-        ticker = yf.Ticker(ticker_symbol)
+        ticker = get_ticker(ticker_symbol)
         # Fetch data for a range around the date
-        hist = ticker.history(start=transaction_date.strftime('%Y-%m-%d'), end=(transaction_date + timedelta(days=1)).strftime('%Y-%m-%d'))
+        start_str = transaction_date.strftime('%Y-%m-%d')
+        end_str = (transaction_date + timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        hist = await asyncio.to_thread(ticker.history, start=start_str, end=end_str)
         
         if hist.empty:
-            hist = ticker.history(period="5d")
+            hist = await asyncio.to_thread(ticker.history, period="5d")
         
         if not hist.empty:
             rate = Decimal(str(hist['Close'].iloc[-1]))
@@ -56,16 +67,20 @@ async def get_historical_fx_rate(db: AsyncSession, source: str, target: str = "U
         
     return Decimal("1.0")
 
-def validate_transaction_price(symbol: str, transaction_date: date, price: Decimal) -> bool:
+async def validate_transaction_price(symbol: str, transaction_date: date, price: Decimal) -> bool:
     """
     Validates if the entered price is within a reasonable range (+/- 10%) of the 
     historical high/low for that day using yfinance.
     """
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = get_ticker(symbol)
         start_date = transaction_date
         end_date = transaction_date + timedelta(days=1)
-        hist = ticker.history(start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+        
+        start_str = start_date.strftime('%Y-%m-%d')
+        end_str = end_date.strftime('%Y-%m-%d')
+        
+        hist = await asyncio.to_thread(ticker.history, start=start_str, end=end_str)
         
         if hist.empty:
             return True
@@ -87,15 +102,17 @@ async def get_current_price(db: AsyncSession, asset: Asset) -> Decimal:
     Fetch the latest market price for an asset.
     """
     if asset.type == AssetType.STOCK:
+        ticker = get_ticker(asset.symbol)
         try:
-            ticker = yf.Ticker(asset.symbol)
-            price = Decimal(str(ticker.fast_info['last_price']))
+            # fast_info is a property that might trigger network calls
+            fast_info = await asyncio.to_thread(lambda: ticker.fast_info)
+            price = Decimal(str(fast_info['last_price']))
             if price > 0:
                 return price
         except Exception as e:
             print(f"Error fetching current price for {asset.symbol}: {e}")
             try:
-                hist = ticker.history(period="1d")
+                hist = await asyncio.to_thread(ticker.history, period="1d")
                 if not hist.empty:
                     return Decimal(str(hist['Close'].iloc[-1]))
             except Exception:
@@ -115,3 +132,91 @@ async def get_current_price(db: AsyncSession, asset: Asset) -> Decimal:
         return Decimal(str(last_price))
     
     return Decimal("0")
+
+async def get_historical_prices_async(symbol: str, period: str = "1mo", interval: str = "1d", start=None, end=None):
+    """
+    Fetch historical prices for a symbol.
+    """
+    ticker = get_ticker(symbol)
+    if start and end:
+        return await asyncio.to_thread(ticker.history, start=start, end=end, interval=interval)
+    return await asyncio.to_thread(ticker.history, period=period, interval=interval)
+
+async def get_stock_financials_data(symbol: str) -> Dict[str, Any]:
+    """
+    Fetch fundamental financial data for a specific ticker.
+    """
+    ticker = get_ticker(symbol)
+    return await asyncio.to_thread(lambda: ticker.info)
+
+async def get_stock_news_data(symbol: str) -> List[Dict[str, Any]]:
+    """
+    Fetch news for a specific ticker.
+    """
+    ticker = get_ticker(symbol)
+    return await asyncio.to_thread(lambda: ticker.news)
+
+def _parse_yf_news_item(item: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    """Parse a yfinance news item."""
+    try:
+        if 'content' in item:
+            content = item['content']
+            title = content.get('title')
+            link = None
+            if 'clickThroughUrl' in content and content['clickThroughUrl']:
+                link = content['clickThroughUrl'].get('url')
+            if not link and 'canonicalUrl' in content and content['canonicalUrl']:
+                link = content['canonicalUrl'].get('url')
+            if title and link:
+                return {"title": title, "link": link}
+        elif 'title' in item and 'link' in item:
+            return {
+                "title": item.get('title'),
+                "link": item.get('link'),
+            }
+    except Exception as e:
+        print(f"Error parsing news item: {e}")
+    return None
+
+async def fetch_yfinance_news_urls(ticker_symbol: str) -> List[Dict[str, str]]:
+    """Fetch news URLs for a single ticker."""
+    results = []
+    try:
+        news_items = await get_stock_news_data(ticker_symbol)
+        if news_items:
+            for item in news_items:
+                parsed = _parse_yf_news_item(item)
+                if parsed:
+                    results.append(parsed)
+    except Exception as e:
+        print(f"Error fetching news for {ticker_symbol}: {e}")
+    return results
+
+async def get_valid_cache(db: AsyncSession, url: str) -> Optional[str]:
+    """
+    Retrieve valid cached news summary.
+    """
+    stmt = select(NewsCache).where(NewsCache.url == url)
+    result = await db.execute(stmt)
+    entry = result.scalar_one_or_none()
+    if entry and entry.expire_at > datetime.now(timezone.utc).replace(tzinfo=None):
+        return entry.summary
+    return None
+
+async def save_cache(db: AsyncSession, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 168):
+    """
+    Save news summary to cache.
+    """
+    if expire_at is None:
+        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
+
+    stmt = select(NewsCache).where(NewsCache.url == url)
+    result = await db.execute(stmt)
+    entry = result.scalar_one_or_none()
+    if entry:
+        entry.summary = summary
+        entry.expire_at = expire_at
+    else:
+        entry = NewsCache(url=url, summary=summary, expire_at=expire_at)
+        db.add(entry)
+    await db.commit()
