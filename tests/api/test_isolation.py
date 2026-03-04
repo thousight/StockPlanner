@@ -110,4 +110,51 @@ async def test_portfolio_zero_state_new_user(client, mock_session, user_b, auth_
         
     app.dependency_overrides.clear()
 
+@pytest.mark.asyncio
+async def test_history_isolation_stealth_404(client, mock_session, user_a, user_b, auth_a, auth_b):
+    """
+    Verify that User B cannot access User A's history.
+    """
+    thread_id = "thread-a"
+    
+    # Mock user B lookup
+    mock_user_b_result = MagicMock()
+    mock_user_b_result.scalar_one_or_none.return_value = user_b
+    
+    # Mock thread lookup fails (ownership check)
+    mock_empty_result = MagicMock()
+    mock_empty_result.scalar_one_or_none.return_value = None
+    
+    mock_session.execute.side_effect = [mock_user_b_result, mock_empty_result]
+    app.dependency_overrides[get_db] = lambda: mock_session
+    
+    response = await client.get(f"/threads/{thread_id}/history", headers=auth_b)
+    assert response.status_code == 404
+    
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_message_deletion_isolation_stealth_404(client, mock_session, user_a, user_b, auth_a, auth_b):
+    """
+    Verify that User B cannot delete User A's message.
+    """
+    thread_id = "thread-a"
+    msg_id = "msg-a"
+    
+    # Mock user B lookup
+    mock_user_b_result = MagicMock()
+    mock_user_b_result.scalar_one_or_none.return_value = user_b
+    
+    # Mock message lookup fails (ownership check)
+    mock_empty_result = MagicMock()
+    mock_empty_result.scalar_one_or_none.return_value = None
+    
+    mock_session.execute.side_effect = [mock_user_b_result, mock_empty_result]
+    app.dependency_overrides[get_db] = lambda: mock_session
+    
+    response = await client.delete(f"/threads/{thread_id}/messages/{msg_id}", headers=auth_b)
+    assert response.status_code == 404
+    
+    app.dependency_overrides.clear()
+
 from unittest.mock import patch

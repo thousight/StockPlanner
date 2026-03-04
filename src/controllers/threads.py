@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, update
@@ -6,8 +6,15 @@ from src.database.session import get_db
 from src.database.models import ChatThread, ChatMessage, User
 from src.schemas.threads import ThreadListResponse, ThreadBase, MessageSchema, HistoryResponse, CursorInfo, ThreadRunStreamRequest
 from src.services.auth import set_user_context
-from src.services.history import backfill_history_if_needed
+from src.services.history import backfill_history_if_needed, sync_conversation_background
+from src.services.context_injection import get_user_context_data
+from src.services.titler import update_thread_title_background
+from src.graph.graph import create_graph
+from src.graph.persistence import get_checkpointer
+from langchain_core.messages import HumanMessage, AIMessage
 import logging
+import json
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -107,9 +114,10 @@ async def get_history(
         thread_id=thread_id,
         messages=[MessageSchema(
             id=m.id,
-            role=m.role,
+            type=m.role.lower(),
             content=m.content,
-            timestamp=m.created_at
+            custom_id=m.langchain_msg_id,
+            response_metadata={"timestamp": m.created_at.isoformat()}
         ) for m in messages],
         cursor=CursorInfo(
             next_cursor=next_cursor,
@@ -188,6 +196,7 @@ async def delete_message(
 async def stream_run(
     thread_id: str,
     request: ThreadRunStreamRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(set_user_context)
 ):
@@ -205,10 +214,101 @@ async def stream_run(
     if not thread:
         raise HTTPException(status_code=404, detail="Not Found")
 
-    async def event_generator():
-        # Empty generator for now. 
-        # Future phases will integrate the agent graph here.
-        if False:
-            yield "data: {}\n\n"
+    # 2. Prepare inputs (Context Injection)
+    initial_input = request.input or {}
+    payload_message = None
+    
+    if "message" in initial_input:
+        payload_message = initial_input.pop("message")
+        user_context_data = await get_user_context_data(db, current_user.id)
+        
+        # Build standard initial state
+        initial_input = {
+            "session_context": {
+                "messages": [HumanMessage(content=payload_message, id=str(uuid.uuid4()))],
+                "current_datetime": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+                "user_agent": "StockPlanner-FastAPI",
+                "revision_count": 0
+            },
+            "user_context": {
+                "user_id": current_user.id,
+                "first_name": current_user.first_name,
+                "risk_tolerance": current_user.risk_tolerance.value if hasattr(current_user.risk_tolerance, "value") else str(current_user.risk_tolerance),
+                "base_currency": current_user.base_currency,
+                "portfolio_summary": user_context_data.get("portfolio_summary", "N/A"),
+                "portfolio": []
+            },
+            "user_input": payload_message,
+            "agent_interactions": [],
+            "output": ""
+        }
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    async def langgraph_event_generator():
+        full_response_content = ""
+        try:
+            async with get_checkpointer() as checkpointer:
+                graph = create_graph(checkpointer=checkpointer)
+                
+                # Merge user config with mandatory thread_id
+                config = (request.config or {}).copy()
+                config["configurable"] = {
+                    **config.get("configurable", {}),
+                    "thread_id": thread_id
+                }
+                
+                if request.checkpoint_id:
+                    config["configurable"]["checkpoint_id"] = request.checkpoint_id
+
+                # Run graph stream
+                async for mode, data in graph.astream(
+                    initial_input, 
+                    config, 
+                    stream_mode=request.stream_mode
+                ):
+                    # Protocol specifies that 'data' lines must be JSON arrays
+                    def default_serializer(obj):
+                        if hasattr(obj, "to_json"):
+                            return obj.to_json()
+                        if hasattr(obj, "dict"):
+                            return obj.dict()
+                        return str(obj)
+
+                    payload = json.dumps([data], default=default_serializer)
+                    yield f"event: {mode}\ndata: {payload}\n\n"
+                    
+                    # Capture content for titling
+                    if mode == "messages":
+                        if isinstance(data, list) and len(data) > 0:
+                            chunk = data[0]
+                            if hasattr(chunk, "content"):
+                                full_response_content += str(chunk.content)
+                
+                # Success signal
+                yield "event: end\ndata: {}\n\n"
+                
+                # 3. Background Sync & Titling
+                final_state = await graph.aget_state(config)
+                if final_state.values and "session_context" in final_state.values:
+                    final_messages = final_state.values["session_context"].get("messages", [])
+                    if final_messages:
+                        background_tasks.add_task(
+                            sync_conversation_background,
+                            thread_id,
+                            current_user.id,
+                            final_messages
+                        )
+                
+                if thread.title == "New Conversation" and full_response_content and payload_message:
+                    background_tasks.add_task(
+                        update_thread_title_background,
+                        thread_id,
+                        payload_message,
+                        full_response_content
+                    )
+
+        except Exception as e:
+            logger.error(f"Error in graph stream: {e}", exc_info=True)
+            error_payload = json.dumps([{"detail": str(e)}])
+            yield f"event: error\ndata: {error_payload}\n\n"
+
+    return StreamingResponse(langgraph_event_generator(), media_type="text/event-stream")

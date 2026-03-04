@@ -14,9 +14,11 @@ class ThreadListResponse(BaseModel):
 
 class MessageSchema(BaseModel):
     id: str
-    role: str
+    type: str  # "human", "ai", etc.
     content: str
-    timestamp: datetime
+    additional_kwargs: Optional[dict] = {}
+    response_metadata: Optional[dict] = {}
+    custom_id: Optional[str] = None # maps to langchain_msg_id
 
 class CursorInfo(BaseModel):
     next_cursor: Optional[str] = None

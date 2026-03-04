@@ -23,26 +23,27 @@ async def test_thread_concurrency_409(client, mock_session, test_user, auth_head
     mock_session.execute.side_effect = [mock_user_result, mock_thread_result, mock_user_result, mock_thread_result]
 
     # Mock the underlying event generator's graph call to add delay
-    with patch("src.controllers.chat.get_checkpointer") as mock_cp_ctx:
+    with patch("src.controllers.threads.get_checkpointer") as mock_cp_ctx:
+        # get_checkpointer is an async context manager
         mock_cp = AsyncMock()
         mock_cp_ctx.return_value.__aenter__.return_value = mock_cp
         
-        with patch("src.controllers.chat.create_graph") as mock_create:
+        with patch("src.controllers.threads.create_graph") as mock_create:
             mock_graph = MagicMock()
             
             async def slow_stream(*args, **kwargs):
                 await asyncio.sleep(0.5)
-                yield {"event": "on_chain_end", "metadata": {"langgraph_node": "end"}, "data": {"output": {}}}
+                yield ("metadata", {"langgraph_node": "end"})
                 
-            mock_graph.astream_events.side_effect = slow_stream
+            mock_graph.astream.side_effect = slow_stream
             mock_create.return_value = mock_graph
             
             app.dependency_overrides[get_db] = lambda: mock_session
 
             # Send two requests concurrently
             tasks = [
-                client.post("/chat", json={"message": "hello"}, headers={**auth_headers, "X-Thread-ID": thread_id}),
-                client.post("/chat", json={"message": "hello"}, headers={**auth_headers, "X-Thread-ID": thread_id})
+                client.post(f"/threads/{thread_id}/runs/stream", json={"input": {"message": "hello"}}, headers={**auth_headers, "X-Thread-ID": thread_id}),
+                client.post(f"/threads/{thread_id}/runs/stream", json={"input": {"message": "hello"}}, headers={**auth_headers, "X-Thread-ID": thread_id})
             ]
             
             responses = await asyncio.gather(*tasks)

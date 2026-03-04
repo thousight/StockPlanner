@@ -68,7 +68,10 @@ async def test_delete_thread(client, mock_session, mock_thread, auth_headers, te
     mock_thread_result = MagicMock()
     mock_thread_result.scalar_one_or_none.return_value = mock_thread
     
-    mock_session.execute.side_effect = [mock_user_result, mock_thread_result]
+    # Mock the update query for ChatMessages
+    mock_update_result = MagicMock()
+    
+    mock_session.execute.side_effect = [mock_user_result, mock_thread_result, mock_update_result]
     
     app.dependency_overrides[get_db] = lambda: mock_session
     
@@ -77,11 +80,10 @@ async def test_delete_thread(client, mock_session, mock_thread, auth_headers, te
         headers=auth_headers
     )
     
-    assert response.status_code == 200
-    assert response.json()["status"] == "success"
+    assert response.status_code == 204 # Returns 204 No Content now
     
-    # Verify status was changed
-    assert mock_thread.status == RecordStatus.INACTIVE
+    # Verify deleted_at was set
+    assert mock_thread.deleted_at is not None
     mock_session.commit.assert_called_once()
     
     del app.dependency_overrides[get_db]

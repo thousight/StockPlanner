@@ -1,3 +1,4 @@
+import hashlib
 from typing import List, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,6 +7,55 @@ from src.database.models import ChatMessage, ChatThread
 import logging
 
 logger = logging.getLogger(__name__)
+
+from src.database.session import AsyncSessionLocal
+
+from sqlalchemy import func
+from src.graph.persistence import get_checkpointer
+from src.graph.graph import create_graph
+
+async def backfill_history_if_needed(db: AsyncSession, thread_id: str, user_id: str):
+    """
+    Checks if relational history exists for a thread. If not, attempts to backfill
+    from the LangGraph checkpointer.
+    """
+    # 1. Check if any messages exist in relational DB
+    stmt = select(func.count()).select_from(ChatMessage).where(
+        ChatMessage.thread_id == thread_id,
+        ChatMessage.deleted_at == None
+    )
+    result = await db.execute(stmt)
+    count = result.scalar()
+    
+    if count > 0:
+        # History already exists in relational DB, no backfill needed
+        return
+
+    logger.info(f"Relational history missing for thread {thread_id}. Attempting backfill from checkpointer.")
+    
+    # 2. Fetch state from LangGraph
+    async with get_checkpointer() as checkpointer:
+        graph = create_graph(checkpointer=checkpointer)
+        config = {"configurable": {"thread_id": thread_id}}
+        state = await graph.aget_state(config)
+        
+        if state.values and "session_context" in state.values:
+            messages = state.values["session_context"].get("messages", [])
+            if messages:
+                # 3. Sync to Postgres
+                await sync_conversation_to_postgres(db, thread_id, user_id, messages)
+
+async def sync_conversation_background(
+    thread_id: str, 
+    user_id: str, 
+    new_messages: List[BaseMessage]
+):
+    """
+    Wrapper for sync_conversation_to_postgres that manages its own database session.
+    Suitable for use with FastAPI BackgroundTasks.
+    """
+    async with AsyncSessionLocal() as db:
+        await sync_conversation_to_postgres(db, thread_id, user_id, new_messages)
 
 async def sync_conversation_to_postgres(
     db: AsyncSession, 
@@ -44,27 +94,29 @@ async def sync_conversation_to_postgres(
         sync_count = 0
         for msg in new_messages:
             # Map roles
-            if isinstance(msg, HumanMessage):
+            if isinstance(msg, HumanMessage) or getattr(msg, 'type', None) == 'human':
                 role = "Human"
-            elif isinstance(msg, AIMessage):
+            elif isinstance(msg, AIMessage) or getattr(msg, 'type', None) == 'ai':
                 role = "AI"
-            elif isinstance(msg, SystemMessage):
-                # We skip System messages for UI history usually
+            elif isinstance(msg, SystemMessage) or getattr(msg, 'type', None) == 'system':
                 continue
             else:
-                # Generic fallback for other message types (ToolMessage etc.)
-                # For now, we only sync Human and AI roles as per requirement.
                 continue
 
             # Check if message already exists by langchain_msg_id
-            # Note: msg.id is where LangChain stores the unique message ID
             msg_id = getattr(msg, "id", None)
+            
+            # If ID is missing, generate a deterministic one based on content to prevent duplicates
             if not msg_id:
-                logger.warning(f"Message in thread {thread_id} missing ID. Content: {msg.content[:50]}...")
-                continue
+                content_str = str(msg.content)
+                msg_id = f"gen-{hashlib.sha256(f'{thread_id}-{role}-{content_str}'.encode()).hexdigest()[:16]}"
+                logger.debug(f"Generated deterministic ID {msg_id} for message in thread {thread_id}")
 
             # Upsert logic
-            stmt = select(ChatMessage).where(ChatMessage.langchain_msg_id == msg_id)
+            stmt = select(ChatMessage).where(
+                ChatMessage.thread_id == thread_id,
+                ChatMessage.langchain_msg_id == msg_id
+            )
             existing_msg_res = await db.execute(stmt)
             existing_msg = existing_msg_res.scalar_one_or_none()
 

@@ -17,7 +17,6 @@ from src.database.session import engine
 from src.controllers.health import router as health_router
 from src.controllers.transactions import router as transactions_router
 from src.controllers.portfolio import router as portfolio_router
-from src.controllers.chat import router as chat_router
 from src.controllers.reports import router as reports_router
 from src.controllers.threads import router as threads_router
 from src.controllers.auth import router as auth_router
@@ -124,8 +123,8 @@ async def thread_concurrency_protection(request: Request, call_next):
     """
     thread_id = request.headers.get("X-Thread-ID")
     
-    # We only apply this to potential chat/graph endpoints
-    if thread_id and ("/chat" in request.url.path or "/graph" in request.url.path):
+    # Apply to standard LangGraph stream endpoints
+    if thread_id and ("/runs/stream" in request.url.path):
         if thread_id in active_threads:
             logger.warning(f"Rejecting concurrent request for thread_id: {thread_id}")
             return JSONResponse(
@@ -158,7 +157,6 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(transactions_router)
 app.include_router(portfolio_router)
-app.include_router(chat_router)
 app.include_router(auth_router)
 app.include_router(reports_router)
 app.include_router(threads_router)

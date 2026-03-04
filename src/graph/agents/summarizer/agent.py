@@ -1,8 +1,9 @@
 from typing import List
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, AIMessage
 from src.graph.state import AgentState
+import uuid
 from src.graph.agents.summarizer.prompts import SUMMARIZER_SYSTEM_PROMPT
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 from src.graph.utils.prompt import convert_state_to_prompt
@@ -34,6 +35,9 @@ async def summarizer_agent(state: AgentState):
         
     return {
         "output": final_content,
+        "session_context": {
+            "messages": [AIMessage(content=final_content, id=str(uuid.uuid4()))]
+        },
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
             "agent": "summarizer",

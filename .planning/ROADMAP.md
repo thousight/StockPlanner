@@ -11,8 +11,9 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 | Phase | Title | Focus | Status |
 |---|---|---|---|
-| **Phase 12** | **Memory Refactor** | Redis integration for short-term conversation state. | Pending |
-| **Phase 13** | **History Management** | Permanent storage and management APIs for chat logs. | Pending |
+| **Phase 12** | **Memory Refactor** | Redis integration for short-term conversation state. | Completed |
+| **Phase 13** | **History Management** | Permanent storage and management APIs for chat logs. | Completed |
+| **Phase 14** | **Protocol Compliance** | Refactor chat streaming to match official LangGraph API. | Pending |
 
 ### Phase 12: Memory Refactor
 **Goal:** Integrate Redis Stack to provide high-speed, short-term memory for agentic workflows using `AsyncRedisSaver`.
@@ -23,7 +24,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Plans:**
 - [x] 12-01-PLAN.md — Redis Infrastructure & Lifespan Setup.
 - [x] 12-02-PLAN.md — LangGraph Redis Checkpointer Migration.
-- [ ] 12-03-PLAN.md — Legacy Cleanup & Migration.
+- [x] 12-03-PLAN.md — Legacy Cleanup & Migration.
 
 ### Phase 13: History Management
 **Goal:** Implement permanent database storage for simplified user-agent interactions and expose retrieval APIs.
@@ -32,9 +33,20 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Requirements:** REQ-080, REQ-081, REQ-082, REQ-090, REQ-091
 
 **Plans:**
-- [ ] 13-01-PLAN.md — Relational History Schema & Dual-Write Logic.
-- [ ] 13-02-PLAN.md — History Retrieval & Management APIs.
-- [ ] 13-03-PLAN.md — Memory & History Integration Verification.
+- [x] 13-01-PLAN.md — Relational History Schema & Dual-Write Logic.
+- [x] 13-02-PLAN.md — History Retrieval & Management APIs.
+- [x] 13-03-PLAN.md — Memory & History Integration Verification.
+
+### Phase 14: Protocol Compliance
+**Goal:** Refactor the SSE streaming output to be compliant with the official LangGraph API protocol, ensuring compatibility with the Dart SDK and other official clients.
+**Plans:** 3 plans
+
+**Requirements:** REQ-100, REQ-101
+
+**Plans:**
+- [x] 14-01-PLAN.md — Standard API Infrastructure.
+- [x] 14-02-PLAN.md — Protocol-Compliant Generator.
+- [ ] 14-03-PLAN.md — History Backfill & Legacy Cleanup.
 
 ## Milestone 4: Advanced Agents & Financial Context
 **Goal:** Deepen the analytical capabilities of the agentic team.
