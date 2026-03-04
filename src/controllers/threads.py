@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, desc, update
 from src.database.session import get_db
-from src.database.models import ChatThread, RecordStatus, User
-from src.schemas.threads import ThreadListResponse, ThreadBase, ThreadHistoryResponse, MessageSchema
-from src.graph.persistence import get_checkpointer
-from src.graph.graph import create_graph
+from src.database.models import ChatThread, ChatMessage, User
+from src.schemas.threads import ThreadListResponse, ThreadBase, MessageSchema, HistoryResponse, CursorInfo, ThreadRunStreamRequest
 from src.services.auth import set_user_context
+from src.services.history import backfill_history_if_needed
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 router = APIRouter(tags=["Threads"])
 logger = logging.getLogger(__name__)
@@ -24,10 +25,10 @@ async def get_threads(
     Returns a paginated list of chat threads for the current user.
     """
     try:
-        # Count total threads for this user
+        # Count total threads for this user (not soft-deleted)
         count_query = select(func.count()).select_from(ChatThread).where(
             ChatThread.user_id == current_user.id,
-            ChatThread.status == RecordStatus.ACTIVE
+            ChatThread.deleted_at == None
         )
         total_result = await db.execute(count_query)
         total = total_result.scalar()
@@ -35,8 +36,8 @@ async def get_threads(
         # Fetch threads
         query = select(ChatThread).where(
             ChatThread.user_id == current_user.id,
-            ChatThread.status == RecordStatus.ACTIVE
-        ).order_by(ChatThread.updated_at.desc()).offset(offset).limit(limit)
+            ChatThread.deleted_at == None
+        ).order_by(desc(ChatThread.updated_at)).offset(offset).limit(limit)
         
         result = await db.execute(query)
         threads = result.scalars().all()
@@ -54,109 +55,160 @@ async def get_threads(
         logger.error(f"Error fetching threads for user {current_user.id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.delete("/threads/{thread_id}")
+@router.get("/threads/{thread_id}/history", response_model=HistoryResponse)
+async def get_history(
+    thread_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: Optional[str] = Query(None, description="The ID of the last message seen (for pagination)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
+):
+    """
+    Returns paginated human-readable conversation history from PostgreSQL.
+    Triggers on-the-fly backfill if relational history is missing.
+    """
+    # 1. Verify thread ownership (Stealth 404)
+    thread_res = await db.execute(select(ChatThread).where(
+        ChatThread.id == thread_id,
+        ChatThread.user_id == current_user.id,
+        ChatThread.deleted_at == None
+    ))
+    thread = thread_res.scalar_one_or_none()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # 2. Backfill if needed
+    await backfill_history_if_needed(db, thread_id, current_user.id)
+
+    # 3. Query messages with cursor-based pagination
+    # Using keyset pagination on UUIDv7 (time-ordered)
+    query = select(ChatMessage).where(
+        ChatMessage.thread_id == thread_id,
+        ChatMessage.deleted_at == None
+    )
+    
+    if cursor:
+        query = query.where(ChatMessage.id < cursor)
+    
+    # We fetch limit + 1 to check if there are more pages
+    query = query.order_by(desc(ChatMessage.id)).limit(limit + 1)
+    
+    result = await db.execute(query)
+    messages = result.scalars().all()
+    
+    has_more = len(messages) > limit
+    if has_more:
+        messages = messages[:limit]
+        next_cursor = messages[-1].id
+    else:
+        next_cursor = None
+
+    return HistoryResponse(
+        thread_id=thread_id,
+        messages=[MessageSchema(
+            id=m.id,
+            role=m.role,
+            content=m.content,
+            timestamp=m.created_at
+        ) for m in messages],
+        cursor=CursorInfo(
+            next_cursor=next_cursor,
+            has_more=has_more
+        )
+    )
+
+@router.delete("/threads/{thread_id}", status_code=204)
 async def delete_thread(
     thread_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(set_user_context)
 ):
     """
-    Soft-deletes a chat thread.
+    Soft-deletes a chat thread and all its messages.
     """
     try:
         query = select(ChatThread).where(
             ChatThread.id == thread_id,
             ChatThread.user_id == current_user.id,
-            ChatThread.status == RecordStatus.ACTIVE
+            ChatThread.deleted_at == None
         )
         result = await db.execute(query)
         thread = result.scalar_one_or_none()
 
         if not thread:
-            raise HTTPException(status_code=404, detail="Thread not found")
+            raise HTTPException(status_code=404, detail="Not Found")
 
-        thread.status = RecordStatus.INACTIVE
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        thread.deleted_at = now
+        
+        # Optionally soft-delete all messages in thread too
+        # To be clean, we should probably do this to ensure they don't show up in global searches if added later
+        from sqlalchemy import update
+        await db.execute(
+            update(ChatMessage)
+            .where(ChatMessage.thread_id == thread_id)
+            .values(deleted_at=now)
+        )
 
         await db.commit()
-        
-        return {"status": "success", "message": "Thread deleted"}
+        return None
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting thread {thread_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/threads/{thread_id}/messages", response_model=ThreadHistoryResponse)
-async def get_thread_history(
+@router.delete("/threads/{thread_id}/messages/{message_id}", status_code=204)
+async def delete_message(
     thread_id: str,
-    limit: int = Query(50, ge=1, le=100),
-    # before_timestamp: Optional[datetime] = Query(None), # For future pagination
+    message_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(set_user_context)
 ):
     """
-    Returns a simplified history of messages for a chat thread.
+    Soft-deletes a specific message.
     """
-    try:
-        # Verify thread ownership
-        result = await db.execute(select(ChatThread).where(
-            ChatThread.id == thread_id,
-            ChatThread.user_id == current_user.id,
-            ChatThread.status == RecordStatus.ACTIVE
-        ))
-        thread = result.scalar_one_or_none()
+    query = select(ChatMessage).where(
+        ChatMessage.id == message_id,
+        ChatMessage.thread_id == thread_id,
+        ChatMessage.user_id == current_user.id,
+        ChatMessage.deleted_at == None
+    )
+    result = await db.execute(query)
+    message = result.scalar_one_or_none()
+    
+    if not message:
+        raise HTTPException(status_code=404, detail="Not Found")
         
-        if not thread:
-            raise HTTPException(status_code=404, detail="Thread not found")
-            
-        async with get_checkpointer() as checkpointer:
-            graph = create_graph(checkpointer=checkpointer)
-            config = {"configurable": {"thread_id": thread_id}}
-            state = await graph.aget_state(config)
-            
-            messages = []
-            if state.values and "session_context" in state.values:
-                session_messages = state.values["session_context"].get("messages", [])
-                
-                # Filter/Map messages to Simplified UI Schema
-                for m in session_messages:
-                    # Determine role
-                    role = getattr(m, 'type', 'unknown')
-                    if role == 'chat': # Some older langchain messages
-                        role = 'ai'
-                    elif role == 'human':
-                        role = 'user'
-                    
-                    content = getattr(m, 'content', str(m))
-                    
-                    # Try to find a timestamp, fallback to thread updated_at
-                    # In real apps, we'd store timestamp in message metadata
-                    timestamp = getattr(m, 'response_metadata', {}).get('created_at', thread.created_at)
-                    if isinstance(timestamp, int): # Unix timestamp
-                        timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                    elif not isinstance(timestamp, datetime):
-                        timestamp = thread.created_at
-                        
-                    messages.append(MessageSchema(
-                        role=role,
-                        content=content,
-                        timestamp=timestamp
-                    ))
-            
-            # Simple pagination from the in-memory list (newest messages first)
-            # Reversing so UI gets messages in chronological order but we might want newest first for pagination
-            # Plan says "simplified UI schema", usually chronological order is preferred for display.
-            # But pagination usually starts from newest.
-            
-            # Let's keep chronological order but limit to the last 'limit' messages.
-            paged_messages = messages[-limit:] if limit < len(messages) else messages
-            
-            return ThreadHistoryResponse(
-                thread_id=thread_id,
-                messages=paged_messages
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching history for thread {thread_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+    message.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
+    return None
+
+@router.post("/threads/{thread_id}/runs/stream")
+async def stream_run(
+    thread_id: str,
+    request: ThreadRunStreamRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
+):
+    """
+    Streams events from a graph run.
+    Follows official LangGraph pathing for SDK compatibility.
+    """
+    # 1. Verify thread ownership (Stealth 404)
+    thread_res = await db.execute(select(ChatThread).where(
+        ChatThread.id == thread_id,
+        ChatThread.user_id == current_user.id,
+        ChatThread.deleted_at == None
+    ))
+    thread = thread_res.scalar_one_or_none()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    async def event_generator():
+        # Empty generator for now. 
+        # Future phases will integrate the agent graph here.
+        if False:
+            yield "data: {}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
