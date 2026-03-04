@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     
     # Database configuration
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/stockplanner"
+    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_CHECKPOINT_TTL_MIN: int = 30
     
     @property
     def ASYNC_DATABASE_URL(self) -> str:
