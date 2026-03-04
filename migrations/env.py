@@ -23,15 +23,6 @@ if config.config_file_name is not None:
 # Set target_metadata
 target_metadata = Base.metadata
 
-def include_object(obj, name, type_, reflected, compare_to):
-    """
-    Filter to ignore tables that are managed by LangGraph checkpointer
-    rather than SQLAlchemy Base metadata.
-    """
-    if type_ == "table" and (name.startswith("checkpoint") or name == "checkpoint_migrations"):
-        return False
-    return True
-
 # Override the sqlalchemy.url in the config object
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
@@ -54,7 +45,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_object=include_object
     )
 
     with context.begin_transaction():
@@ -65,7 +55,6 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection, 
         target_metadata=target_metadata,
-        include_object=include_object
     )
 
     with context.begin_transaction():

@@ -30,7 +30,6 @@ ddgs
 # Agentic Frameworks
 langchain-core
 langgraph
-langgraph-checkpoint-postgres
 langchain-openai
 langchain
 

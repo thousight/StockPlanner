@@ -22,7 +22,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 **Plans:**
 - [x] 12-01-PLAN.md — Redis Infrastructure & Lifespan Setup.
-- [ ] 12-02-PLAN.md — LangGraph Redis Checkpointer Migration.
+- [x] 12-02-PLAN.md — LangGraph Redis Checkpointer Migration.
 - [ ] 12-03-PLAN.md — Legacy Cleanup & Migration.
 
 ### Phase 13: History Management
