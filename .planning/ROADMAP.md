@@ -15,12 +15,26 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 | **Phase 13** | **History Management** | Permanent storage and management APIs for chat logs. | Pending |
 
 ### Phase 12: Memory Refactor
-**Goal:** Integrate Redis to provide high-speed, short-term memory for agentic workflows.
-**Plans:** [To be planned]
+**Goal:** Integrate Redis Stack to provide high-speed, short-term memory for agentic workflows using `AsyncRedisSaver`.
+**Plans:** 3 plans
+
+**Requirements:** REQ-070, REQ-071, REQ-072
+
+**Plans:**
+- [ ] 12-01-PLAN.md — Redis Infrastructure & Lifespan Setup.
+- [ ] 12-02-PLAN.md — LangGraph Redis Checkpointer Migration.
+- [ ] 12-03-PLAN.md — Legacy Cleanup & Migration.
 
 ### Phase 13: History Management
-**Goal:** Implement permanent database storage for all user-agent interactions and expose retrieval APIs.
-**Plans:** [To be planned]
+**Goal:** Implement permanent database storage for simplified user-agent interactions and expose retrieval APIs.
+**Plans:** 3 plans
+
+**Requirements:** REQ-080, REQ-081, REQ-082, REQ-090, REQ-091
+
+**Plans:**
+- [ ] 13-01-PLAN.md — Relational History Schema & Dual-Write Logic.
+- [ ] 13-02-PLAN.md — History Retrieval & Management APIs.
+- [ ] 13-03-PLAN.md — Memory & History Integration Verification.
 
 ## Milestone 4: Advanced Agents & Financial Context
 **Goal:** Deepen the analytical capabilities of the agentic team.

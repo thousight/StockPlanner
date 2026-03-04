@@ -7,7 +7,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
 import redis.asyncio as redis
-from aiobreaker import CircuitBreaker
+import redis.exceptions as redis_exceptions
+from aiobreaker import CircuitBreaker, CircuitBreakerError
 
 from src.config import settings
 from src.middleware import ExcludeNoneRoute
@@ -106,6 +107,22 @@ app = FastAPI(
 
 # Apply global route class for excluding None/null fields
 app.router.route_class = ExcludeNoneRoute
+
+@app.exception_handler(CircuitBreakerError)
+async def redis_circuit_breaker_handler(request: Request, exc: CircuitBreakerError):
+    logger.error(f"Redis Circuit Breaker open: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service Temporarily Unavailable: Redis Connection Failure (Breaker Open)"}
+    )
+
+@app.exception_handler(redis_exceptions.ConnectionError)
+async def redis_connection_error_handler(request: Request, exc: redis_exceptions.ConnectionError):
+    logger.error(f"Redis Connection Error: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service Temporarily Unavailable: Redis Connection Failure"}
+    )
 
 @app.middleware("http")
 async def thread_concurrency_protection(request: Request, call_next):

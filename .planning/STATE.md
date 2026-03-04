@@ -3,16 +3,18 @@
 ## Current Position
 - **Milestone:** Milestone 3: Conversation History & Memory
 - **Phase:** Phase 12: Memory Refactor
-- **Status:** Milestone 2 complete (v2.0). Starting Milestone 3.
-- **Last Activity:** [2026-03-02] — Archived Milestone 2 and prepared roadmap for Milestone 3 (Redis & History).
+- **Status:** Initializing Milestone 3. Requirements and Roadmap established.
+- **Last Activity:** [2026-03-02] — Completed Milestone 3 setup (questioning, research, requirements, roadmap).
 
 ## Planning Context
 - **Vision:** Persistent, personalized financial planner with high-speed memory.
 - **Goal:** Enhance agent memory with Redis and establish permanent history storage.
-- **Constraints:** FastAPI, Redis, PostgreSQL, LangGraph.
+- **Constraints:** FastAPI, Redis Stack, PostgreSQL, LangGraph.
 
 ## Accumulated Context
-- **Infrastructure:** v1.0 established robust async foundations.
-- **Security:** v2.0 established secure JWT authentication and strict multi-tenant isolation.
-- **Database:** Standardized on UUIDv7 for users and global assets for performance.
-- **Verification:** 121 verified tests covering logic, security, and integration.
+- **Infrastructure:** v1.0 established robust async foundations and PostgreSQL persistence.
+- **Security:** v2.0 established secure JWT authentication and multi-tenant isolation.
+- **Research Findings:** 
+  - `AsyncRedisSaver` is the standard for async Redis state management in LangGraph.
+  - Redis Stack (RedisJSON + RediSearch) is required for full checkpointer features.
+  - A "Dual-Write" strategy is best for separating binary state (Redis) from UI-friendly logs (Postgres).

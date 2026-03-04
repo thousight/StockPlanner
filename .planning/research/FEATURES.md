@@ -58,9 +58,63 @@ Prioritize:
 3.  **Basic Secure Schema** with `mfa_enabled`, `last_login`, and `ip_address` tracking.
 4.  **Database-backed Refresh Token storage** for persistence and revocation.
 
-Defer: **Step-up Auth**, **Field-Level Encryption**, **Redis-based Blacklisting** (initially use Database).
+---
+
+# Feature Landscape: AI Memory & State Persistence
+
+**Domain:** Stock Analysis / Agentic AI
+**Researched:** 2025-05-24
+**Confidence:** HIGH
+
+## Table Stakes
+
+Features users expect in an agentic chat application.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Conversation Persistence** | Resume chat after refresh. | Med | Uses `thread_id` to reload state. |
+| **Human-Readable History** | View previous messages in UI. | Med | Requires relational Postgres table. |
+| **Stateful Agents** | Agents remember previous steps. | Low | Core LangGraph functionality. |
+| **Thread Isolation** | Private conversations per user. | Low | Map `user_id` to `thread_id`. |
+
+## Differentiators
+
+Features that set the product apart.
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **"Time Travel"** | Replay or fork conversation. | High | Redis checkpointer stores history nodes. |
+| **Streaming UI** | Real-time response feedback. | Med | `astream` support for tokens/events. |
+| **Automatic Cleanup** | ephemeral sessions via TTL. | Low | Native Redis TTL support in checkpointer. |
+| **Rich Metadata Logs** | Audit tool calls and cost. | Med | Store tool outputs in Postgres `metadata`. |
+
+## Anti-Features
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **JSON Blobs for UI** | Hard to query/filter. | Map to Relational `chat_messages` table. |
+| **Infinite In-Memory History**| Memory leaks. | Use Redis with TTL or sliding window. |
+| **Global Agent Instance** | Thread safety issues. | Compile graph once, instantiate state per run. |
+
+## Feature Dependencies
+
+```mermaid
+graph TD
+    A[FastAPI Lifespan] --> B[Redis/Postgres Pools]
+    B --> C[LangGraph Compilation]
+    C --> D[AsyncRedisSaver]
+    D --> E[Chat API Endpoint]
+    E --> F[Postgres Dual-Write]
+    F --> G[UI Message Feed]
+```
+
+## MVP Recommendation
+
+Prioritize:
+1.  **Redis-backed LangGraph state** (Transient).
+2.  **Postgres-backed message table** (Permanent).
+3.  **Basic "Dual-Write" logic** in FastAPI controller.
 
 ## Sources
-- [OWASP Top 10 API Security](https://owasp.org/www-project-api-security/)
-- [NIST Special Publication 800-63B (Digital Identity)](https://pages.nist.gov/800-63-3/sp800-63b.html)
-- [Financial Data Security Best Practices (2025)](https://www.fca.org.uk/firms/security-best-practices)
+- [LangGraph Persistence Guide](https://langchain-ai.github.io/langgraph/how-tos/persistence/)
+- [RedisJSON Documentation](https://redis.io/docs/latest/develop/data-types/json/)
