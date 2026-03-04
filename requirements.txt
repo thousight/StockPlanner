@@ -40,8 +40,8 @@ readability-lxml
 textstat
 
 # Cache & Memory
-redis>=5.0.0
-langgraph-checkpoint-redis>=2.0.0
+redis>=7.1.0
+langgraph-checkpoint-redis>=0.3.0
 aiobreaker>=1.2.0
 
 # Lifecycle & Tasks
