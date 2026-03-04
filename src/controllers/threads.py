@@ -11,15 +11,103 @@ from src.services.context_injection import get_user_context_data
 from src.services.titler import update_thread_title_background
 from src.graph.graph import create_graph
 from src.graph.persistence import get_checkpointer
-from langchain_core.messages import HumanMessage, AIMessage
+from langgraph.graph.message import add_messages
+from langchain_core.messages import HumanMessage
 import logging
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Any
 
 router = APIRouter(tags=["Threads"])
 logger = logging.getLogger(__name__)
+
+def default_serializer(obj: Any) -> Any:
+    """
+    Custom JSON serializer for LangChain/LangGraph objects.
+    """
+    if hasattr(obj, "to_json"):
+        return obj.to_json()
+    if hasattr(obj, "dict"):
+        return obj.dict()
+    return str(obj)
+
+async def langgraph_event_generator(
+    thread_id: str,
+    initial_input: dict,
+    request: ThreadRunStreamRequest,
+    current_user: User,
+    background_tasks: BackgroundTasks,
+    thread_title: Optional[str],
+    payload_message: Optional[str]
+) -> Any:
+    """
+    Async generator that yields SSE-formatted strings from LangGraph events.
+    Moved to module level to avoid re-initialization overhead.
+    """
+    full_response_content = ""
+    try:
+        async with get_checkpointer() as checkpointer:
+            graph = create_graph(checkpointer=checkpointer)
+            
+            # Merge user config with mandatory thread_id
+            config = (request.config or {}).copy()
+            config["configurable"] = {
+                **config.get("configurable", {}),
+                "thread_id": thread_id
+            }
+            
+            if request.checkpoint_id:
+                config["configurable"]["checkpoint_id"] = request.checkpoint_id
+
+            # Run graph stream
+            async for mode, data in graph.astream(
+                initial_input, 
+                config, 
+                stream_mode=request.stream_mode
+            ):
+                # Protocol specifies that 'data' lines must be JSON arrays
+                payload = json.dumps([data], default=default_serializer)
+                yield f"event: {mode}\ndata: {payload}\n\n"
+                
+                # Capture content for titling
+                if mode == "messages":
+                    if isinstance(data, list) and len(data) > 0:
+                        chunk = data[0]
+                        if hasattr(chunk, "content"):
+                            full_response_content += str(chunk.content)
+            
+            # Success signal
+            yield "event: end\ndata: {}\n\n"
+            
+            # 3. Background Sync & Titling
+            # Use a fresh config with ONLY thread_id to ensure we get the LATEST state
+            # (If config has checkpoint_id from request, aget_state returns the old snapshot)
+            latest_config = {"configurable": {"thread_id": thread_id}}
+            final_state = await graph.aget_state(latest_config)
+            
+            if final_state.values and "session_context" in final_state.values:
+                final_messages = final_state.values["session_context"].get("messages", [])
+                if final_messages:
+                    background_tasks.add_task(
+                        sync_conversation_background,
+                        thread_id,
+                        current_user.id,
+                        final_messages
+                    )
+            
+            if thread_title == "New Conversation" and full_response_content and payload_message:
+                background_tasks.add_task(
+                    update_thread_title_background,
+                    thread_id,
+                    payload_message,
+                    full_response_content
+                )
+
+    except Exception as e:
+        logger.error(f"Error in graph stream: {e}", exc_info=True)
+        error_payload = json.dumps([{"detail": str(e)}])
+        yield f"event: error\ndata: {error_payload}\n\n"
 
 @router.get("/threads", response_model=ThreadListResponse)
 async def get_threads(
@@ -116,8 +204,7 @@ async def get_history(
             id=m.id,
             type=m.role.lower(),
             content=m.content,
-            custom_id=m.langchain_msg_id,
-            response_metadata={"timestamp": m.created_at.isoformat()}
+            custom_id=m.langchain_msg_id
         ) for m in messages],
         cursor=CursorInfo(
             next_cursor=next_cursor,
@@ -149,9 +236,7 @@ async def delete_thread(
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         thread.deleted_at = now
         
-        # Optionally soft-delete all messages in thread too
-        # To be clean, we should probably do this to ensure they don't show up in global searches if added later
-        from sqlalchemy import update
+        # Soft-delete all messages in thread too
         await db.execute(
             update(ChatMessage)
             .where(ChatMessage.thread_id == thread_id)
@@ -222,10 +307,13 @@ async def stream_run(
         payload_message = initial_input.pop("message")
         user_context_data = await get_user_context_data(db, current_user.id)
         
+        # We need a stable ID for the human message for idempotency in PostgreSQL
+        human_msg_id = str(uuid.uuid4())
+        
         # Build standard initial state
         initial_input = {
             "session_context": {
-                "messages": [HumanMessage(content=payload_message, id=str(uuid.uuid4()))],
+                "messages": [HumanMessage(content=payload_message, id=human_msg_id)],
                 "current_datetime": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 "user_agent": "StockPlanner-FastAPI",
                 "revision_count": 0
@@ -243,72 +331,15 @@ async def stream_run(
             "output": ""
         }
 
-    async def langgraph_event_generator():
-        full_response_content = ""
-        try:
-            async with get_checkpointer() as checkpointer:
-                graph = create_graph(checkpointer=checkpointer)
-                
-                # Merge user config with mandatory thread_id
-                config = (request.config or {}).copy()
-                config["configurable"] = {
-                    **config.get("configurable", {}),
-                    "thread_id": thread_id
-                }
-                
-                if request.checkpoint_id:
-                    config["configurable"]["checkpoint_id"] = request.checkpoint_id
-
-                # Run graph stream
-                async for mode, data in graph.astream(
-                    initial_input, 
-                    config, 
-                    stream_mode=request.stream_mode
-                ):
-                    # Protocol specifies that 'data' lines must be JSON arrays
-                    def default_serializer(obj):
-                        if hasattr(obj, "to_json"):
-                            return obj.to_json()
-                        if hasattr(obj, "dict"):
-                            return obj.dict()
-                        return str(obj)
-
-                    payload = json.dumps([data], default=default_serializer)
-                    yield f"event: {mode}\ndata: {payload}\n\n"
-                    
-                    # Capture content for titling
-                    if mode == "messages":
-                        if isinstance(data, list) and len(data) > 0:
-                            chunk = data[0]
-                            if hasattr(chunk, "content"):
-                                full_response_content += str(chunk.content)
-                
-                # Success signal
-                yield "event: end\ndata: {}\n\n"
-                
-                # 3. Background Sync & Titling
-                final_state = await graph.aget_state(config)
-                if final_state.values and "session_context" in final_state.values:
-                    final_messages = final_state.values["session_context"].get("messages", [])
-                    if final_messages:
-                        background_tasks.add_task(
-                            sync_conversation_background,
-                            thread_id,
-                            current_user.id,
-                            final_messages
-                        )
-                
-                if thread.title == "New Conversation" and full_response_content and payload_message:
-                    background_tasks.add_task(
-                        update_thread_title_background,
-                        thread_id,
-                        payload_message,
-                        full_response_content
-                    )
-
-        except Exception as e:
-            logger.error(f"Error in graph stream: {e}", exc_info=True)
-            error_payload = json.dumps([{"detail": str(e)}])
-            yield f"event: error\ndata: {error_payload}\n\n"
-
-    return StreamingResponse(langgraph_event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        langgraph_event_generator(
+            thread_id=thread_id,
+            initial_input=initial_input,
+            request=request,
+            current_user=current_user,
+            background_tasks=background_tasks,
+            thread_title=thread.title,
+            payload_message=payload_message
+        ), 
+        media_type="text/event-stream"
+    )

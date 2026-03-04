@@ -5,20 +5,27 @@ from src.graph.agents.research.agent import research_agent
 from src.graph.agents.analyst.agent import analyst_agent
 from src.graph.agents.off_topic.agent import off_topic_agent
 from src.graph.agents.summarizer.agent import summarizer_agent
+from typing import List
 
-def create_mesh_router(allowed_destinations: list):
-    def router(state: AgentState):
+class MeshRouter:
+    """
+    Router for the multi-agent mesh.
+    Determines the next agent based on the last agent interaction.
+    """
+    def __init__(self, allowed_destinations: List[str]):
+        self.allowed_destinations = allowed_destinations
+
+    def __call__(self, state: AgentState) -> str:
         interactions = state.get("agent_interactions", [])
         if not interactions:
             return "summarizer"
         
         last_interaction = interactions[-1]
         next_agent = last_interaction.get("next_agent", "summarizer").lower()
-        if next_agent not in allowed_destinations:
+        if next_agent not in self.allowed_destinations:
             print(f"WARNING: Invalid next_agent '{next_agent}'. Falling back.")
-            return "summarizer" if "summarizer" in allowed_destinations else allowed_destinations[0]
+            return "summarizer" if "summarizer" in self.allowed_destinations else self.allowed_destinations[0]
         return next_agent
-    return router
 
 def create_graph(checkpointer=None):
     workflow = StateGraph(AgentState)
@@ -35,7 +42,7 @@ def create_graph(checkpointer=None):
 
     workflow.add_conditional_edges(
         "supervisor",
-        create_mesh_router(["research", "analyst", "off_topic", "summarizer"]),
+        MeshRouter(["research", "analyst", "off_topic", "summarizer"]),
         {
             "research": "research",
             "analyst": "analyst",
@@ -46,7 +53,7 @@ def create_graph(checkpointer=None):
     
     workflow.add_conditional_edges(
         "research",
-        create_mesh_router(["analyst", "supervisor", "summarizer"]),
+        MeshRouter(["analyst", "supervisor", "summarizer"]),
         {
             "analyst": "analyst",
             "summarizer": "summarizer"
@@ -55,7 +62,7 @@ def create_graph(checkpointer=None):
     
     workflow.add_conditional_edges(
         "analyst",
-        create_mesh_router(["supervisor", "summarizer"]),
+        MeshRouter(["supervisor", "summarizer"]),
         {
             "summarizer": "summarizer"
         }
@@ -63,7 +70,7 @@ def create_graph(checkpointer=None):
     
     workflow.add_conditional_edges(
         "off_topic",
-        create_mesh_router(["research", "supervisor", "summarizer"]),
+        MeshRouter(["research", "supervisor", "summarizer"]),
         {
             "research": "research",
             "summarizer": "summarizer"

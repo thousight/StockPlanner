@@ -50,6 +50,7 @@ async def test_stream_protocol_subgraph_propagation(client, mock_session, test_u
         with patch("src.controllers.threads.create_graph") as mock_create_graph:
             mock_graph = MagicMock()
             mock_graph.aget_state = AsyncMock(return_value=MagicMock(values={}))
+            mock_graph.aupdate_state = AsyncMock()
             
             async def mock_astream(*args, **kwargs):
                 # Simulate events from main graph and subgraph

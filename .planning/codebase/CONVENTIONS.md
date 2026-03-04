@@ -61,6 +61,9 @@
 
 ## Function Design
 
+**Nesting:**
+- **No Nested Functions:** Avoid defining functions inside other functions. Inner functions should be moved to the module level (same file or utility module) to avoid re-initialization overhead and reduce memory usage. Pass required dependencies as explicit arguments.
+
 **Size:**
 - Streamlit application logic in `src/app.py` contains large functions (`run_agent_graph`).
 - Agent logic is generally modularized into specialized functions.

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import List, Optional
 
@@ -38,3 +38,18 @@ class ThreadRunStreamRequest(BaseModel):
     stream_mode: List[str] = ["messages"]
     config: Optional[dict] = None
     checkpoint_id: Optional[str] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "input": {
+                        "session_context": {
+                            "messages": [{"role": "user", "content": "What are the latest news for TSLA?"}]
+                        }
+                    },
+                    "stream_mode": ["messages"]
+                }
+            ]
+        }
+    )
