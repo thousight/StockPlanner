@@ -130,6 +130,9 @@ class User(Base):
     last_login_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)
 
+    threads = relationship("ChatThread", back_populates="user")
+    messages = relationship("ChatMessage", back_populates="user")
+
     __table_args__ = (
         Index(
             "ix_user_email_unique", 
@@ -164,11 +167,30 @@ class ChatThread(Base):
     __tablename__ = "chat_threads"
 
     id = Column(String, primary_key=True, index=True) # UUID as string
-    user_id = Column(String, index=True)
+    user_id = Column(String, ForeignKey("users.id"), index=True)
     title = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     status = Column(Enum(RecordStatus), default=RecordStatus.ACTIVE, nullable=False)
+    deleted_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="threads")
+    messages = relationship("ChatMessage", back_populates="thread", cascade="all, delete-orphan")
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid7.uuid7()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    thread_id = Column(String, ForeignKey("chat_threads.id"), nullable=False, index=True)
+    role = Column(String, nullable=False) # "Human" or "AI"
+    content = Column(Text, nullable=False)
+    langchain_msg_id = Column(String, nullable=False, index=True, unique=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    deleted_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="messages")
+    thread = relationship("ChatThread", back_populates="messages")
 
 class Report(Base):
     __tablename__ = "reports"
