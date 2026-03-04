@@ -5,6 +5,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from datetime import datetime, timezone, timedelta
 import logging
 import redis.asyncio as redis
 import redis.exceptions as redis_exceptions
@@ -20,7 +21,7 @@ from src.controllers.chat import router as chat_router
 from src.controllers.reports import router as reports_router
 from src.controllers.threads import router as threads_router
 from src.controllers.auth import router as auth_router
-from src.lifecycle.tasks import cleanup_checkpoints, cleanup_news_cache
+from src.lifecycle.tasks import cleanup_news_cache
 from src.graph.persistence import get_checkpointer
 
 # Setup logging
@@ -31,8 +32,8 @@ logger = logging.getLogger(__name__)
 active_threads = set()
 
 # Redis Circuit Breaker: Fail fast if Redis is down
-# 5 failures in 30 seconds opens the breaker for 60 seconds
-redis_cb = CircuitBreaker(fail_max=5, reset_timeout=60)
+# 5 failures opens the breaker for 60 seconds
+redis_cb = CircuitBreaker(fail_max=5, timeout_duration=timedelta(seconds=60))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -60,15 +61,6 @@ async def lifespan(app: FastAPI):
 
     # Setup Scheduler
     scheduler = AsyncIOScheduler()
-    
-    # Schedule checkpoint cleanup: Daily at 02:00 AM
-    scheduler.add_job(
-        cleanup_checkpoints,
-        CronTrigger(hour=2, minute=0),
-        id="cleanup_checkpoints",
-        name="Daily LangGraph checkpoint cleanup (30-day TTL)",
-        replace_existing=True
-    )
     
     # Schedule news cache cleanup: Hourly
     scheduler.add_job(

@@ -1,5 +1,4 @@
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from src.config import settings
 
 def get_checkpointer() -> AsyncRedisSaver:
@@ -10,19 +9,14 @@ def get_checkpointer() -> AsyncRedisSaver:
     Note: This checkpointer must be used within an 'async with' block to 
     initialize its connection pool.
     """
-    # Configure with JsonPlusSerializer for handling complex nested state
-    # pickle_fallback=True ensures we can handle things that are not JSON-serializable
-    serializer = JsonPlusSerializer(pickle_fallback=True)
-    
-    # 30-minute sliding window (1800 seconds)
+    # 30-minute sliding window (Note: AsyncRedisSaver uses minutes for default_ttl)
     # refresh_on_read=True ensures TTL is reset every time the state is accessed
     ttl_config = {
-        "default_ttl": settings.REDIS_CHECKPOINT_TTL_MIN * 60,
+        "default_ttl": settings.REDIS_CHECKPOINT_TTL_MIN,
         "refresh_on_read": True
     }
     
     return AsyncRedisSaver.from_conn_string(
         settings.REDIS_URL,
-        serde=serializer,
         ttl=ttl_config
     )
