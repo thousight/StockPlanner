@@ -13,10 +13,26 @@ class ThreadListResponse(BaseModel):
     total: int
 
 class MessageSchema(BaseModel):
+    id: str
     role: str
     content: str
     timestamp: datetime
 
+class CursorInfo(BaseModel):
+    next_cursor: Optional[str] = None
+    has_more: bool
+
+class HistoryResponse(BaseModel):
+    messages: List[MessageSchema]
+    thread_id: str
+    cursor: CursorInfo
+
 class ThreadHistoryResponse(BaseModel):
     messages: List[MessageSchema]
     thread_id: str
+
+class ThreadRunStreamRequest(BaseModel):
+    input: Optional[dict] = None
+    stream_mode: List[str] = ["messages"]
+    config: Optional[dict] = None
+    checkpoint_id: Optional[str] = None
