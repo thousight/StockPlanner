@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
+import redis.asyncio as redis
+from aiobreaker import CircuitBreaker
 
 from src.config import settings
 from src.middleware import ExcludeNoneRoute
@@ -27,10 +29,24 @@ logger = logging.getLogger(__name__)
 # Global set for thread concurrency protection
 active_threads = set()
 
+# Redis Circuit Breaker: Fail fast if Redis is down
+# 5 failures in 30 seconds opens the breaker for 60 seconds
+redis_cb = CircuitBreaker(fail_max=5, reset_timeout=60)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
     logger.info(f"Starting {settings.PROJECT_NAME} in {settings.ENVIRONMENT} mode")
+    
+    # Initialize Redis client
+    try:
+        app.state.redis = redis.from_url(settings.REDIS_URL, decode_responses=False)
+        # Health check via circuit breaker
+        await redis_cb.call_async(app.state.redis.ping)
+        logger.info("Redis client initialized and connection verified")
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis: {e}")
+        # We don't raise here yet; Task 3 will handle the 503s
     
     # Initialize LangGraph checkpointer tables
     try:
@@ -72,6 +88,11 @@ async def lifespan(app: FastAPI):
     
     scheduler.shutdown()
     logger.info("Background task scheduler shut down")
+    
+    # Close Redis connection
+    if hasattr(app.state, "redis"):
+        await app.state.redis.aclose()
+        logger.info("Redis client shut down")
     
     await engine.dispose()
 
