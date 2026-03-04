@@ -15,15 +15,20 @@ A comprehensive financial planner application that collects user financial infor
 - **Verification**: Pytest
 
 ## Current State
+- **Shipped:** v3.0 (2026-03-03) — Conversation History & Memory.
+- **Verification:** 132 tests ensure system stability, protocol compliance, financial logic, and cross-user security.
+
+<details>
+<summary>Previous Shipped Milestones</summary>
 - **Shipped:** v1.0 (2026-03-02) — API Server & Cloud Sync.
 - **Shipped:** v2.0 (2026-03-02) — Basic Authentication & User Management.
 - **Security:** Argon2id hashing, JWT Access/Refresh tokens with rotation, and strict multi-tenant isolation ("Stealth 404") are fully operational.
-- **Verification:** 121 tests ensure system stability, financial logic, and cross-user security.
+</details>
 
-## Next Milestone Goals (Milestone 3)
-- **Memory:** Integrate Redis for high-speed, short-term agent memory.
-- **History:** Establish permanent storage for user-agent conversation logs.
-- **UX:** Provide APIs for users to manage their chat history.
+## Next Milestone Goals (Milestone 4: Advanced Agents & Financial Context)
+- **Specialized Agents:** Create dedicated agents for EDGAR (SEC filings) and social media analysis.
+- **Modularity:** Refactor the supervisor graph for improved routing and stability.
+- **Deep Research:** Implement narrative and sentiment analysis for financial news.
 
 ## Core Principles
 
