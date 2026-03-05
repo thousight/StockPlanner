@@ -5,7 +5,10 @@ from src.graph.tools.sentiment import SentimentResult
 
 @pytest.mark.asyncio
 async def test_get_key_macro_indicators_success():
-    mock_fed_data = [{"date": "2024-01-01", "value": "2.5"}]
+    mock_fed_data = [
+        {"date": "2024-02-01", "value": "3.1"},
+        {"date": "2024-01-01", "value": "2.5"}
+    ]
     mock_events = [{"time": "2024-03-04", "event": "FOMC", "estimate": "5.5", "previous": "5.5"}]
     
     with patch("src.graph.tools.macro.fed_service.get_series_data", new_callable=AsyncMock) as mock_fed, \
@@ -18,7 +21,8 @@ async def test_get_key_macro_indicators_success():
         assert "Key US Macroeconomic Indicators" in result
         assert "CPI" in result
         assert "FOMC" in result
-        assert "2.5" in result
+        assert "3.1" in result
+        assert "Previous: 2.5" in result
 
 @pytest.mark.asyncio
 async def test_get_political_sentiment_success():

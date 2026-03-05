@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List
 
 from src.services.macro import fed_service, calendar_service
 from src.graph.tools.sentiment import analyze_sentiment
@@ -11,8 +11,15 @@ def format_series(name: str, data: List[Dict[str, str]], unit: str) -> str:
     """Helper to format FRED series data for the report."""
     if not data:
         return f"- **{name}:** Data unavailable."
+    
     latest = data[0]
-    return f"- **{name}:** {latest['value']} {unit} (as of {latest['date']})"
+    line = f"- **{name}:** {latest['value']} {unit} (as of {latest['date']})"
+    
+    if len(data) > 1:
+        previous = data[1]
+        line += f" | Previous: {previous['value']} (as of {previous['date']})"
+        
+    return line
 
 async def get_political_sentiment(**kwargs) -> str:
     """
