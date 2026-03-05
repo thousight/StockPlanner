@@ -8,7 +8,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.database.session import AsyncSessionLocal
 from src.database.models import ResearchCache, ResearchSourceType
 from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
-from src.services.market_data import get_valid_cache, save_cache
 from src.graph.utils.scraping import fetch_content, clean_html, DEFAULT_USER_AGENT
 
 async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
@@ -50,7 +49,7 @@ async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
         
     async with AsyncSessionLocal() as db:
         try:
-            # 1. Check unified ResearchCache first
+            # 1. Check unified ResearchCache
             stmt = select(ResearchCache).where(
                 ResearchCache.key == url,
                 ResearchCache.expire_at > datetime.now(timezone.utc).replace(tzinfo=None)
@@ -60,12 +59,7 @@ async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
             if cached:
                 return cached.content
                 
-            # 2. Fallback to old NewsCache (for legacy data)
-            cached_summary = await get_valid_cache(db, url)
-            if cached_summary:
-                return cached_summary
-                
-            # 3. Cache miss - Fetch and Summarize
+            # 2. Cache miss - Fetch and Summarize
             ua = user_agent if user_agent else DEFAULT_USER_AGENT
             html = await fetch_content(url, ua)
             if html:

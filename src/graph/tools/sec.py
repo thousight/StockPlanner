@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict
 from bs4 import BeautifulSoup
@@ -6,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 from src.database.session import AsyncSessionLocal
-from src.database.models import SECCache, ResearchCache, ResearchSourceType
+from src.database.models import ResearchCache, ResearchSourceType
 from src.graph.utils.scraping import fetch_content, DEFAULT_USER_AGENT
 
 # SEC.gov requires a specific User-Agent
@@ -14,12 +15,10 @@ CACHE_TTL_DAYS = 7
 
 async def get_cached_section(ticker: str, accession_number: str, section_name: str) -> Optional[str]:
     """
-    Check if a section is already cached and not expired.
-    Checks ResearchCache first, then legacy SECCache.
+    Check if a section is already cached and not expired in ResearchCache.
     """
     key = f"sec_{accession_number}_{section_name}"
     async with AsyncSessionLocal() as session:
-        # 1. Check ResearchCache
         stmt = select(ResearchCache).where(
             ResearchCache.key == key,
             ResearchCache.expire_at > datetime.now(timezone.utc).replace(tzinfo=None)
@@ -28,18 +27,7 @@ async def get_cached_section(ticker: str, accession_number: str, section_name: s
         cached = result.scalar_one_or_none()
         if cached:
             return cached.content
-
-        # 2. Fallback to SECCache
-        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=CACHE_TTL_DAYS)
-        stmt = select(SECCache).where(
-            SECCache.ticker == ticker,
-            SECCache.accession_number == accession_number,
-            SECCache.section_name == section_name,
-            SECCache.created_at >= cutoff
-        )
-        result = await session.execute(stmt)
-        cached = result.scalar_one_or_none()
-        return cached.content if cached else None
+        return None
 
 async def save_to_cache(
     ticker: str, 
@@ -50,13 +38,12 @@ async def save_to_cache(
     content: str
 ):
     """
-    Save extracted section to the ResearchCache (and SECCache for now).
+    Save extracted section to the ResearchCache.
     """
     key = f"sec_{accession_number}_{section_name}"
     expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=CACHE_TTL_DAYS)
     
     async with AsyncSessionLocal() as session:
-        # 1. Save to ResearchCache
         stmt = select(ResearchCache).where(ResearchCache.key == key)
         result = await session.execute(stmt)
         cached_r = result.scalar_one_or_none()
@@ -73,29 +60,6 @@ async def save_to_cache(
                 expire_at=expire_at
             )
             session.add(new_r)
-
-        # 2. Keep legacy SECCache updated for now
-        stmt = select(SECCache).where(
-            SECCache.ticker == ticker,
-            SECCache.accession_number == accession_number,
-            SECCache.section_name == section_name
-        )
-        result = await session.execute(stmt)
-        cached = result.scalar_one_or_none()
-        
-        if cached:
-            cached.content = content
-            cached.created_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        else:
-            new_cache = SECCache(
-                ticker=ticker,
-                accession_number=accession_number,
-                filing_type=filing_type,
-                filing_date=filing_date,
-                section_name=section_name,
-                content=content
-            )
-            session.add(new_cache)
         
         await session.commit()
 

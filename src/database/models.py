@@ -162,26 +162,6 @@ class RefreshToken(Base):
 
     user = relationship("User", backref="refresh_tokens")
 
-class NewsCache(Base):
-    __tablename__ = "news_cache"
-
-    url = Column(String, primary_key=True, index=True)
-    summary = Column(Text)
-    expire_at = Column(DateTime)
-
-class SECCache(Base):
-    __tablename__ = "sec_cache"
-
-    id = Column(Integer, primary_key=True, index=True)
-    ticker = Column(String, index=True, nullable=False)
-    accession_number = Column(String, index=True, nullable=False)
-    filing_type = Column(String, index=True, nullable=False) # 10-K, 10-Q, 8-K
-    filing_date = Column(Date, index=True, nullable=False)
-    section_name = Column(String, index=True, nullable=False) # Item 1A, Item 7, etc.
-    content = Column(Text, nullable=False)
-    summary = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
-
 class ResearchCache(Base):
     __tablename__ = "research_cache"
 

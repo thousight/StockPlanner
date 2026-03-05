@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from decimal import Decimal
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from src.services.portfolio import (
@@ -11,12 +11,9 @@ from src.services.portfolio import (
     get_transactions,
     delete_transaction
 )
-from src.services.market_data import (
-    get_valid_cache,
-    save_cache
-)
-from src.database.models import Asset, Transaction, Holding, RecordStatus, NewsCache
+from src.database.models import Asset, Transaction, Holding, RecordStatus
 from src.schemas.transactions import TransactionCreate, TransactionAction
+
 @pytest.mark.asyncio
 async def test_get_or_create_asset_existing(mock_session):
     # Setup
@@ -192,38 +189,3 @@ async def test_delete_transaction(mock_session):
     assert mock_tx.status == RecordStatus.INACTIVE
     assert mock_session.execute.call_count == 3
     mock_session.flush.assert_called()
-
-@pytest.mark.asyncio
-async def test_get_valid_cache_found(mock_session):
-    # Setup
-    url = "https://example.com"
-    future_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
-    mock_entry = NewsCache(url=url, summary="Test summary", expire_at=future_date)
-    
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = mock_entry
-    mock_session.execute = AsyncMock(return_value=mock_result)
-    
-    # Execute
-    summary = await get_valid_cache(mock_session, url)
-    
-    # Verify
-    assert summary == "Test summary"
-
-@pytest.mark.asyncio
-async def test_save_cache_update(mock_session):
-    # Setup
-    url = "https://example.com"
-    mock_entry = NewsCache(url=url, summary="Old summary")
-    
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = mock_entry
-    mock_session.execute = AsyncMock(return_value=mock_result)
-    mock_session.commit = AsyncMock()
-    
-    # Execute
-    await save_cache(mock_session, url, "New summary")
-    
-    # Verify
-    assert mock_entry.summary == "New summary"
-    mock_session.commit.assert_called_once()

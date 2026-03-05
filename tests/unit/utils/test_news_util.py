@@ -22,32 +22,10 @@ async def test_get_summary_research_cache_hit():
         assert result == "Cached Summary"
 
 @pytest.mark.asyncio
-async def test_get_summary_newscache_fallback():
-    url = "https://news.com/2"
-    
-    with patch("src.graph.utils.news.AsyncSessionLocal") as mock_session_factory, \
-         patch("src.graph.utils.news.get_valid_cache", new_callable=AsyncMock) as mock_legacy:
-        
-        mock_session = AsyncMock()
-        mock_session_factory.return_value.__aenter__.return_value = mock_session
-        
-        # ResearchCache miss
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_session.execute.return_value = mock_result
-        
-        # Legacy NewsCache hit
-        mock_legacy.return_value = "Legacy Summary"
-        
-        result = await get_summary(url)
-        assert result == "Legacy Summary"
-
-@pytest.mark.asyncio
 async def test_get_summary_full_flow():
     url = "https://news.com/3"
     
     with patch("src.graph.utils.news.AsyncSessionLocal") as mock_session_factory, \
-         patch("src.graph.utils.news.get_valid_cache", new_callable=AsyncMock) as mock_legacy, \
          patch("src.graph.utils.news.fetch_content", new_callable=AsyncMock) as mock_fetch, \
          patch("src.graph.utils.news.clean_html") as mock_clean, \
          patch("src.graph.utils.news.summarize_content", new_callable=AsyncMock) as mock_summ:
@@ -59,7 +37,6 @@ async def test_get_summary_full_flow():
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = mock_result
-        mock_legacy.return_value = None
         
         # Fetch flow
         mock_fetch.return_value = "<html>Content</html>"

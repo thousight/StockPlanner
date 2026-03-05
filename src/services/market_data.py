@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database.models import FXRate, Asset, AssetType, Transaction, RecordStatus, NewsCache
+from src.database.models import FXRate, Asset, AssetType, Transaction, RecordStatus
 import yfinance as yf
 
 def get_ticker(symbol: str) -> yf.Ticker:
@@ -191,32 +191,3 @@ async def fetch_yfinance_news_urls(ticker_symbol: str) -> List[Dict[str, str]]:
     except Exception as e:
         print(f"Error fetching news for {ticker_symbol}: {e}")
     return results
-
-async def get_valid_cache(db: AsyncSession, url: str) -> Optional[str]:
-    """
-    Retrieve valid cached news summary.
-    """
-    stmt = select(NewsCache).where(NewsCache.url == url)
-    result = await db.execute(stmt)
-    entry = result.scalar_one_or_none()
-    if entry and entry.expire_at > datetime.now(timezone.utc).replace(tzinfo=None):
-        return entry.summary
-    return None
-
-async def save_cache(db: AsyncSession, url: str, summary: str, expire_at: Optional[datetime] = None, ttl_hours: int = 168):
-    """
-    Save news summary to cache.
-    """
-    if expire_at is None:
-        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours)
-
-    stmt = select(NewsCache).where(NewsCache.url == url)
-    result = await db.execute(stmt)
-    entry = result.scalar_one_or_none()
-    if entry:
-        entry.summary = summary
-        entry.expire_at = expire_at
-    else:
-        entry = NewsCache(url=url, summary=summary, expire_at=expire_at)
-        db.add(entry)
-    await db.commit()

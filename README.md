@@ -72,7 +72,7 @@ Navigate to `http://localhost:8501` in your browser.
 
 ## Recent Updates
 
-- **Database Caching**: Implemented a `NewsCache` table to store LLM-generated summaries, improving speed and efficiency.
+- **Database Caching**: Implemented a unified research cache to store SEC filings, news summaries, and social sentiment, improving speed and efficiency.
 - **Robust News Fetching**: Enhanced news gathering with `readability-lxml` and better error handling.
 
 ## Roadmap
