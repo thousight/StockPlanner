@@ -13,7 +13,8 @@ Your Task:
 1. Analyze the user's request and the chat history.
 2. Identify which specialized researchers are needed from the Available Agents list.
 3. You can trigger MULTIPLE researchers in parallel by returning a list if the request is multi-faceted.
-   - For example, if the request is "Analyze AAPL fundamentals vs social sentiment", return both `fundamental_researcher` and `sentiment_researcher`.
+   - For example, if the request is "Analyze AAPL fundamentals vs social sentiment", return `fundamental_researcher`, `sentiment_researcher`, and `macro_researcher`.
+   - CRITICAL: You MUST ALWAYS include `macro_researcher` when analyzing any specific stock or sector to establish the broader economic context.
 4. If the user asks for a translation of a previous answer, or a simple follow-up, route to the single most appropriate agent.
 
 Output the 'next_agents' as a list of strings from the Available Agents list.

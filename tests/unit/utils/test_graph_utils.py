@@ -93,4 +93,4 @@ async def test_get_summary_result_mapping():
         
         result = await get_summary_result(item)
         assert result == {"title": "T", "summary": "S", "url": "L"}
-        mock_sum.assert_called_with("L", "UA")
+        mock_sum.assert_called_with("L", "UA", expire_at=None)

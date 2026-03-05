@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     X_API_SECRET: Optional[str] = None
     X_ACCESS_TOKEN: Optional[str] = None
     X_ACCESS_TOKEN_SECRET: Optional[str] = None
+    FRED_API_KEY: Optional[str] = None
+    FINNHUB_API_KEY: Optional[str] = None
     
     # JWT configuration
     JWT_SECRET_KEY: str = "your-super-secret-key-change-this-in-production"

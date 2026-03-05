@@ -35,13 +35,15 @@ async def save_to_cache(
     filing_type: str, 
     filing_date: datetime, 
     section_name: str, 
-    content: str
+    content: str,
+    expire_at: Optional[datetime] = None
 ):
     """
     Save extracted section to the ResearchCache.
     """
     key = f"sec_{accession_number}_{section_name}"
-    expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=CACHE_TTL_DAYS)
+    if expire_at is None:
+        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=CACHE_TTL_DAYS)
     
     async with AsyncSessionLocal() as session:
         stmt = select(ResearchCache).where(ResearchCache.key == key)
@@ -96,7 +98,7 @@ async def fetch_filing_content(url: str, user_agent: str = DEFAULT_USER_AGENT) -
     """
     return await fetch_content(url, user_agent)
 
-async def get_sec_filing_section(ticker: str, filing_type: str = "10-K", section_id: str = "item1a") -> str:
+async def get_sec_filing_section(ticker: str, filing_type: str = "10-K", section_id: str = "item1a", expire_at: Optional[datetime] = None) -> str:
     """
     Main tool for agents to fetch and extract a specific section from the latest filing.
     Includes caching logic.
@@ -129,7 +131,8 @@ async def get_sec_filing_section(ticker: str, filing_type: str = "10-K", section
                 filing_type=filing_type,
                 filing_date=filing_date,
                 section_name=section_id,
-                content=content
+                content=content,
+                expire_at=expire_at
             )
             return content
         else:

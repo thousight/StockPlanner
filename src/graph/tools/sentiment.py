@@ -21,7 +21,8 @@ async def analyze_sentiment(
     text: str, 
     source_type: ResearchSourceType = ResearchSourceType.NEWS, 
     ticker: Optional[str] = None, 
-    key: Optional[str] = None
+    key: Optional[str] = None,
+    expire_at: Optional[datetime] = None
 ) -> SentimentResult:
     """
     Analyze the sentiment of a given financial text.
@@ -66,8 +67,9 @@ async def analyze_sentiment(
                     result = await db.execute(stmt)
                     cached = result.scalar_one_or_none()
                     
-                    ttl_days = 1 if source_type in [ResearchSourceType.SOCIAL, ResearchSourceType.X] else 7
-                    expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=ttl_days)
+                    if expire_at is None:
+                        ttl_days = 1 if source_type in [ResearchSourceType.SOCIAL, ResearchSourceType.X] else 7
+                        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=ttl_days)
 
                     if cached:
                         cached.sentiment_score = res.sentiment_score

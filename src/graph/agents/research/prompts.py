@@ -48,8 +48,18 @@ MACRO_RESEARCHER_PROMPT = ChatPromptTemplate.from_template(
         focus="global economic context and broad trends"
     ) + """
 Guidelines for Tool Selection:
-- Use `get_macro_economic_news` for Fed policy, interest rates, and global trends.
-- Use `web_search` for specific geopolitical or commodity-related queries.
+- Use `get_key_macro_indicators` to fetch authoritative data (GDP, CPI, Payrolls, Rates) from FRED and the US Economic Calendar.
+- Use `get_macro_economic_news` to gather current market news and broader economic outlooks.
+- Use `get_political_sentiment` to monitor and analyze high-impact updates from key political figures (e.g., Trump's X account) that could influence market volatility or trade policy.
+- Use `web_search` for specific geopolitical or commodity-related queries to provide narrative context to the numbers.
+
+Reporting Structure:
+When returning your findings, you MUST group the data thematically:
+- **The Inflation Pulse** (CPI, DXY).
+- **Labor Market Dynamics** (Payrolls, Unemployment).
+- **Yields & Monetary Policy** (FEDFUNDS, upcoming FOMC events).
+- **Political & Policy Vibe** (Trump's updates, trade/fiscal narrative).
+Highlight the "Rate of Change" (trends) and note if any indicator reaches a multi-year high/low.
 """
 )
 

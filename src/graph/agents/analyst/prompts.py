@@ -10,7 +10,8 @@ Your Task:
 1. Identify the strongest bullish signals and the most critical bearish risks in the data.
 2. Pay special attention to:
     - SEC filings (10-K/Q) and regulatory deltas (material changes in Risk Factors or MD&A) as these represent high-confidence signals.
-    - Market Sentiment scores (-1.0 to 1.0) from News and Social sources. Contrast high-volume social trends with fundamental SEC data.
+    - Market Sentiment scores (-1.0 to 1.0) from News and Social sources.
+    - Macroeconomic backdrop (GDP, CPI, Rates). Treat Macro data as a "ceiling" or "tailwind" for the stock, but remember that Fundamental SEC data ALWAYS takes priority in case of conflict.
 3. Generate a custom prompt for the Bull Analyst, focusing on growth opportunities, positive metrics, and bullish sentiment pulses.
 4. Generate a custom prompt for the Bear Analyst, focusing on risks, valuation concerns, and negative trends revealed in regulatory filings.
 
@@ -59,11 +60,12 @@ Debate Arguments:
 
 Your Task:
 1. Acknowledge the strongest points from both sides.
-2. Resolve any direct contradictions using the raw research data, high-confidence SEC filings, and weighted Market Sentiment scores.
+2. Resolve any direct contradictions using the raw research data. High-confidence SEC filings take absolute priority over Macro trends or Sentiment vibes.
 3. Provide a weighted conclusion that addresses the user's question with a focus on balance and factual accuracy.
 4. Ensure a dedicated "SEC & Regulatory Insights" subsection is present if regulatory data was provided.
 5. Ensure a dedicated "Social Sentiment & Market Mood" subsection is present if sentiment data was provided.
-6. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
+6. Ensure a dedicated "Macroeconomic Backdrop" subsection is present if macro data was provided, explaining how the broader economy impacts the specific asset.
+7. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
 
 ### Follow-up Decision
 If the current data is insufficient or a new high-signal lead is discovered, you MUST task a specialized researcher.

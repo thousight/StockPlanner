@@ -19,7 +19,7 @@ from src.controllers.portfolio import router as portfolio_router
 from src.controllers.reports import router as reports_router
 from src.controllers.threads import router as threads_router
 from src.controllers.auth import router as auth_router
-from src.lifecycle.tasks import cleanup_news_cache
+from src.lifecycle.tasks import cleanup_research_cache
 from src.graph.persistence import get_checkpointer
 
 # Setup logging
@@ -60,13 +60,13 @@ async def lifespan(app: FastAPI):
     # Setup Scheduler
     scheduler = AsyncIOScheduler()
     
-    # Schedule news cache cleanup: Hourly
+    # Schedule research cache cleanup: Hourly
     scheduler.add_job(
-        cleanup_news_cache,
+        cleanup_research_cache,
         "interval",
         hours=1,
-        id="cleanup_news_cache",
-        name="Hourly news cache cleanup",
+        id="cleanup_research_cache",
+        name="Hourly research cache cleanup",
         replace_existing=True
     )
     

@@ -28,7 +28,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 ### Phase 18: Macro Economics Tracking
 **Goal:** Dedicated tools and agents for tracking expanded macro-economic indicators.
-**Status:** Pending
+**Status:** Completed
 
 ## Milestone 5: Daily Proactive Analysis
 **Goal:** Move from reactive chat to proactive financial coaching.

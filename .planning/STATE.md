@@ -2,9 +2,9 @@
 
 ## Current Position
 - **Milestone:** Milestone 4: Advanced Agents & Financial Context
-- **Phase:** 17
-- **Status:** Completed Phase 17 (Modular Graph).
-- **Last Activity:** [2026-03-04] — Refactored research layer into specialized parallel nodes (Fundamental, Sentiment, Macro). Implemented parallel fan-out routing and fan-in join at the Analyst.
+- **Phase:** 18
+- **Status:** Completed Phase 18 (Macro Economics Tracking).
+- **Last Activity:** [2026-03-04] — Implemented FED API and Finnhub calendar services, refactored caching for dynamic TTLs, and established thematic macro reporting within the modular graph.
 
 ## Planning Context
 - **Vision:** Persistent, personalized financial planner with high-speed memory.

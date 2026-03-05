@@ -9,14 +9,27 @@ async def test_x_client_mock_fallback():
         client = XClient()
         tweets = await client.get_recent_cashtag_tweets("AAPL")
         assert len(tweets) > 0
-        assert "mock_" in tweets[0]["id"]
+        assert "mock_1" in tweets[0]["id"]
+
+@pytest.mark.asyncio
+async def test_x_client_user_mock_fallback():
+    with patch("src.config.settings.X_BEARER_TOKEN", None):
+        client = XClient()
+        tweets = await client.get_user_tweets("realDonaldTrump")
+        assert len(tweets) > 0
+        assert "mock_u1" in tweets[0]["id"]
 
 @pytest.mark.asyncio
 async def test_x_client_api_call():
     # Test that it calls the real API if client initialized
     with patch("src.config.settings.X_BEARER_TOKEN", "fake_token"), \
-         patch("tweepy.asynchronous.AsyncClient.search_recent_tweets", new_callable=AsyncMock) as mock_search:
+         patch("tweepy.asynchronous.AsyncClient.get_user", new_callable=AsyncMock) as mock_get_user, \
+         patch("tweepy.asynchronous.AsyncClient.get_users_tweets", new_callable=AsyncMock) as mock_search:
         
+        mock_user = MagicMock()
+        mock_user.data.id = "123"
+        mock_get_user.return_value = mock_user
+
         mock_response = MagicMock()
         mock_tweet = MagicMock()
         mock_tweet.id = 12345
@@ -28,7 +41,7 @@ async def test_x_client_api_call():
         mock_search.return_value = mock_response
         
         client = XClient()
-        tweets = await client.get_recent_cashtag_tweets("AAPL")
+        tweets = await client.get_user_tweets("realDonaldTrump")
         
         assert len(tweets) == 1
         assert tweets[0]["id"] == "12345"

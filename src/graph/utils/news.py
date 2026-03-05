@@ -10,10 +10,10 @@ from src.database.models import ResearchCache, ResearchSourceType
 from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
 from src.graph.utils.scraping import fetch_content, clean_html, DEFAULT_USER_AGENT
 
-async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
+async def get_summary_result(item: Dict[str, str], expire_at: Optional[datetime] = None) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""
     user_agent = item.get("user_agent", "")
-    summary = await get_summary(item['link'], user_agent)
+    summary = await get_summary(item['link'], user_agent, expire_at=expire_at)
     if summary:
         return {
             "title": item["title"],
@@ -39,10 +39,10 @@ def fetch_ddgs_urls(query: str) -> List[Dict[str, str]]:
         print(f"Error for query {query}: {e}")
     return results
 
-async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
+async def get_summary(url: str, user_agent: str = "", expire_at: Optional[datetime] = None) -> Optional[str]:
     """
     Get news summary from cache or fetch and summarize.
-    TTL: 7 days.
+    TTL: Default 7 days if expire_at not provided.
     """
     if not url:
         return None
@@ -68,7 +68,9 @@ async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
                     summary = await summarize_content(content, url)
                     if summary and "Error" not in summary:
                         # Save to unified ResearchCache
-                        expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7)
+                        if expire_at is None:
+                            expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7)
+                        
                         new_cache = ResearchCache(
                             source_type=ResearchSourceType.NEWS,
                             key=url,

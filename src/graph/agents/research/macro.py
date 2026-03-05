@@ -1,16 +1,20 @@
-import inspect
 import asyncio
+
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+
 from src.graph.state import AgentState
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.tools.news import get_macro_economic_news, web_search
+from src.graph.tools.macro import get_key_macro_indicators, get_political_sentiment
 from src.graph.agents.research.prompts import MACRO_RESEARCHER_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
 from src.graph.agents.research.research_plan import ResearchPlan
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 
 TOOLS_LIST = [
+    get_key_macro_indicators,
     get_macro_economic_news,
+    get_political_sentiment,
     web_search
 ]
 
