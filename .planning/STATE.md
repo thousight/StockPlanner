@@ -2,9 +2,9 @@
 
 ## Current Position
 - **Milestone:** Milestone 4: Advanced Agents & Financial Context
-- **Phase:** 16
-- **Status:** Completed Phase 16 (Social & Sentiment).
-- **Last Activity:** [2026-03-04] — Implemented unified scraping utilities, numerical sentiment engine, X (Twitter) API integration, and agentic weighting of sentiment.
+- **Phase:** 17
+- **Status:** Completed Phase 17 (Modular Graph).
+- **Last Activity:** [2026-03-04] — Refactored research layer into specialized parallel nodes (Fundamental, Sentiment, Macro). Implemented parallel fan-out routing and fan-in join at the Analyst.
 
 ## Planning Context
 - **Vision:** Persistent, personalized financial planner with high-speed memory.

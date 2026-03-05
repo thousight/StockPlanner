@@ -24,6 +24,10 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 ### Phase 17: Modular Graph
 **Goal:** Refactoring the supervisor graph for specialized analyst routing.
+**Status:** Completed
+
+### Phase 18: Macro Economics Tracking
+**Goal:** Dedicated tools and agents for tracking expanded macro-economic indicators.
 **Status:** Pending
 
 ## Milestone 5: Daily Proactive Analysis

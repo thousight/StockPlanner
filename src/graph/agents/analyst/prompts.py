@@ -65,5 +65,15 @@ Your Task:
 5. Ensure a dedicated "Social Sentiment & Market Mood" subsection is present if sentiment data was provided.
 6. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
 
-Provide a comprehensive, professional investment report in Markdown.
+### Follow-up Decision
+If the current data is insufficient or a new high-signal lead is discovered, you MUST task a specialized researcher.
+- Route to `fundamental_researcher` for missing SEC data or financial metrics.
+- Route to `sentiment_researcher` for missing social trends or news updates.
+- Route to `macro_researcher` for missing economic context.
+- Provide a SPECIFIC, atomic question for the researcher.
+
+Output the final report in Markdown. At the VERY END of your response, if a follow-up is needed, add:
+FOLLOW_UP: [agent_name] | [specific_question]
+If no follow-up is needed, add:
+FOLLOW_UP: None
 """)

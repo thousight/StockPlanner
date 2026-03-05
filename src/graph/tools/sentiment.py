@@ -116,15 +116,13 @@ async def get_market_sentiment(ticker: str, **kwargs) -> str:
     if news_data:
         sentiment_tasks.append(analyze_sentiment(news_data, ResearchSourceType.NEWS, ticker, f"news_{ticker}"))
     else:
-        async def dummy(): return None
-        sentiment_tasks.append(dummy())
+        sentiment_tasks.append(asyncio.sleep(0, result=None))
 
     # SEC sentiment
     if sec_data and "Error" not in sec_data:
         sentiment_tasks.append(analyze_sentiment(sec_data, ResearchSourceType.SEC, ticker, f"sec_{ticker}_item1a"))
     else:
-        async def dummy(): return None
-        sentiment_tasks.append(dummy())
+        sentiment_tasks.append(asyncio.sleep(0, result=None))
 
     # X (Social) sentiment
     if x_tweets:
@@ -132,8 +130,7 @@ async def get_market_sentiment(ticker: str, **kwargs) -> str:
         current_hour = datetime.now(timezone.utc).strftime("%Y%m%d%H")
         sentiment_tasks.append(analyze_sentiment(combined_tweets, ResearchSourceType.X, ticker, f"x_{ticker}_{current_hour}"))
     else:
-        async def dummy(): return None
-        sentiment_tasks.append(dummy())
+        sentiment_tasks.append(asyncio.sleep(0, result=None))
 
     # Reddit (Social) sentiment
     if reddit_data:
@@ -141,8 +138,7 @@ async def get_market_sentiment(ticker: str, **kwargs) -> str:
         current_hour = datetime.now(timezone.utc).strftime("%Y%m%d%H")
         sentiment_tasks.append(analyze_sentiment(combined_reddit, ResearchSourceType.SOCIAL, ticker, f"reddit_{ticker}_{current_hour}"))
     else:
-        async def dummy(): return None
-        sentiment_tasks.append(dummy())
+        sentiment_tasks.append(asyncio.sleep(0, result=None))
 
     sentiment_results = await asyncio.gather(*sentiment_tasks)
     

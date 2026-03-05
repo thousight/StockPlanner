@@ -1,4 +1,3 @@
-import re
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict
 from bs4 import BeautifulSoup
