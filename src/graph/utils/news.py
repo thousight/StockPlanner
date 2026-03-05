@@ -1,14 +1,15 @@
-from ddgs import DDGS
 from typing import Dict, List, Optional
+from datetime import datetime, timezone, timedelta
+from sqlalchemy import select
+from ddgs import DDGS
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
+
 from src.database.session import AsyncSessionLocal
+from src.database.models import ResearchCache, ResearchSourceType
 from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
 from src.services.market_data import get_valid_cache, save_cache
 from src.graph.utils.scraping import fetch_content, clean_html, DEFAULT_USER_AGENT
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
-from src.database.models import ResearchCache, ResearchSourceType
-from sqlalchemy import select
-from datetime import datetime, timezone, timedelta
 
 async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""

@@ -1,16 +1,17 @@
-from src.graph.utils.scraping import fetch_content, DEFAULT_USER_AGENT
-from src.database.session import AsyncSessionLocal
-from sqlalchemy import select
+import re
 from datetime import datetime, timezone, timedelta
-from bs4 import BeautifulSoup
 from typing import List, Optional, Dict
+from bs4 import BeautifulSoup
+from sqlalchemy import select
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
+from src.database.session import AsyncSessionLocal
+from src.database.models import SECCache, ResearchCache, ResearchSourceType
+from src.graph.utils.scraping import fetch_content, DEFAULT_USER_AGENT
+
 # SEC.gov requires a specific User-Agent
 CACHE_TTL_DAYS = 7
-
-from src.database.models import SECCache, ResearchCache, ResearchSourceType
 
 async def get_cached_section(ticker: str, accession_number: str, section_name: str) -> Optional[str]:
     """
@@ -104,10 +105,6 @@ async def get_latest_filing_urls(ticker: str, filing_type: str = "10-K") -> List
     Fetch the latest filing URLs for a given ticker from SEC.gov.
     Returns a list of dictionaries with accession number, filing date, and URL.
     """
-    # For now, we'll return a mock URL as fetching real ones requires CIK lookup
-    # A real implementation would hit https://data.sec.gov/submissions/CIK{cik}.json
-    # or the RSS feed: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type={filing_type}&output=atom
-    
     # Simple mockup for now to satisfy initial tests
     return [{
         "accession_number": "0000320193-23-000106",
@@ -128,9 +125,6 @@ def extract_section(html_content: str, section_id: str) -> str:
     if section:
         return section.get_text(separator="\n", strip=True)
     
-    # Fallback: look for headings containing the section name (simplified)
-    # Real SEC filings are notoriously hard to parse this way.
-    # In production, we'd use a more robust regex-based or offset-based parser.
     return ""
 
 async def fetch_filing_content(url: str, user_agent: str = DEFAULT_USER_AGENT) -> str:
@@ -181,8 +175,6 @@ async def get_sec_filing_section(ticker: str, filing_type: str = "10-K", section
     except Exception as e:
         return f"Error fetching {filing_type} for {ticker}: {str(e)}"
 
-# ... (previous code)
-
 async def get_sec_filing_delta(ticker: str, filing_type: str = "10-K", section_id: str = "item1a") -> str:
     """
     Compare the latest section with the previous same-period section.
@@ -206,21 +198,19 @@ async def get_sec_filing_delta(ticker: str, filing_type: str = "10-K", section_i
     # 2. Get contents (with caching)
     current_content = await get_sec_filing_section(ticker, filing_type, section_id)
     # For previous, we need a way to specify accession number in get_sec_filing_section
-    # Let's simplify and assume we can fetch it.
-    # In a real scenario, we'd need to handle this more robustly.
     previous_content = "This is a placeholder for previous year's content." 
     
     # 3. LLM comparison
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     prompt = ChatPromptTemplate.from_template("""
-    Compare the following two sections ({{section_id}}) from {{ticker}}'s {{filing_type}} filings.
+    Compare the following two sections ({section_id}) from {ticker}'s {filing_type} filings.
     The goal is to identify material changes: New risks/items, Removed risks/items, and significantly Changed risks/items.
     
-    Current ({{current_date}}):
-    {{current_content}}
+    Current ({current_date}):
+    {current_content}
     
-    Previous ({{previous_date}}):
-    {{previous_content}}
+    Previous ({previous_date}):
+    {previous_content}
     
     Provide a concise, bulleted summary of the semantic deltas.
     """)
