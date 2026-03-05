@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from langchain_core.messages import HumanMessage, AIMessage
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.utils.agents import with_logging, get_next_interaction_id
-from src.graph.utils.news import fetch_article_content, get_summary_result
+from src.graph.utils.news import get_summary_result
 
 def test_convert_state_to_prompt_empty():
     state = {}
@@ -83,34 +83,6 @@ def test_get_next_interaction_id():
     state = {"agent_interactions": [{}, {}]}
     assert get_next_interaction_id(state) == 3
     assert get_next_interaction_id({}) == 1
-
-@pytest.mark.asyncio
-async def test_fetch_article_content_success():
-    url = "https://example.com/article"
-    html = "<html><body><h1>Title</h1><p>This is some content.</p></body></html>"
-    
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.text = html
-    
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        mock_get.return_value = mock_response
-        
-        content = await fetch_article_content(url)
-        assert "This is some content" in content
-
-@pytest.mark.asyncio
-async def test_fetch_article_content_404():
-    url = "https://example.com/article"
-    
-    mock_response = MagicMock()
-    mock_response.status_code = 404
-    
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        mock_get.return_value = mock_response
-        
-        content = await fetch_article_content(url)
-        assert content is None
 
 @pytest.mark.asyncio
 async def test_get_summary_result_mapping():

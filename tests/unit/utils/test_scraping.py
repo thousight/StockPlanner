@@ -25,6 +25,17 @@ async def test_fetch_content_failure():
         result = await fetch_content(url)
         assert result == ""
 
+@pytest.mark.asyncio
+async def test_fetch_content_empty_url():
+    assert await fetch_content("") == ""
+    assert await fetch_content(None) == ""
+
+@pytest.mark.asyncio
+async def test_fetch_content_exception():
+    with patch("httpx.AsyncClient.get", side_effect=Exception("Network error")):
+        result = await fetch_content("https://error.com")
+        assert result == ""
+
 def test_clean_html_basic():
     html = "<html><body><header>Nav</header><main><h1>Title</h1><p>Main content here.</p></main><footer>Footer</footer></body></html>"
     # readability-lxml should extract the main content
@@ -37,3 +48,7 @@ def test_clean_html_basic():
 def test_clean_html_empty():
     assert clean_html("") == ""
     assert clean_html(None) == ""
+
+def test_clean_html_exception():
+    with patch("src.graph.utils.scraping.Document", side_effect=Exception("Parsing error")):
+        assert clean_html("<html></html>") == ""
