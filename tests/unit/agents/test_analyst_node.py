@@ -4,9 +4,7 @@ from src.graph.agents.analyst.agent import analyst_agent
 from src.graph.agents.analyst.subgraph import (
     generate_instructions, 
     bull_agent, 
-    bear_agent, 
     synthesizer,
-    DebateState,
     Instructions,
     FinalSynthesis
 )

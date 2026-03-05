@@ -4,7 +4,6 @@ from langchain_core.messages import HumanMessage, AIMessage
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.utils.agents import with_logging, get_next_interaction_id
 from src.graph.utils.news import fetch_article_content, get_summary_result
-import logging
 
 def test_convert_state_to_prompt_empty():
     state = {}

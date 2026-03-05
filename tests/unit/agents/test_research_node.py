@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from decimal import Decimal
 from src.graph.agents.research.agent import research_agent, execute_tool, TOOLS_LIST
 from src.graph.agents.research.research_plan import ResearchPlan
 from src.graph.utils.tool_call import ToolCall

@@ -1,12 +1,10 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
 from main import app
 from src.database.session import get_db
-from src.database.models import User, UserStatus, ChatThread, Transaction, Asset, RecordStatus
+from src.database.models import User, UserStatus, ChatThread, Transaction, RecordStatus
 from src.services.auth import create_access_token
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from decimal import Decimal
-from datetime import datetime
 
 @pytest.fixture
 def user_a():
@@ -33,7 +31,7 @@ async def test_thread_isolation_stealth_404(client, mock_session, user_a, user_b
     Should return 404.
     """
     thread_id = "thread-a"
-    mock_thread_a = ChatThread(id=thread_id, user_id=user_a.id, status=RecordStatus.ACTIVE)
+    ChatThread(id=thread_id, user_id=user_a.id, status=RecordStatus.ACTIVE)
     
     # 1. Mock user lookup for User B's request
     mock_user_b_result = MagicMock()
@@ -59,7 +57,7 @@ async def test_transaction_isolation_stealth_404(client, mock_session, user_a, u
     Verify that User B cannot read or delete User A's transaction.
     """
     tx_id = 100
-    mock_tx_a = Transaction(id=tx_id, user_id=user_a.id, asset_id=1)
+    Transaction(id=tx_id, user_id=user_a.id, asset_id=1)
     
     # Mock user B
     mock_user_b_result = MagicMock()
@@ -156,5 +154,3 @@ async def test_message_deletion_isolation_stealth_404(client, mock_session, user
     assert response.status_code == 404
     
     app.dependency_overrides.clear()
-
-from unittest.mock import patch

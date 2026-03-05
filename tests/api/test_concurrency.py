@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-from httpx import AsyncClient, ASGITransport
 from main import app
 from src.database.session import get_db
 from unittest.mock import patch, AsyncMock, MagicMock

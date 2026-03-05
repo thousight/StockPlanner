@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from main import lifespan
 from src.lifecycle.tasks import cleanup_news_cache
 import time_machine
-from datetime import datetime, timezone
+from datetime import datetime
 
 @pytest.mark.asyncio
 async def test_lifespan_startup_shutdown():

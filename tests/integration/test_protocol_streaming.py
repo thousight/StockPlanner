@@ -1,12 +1,9 @@
 import pytest
 import json
-from httpx import AsyncClient, ASGITransport
 from main import app
 from src.database.session import get_db
-from src.database.models import User, ChatThread, UserStatus
-from src.services.auth import create_access_token
+from src.database.models import ChatThread
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
 
 @pytest.mark.asyncio
 async def test_stream_protocol_subgraph_propagation(client, mock_session, test_user, auth_headers):

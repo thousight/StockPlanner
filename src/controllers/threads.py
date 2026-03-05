@@ -11,7 +11,6 @@ from src.services.context_injection import get_user_context_data
 from src.services.titler import update_thread_title_background
 from src.graph.graph import create_graph
 from src.graph.persistence import get_checkpointer
-from langgraph.graph.message import add_messages
 from langchain_core.messages import HumanMessage
 import logging
 import json
@@ -123,7 +122,7 @@ async def get_threads(
         # Count total threads for this user (not soft-deleted)
         count_query = select(func.count()).select_from(ChatThread).where(
             ChatThread.user_id == current_user.id,
-            ChatThread.deleted_at == None
+            ChatThread.deleted_at.is_(None)
         )
         total_result = await db.execute(count_query)
         total = total_result.scalar()
@@ -131,7 +130,7 @@ async def get_threads(
         # Fetch threads
         query = select(ChatThread).where(
             ChatThread.user_id == current_user.id,
-            ChatThread.deleted_at == None
+            ChatThread.deleted_at.is_(None)
         ).order_by(desc(ChatThread.updated_at)).offset(offset).limit(limit)
         
         result = await db.execute(query)
@@ -166,7 +165,7 @@ async def get_history(
     thread_res = await db.execute(select(ChatThread).where(
         ChatThread.id == thread_id,
         ChatThread.user_id == current_user.id,
-        ChatThread.deleted_at == None
+        ChatThread.deleted_at.is_(None)
     ))
     thread = thread_res.scalar_one_or_none()
     if not thread:
@@ -179,7 +178,7 @@ async def get_history(
     # Using keyset pagination on UUIDv7 (time-ordered)
     query = select(ChatMessage).where(
         ChatMessage.thread_id == thread_id,
-        ChatMessage.deleted_at == None
+        ChatMessage.deleted_at.is_(None)
     )
     
     if cursor:
@@ -225,7 +224,7 @@ async def delete_thread(
         query = select(ChatThread).where(
             ChatThread.id == thread_id,
             ChatThread.user_id == current_user.id,
-            ChatThread.deleted_at == None
+            ChatThread.deleted_at.is_(None)
         )
         result = await db.execute(query)
         thread = result.scalar_one_or_none()
@@ -265,7 +264,7 @@ async def delete_message(
         ChatMessage.id == message_id,
         ChatMessage.thread_id == thread_id,
         ChatMessage.user_id == current_user.id,
-        ChatMessage.deleted_at == None
+        ChatMessage.deleted_at.is_(None)
     )
     result = await db.execute(query)
     message = result.scalar_one_or_none()
@@ -293,7 +292,7 @@ async def stream_run(
     thread_res = await db.execute(select(ChatThread).where(
         ChatThread.id == thread_id,
         ChatThread.user_id == current_user.id,
-        ChatThread.deleted_at == None
+        ChatThread.deleted_at.is_(None)
     ))
     thread = thread_res.scalar_one_or_none()
     if not thread:

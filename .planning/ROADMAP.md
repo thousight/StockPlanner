@@ -14,11 +14,17 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 - Narrative and sentiment analysis for news articles.
 - Refactored agent architecture for better modularity and streaming stability.
 
-| Phase | Title | Focus | Status |
-|---|---|---|---|
-| **Phase 15** | **SEC & EDGAR Agent** | Dedicated agent for parsing SEC filings and structured reports. | Pending |
-| **Phase 16** | **Social & Sentiment** | Analysis of social media trends and news sentiment. | Pending |
-| **Phase 17** | **Modular Graph** | Refactoring the supervisor graph for specialized analyst routing. | Pending |
+### Phase 15: SEC & EDGAR Agent
+**Goal:** Dedicated agent for parsing SEC filings and structured reports.
+**Status:** Completed
+
+### Phase 16: Social & Sentiment
+**Goal:** Analysis of social media trends and news sentiment.
+**Status:** Completed
+
+### Phase 17: Modular Graph
+**Goal:** Refactoring the supervisor graph for specialized analyst routing.
+**Status:** Pending
 
 ## Milestone 5: Daily Proactive Analysis
 **Goal:** Move from reactive chat to proactive financial coaching.

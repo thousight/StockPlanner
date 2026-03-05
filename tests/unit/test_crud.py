@@ -1,8 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from decimal import Decimal
-from datetime import datetime, timezone, date, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException
 
 from src.services.portfolio import (
@@ -10,16 +9,13 @@ from src.services.portfolio import (
     create_transaction,
     get_holdings,
     get_transactions,
-    get_transaction,
-    delete_transaction,
-    recalculate_holding
+    delete_transaction
 )
 from src.services.market_data import (
     get_valid_cache,
-    save_cache,
-    get_historical_fx_rate
+    save_cache
 )
-from src.database.models import Asset, Transaction, Holding, AssetType, RecordStatus, NewsCache
+from src.database.models import Asset, Transaction, Holding, RecordStatus, NewsCache
 from src.schemas.transactions import TransactionCreate, TransactionAction
 @pytest.mark.asyncio
 async def test_get_or_create_asset_existing(mock_session):
@@ -42,7 +38,6 @@ async def test_get_or_create_asset_existing(mock_session):
 @pytest.mark.asyncio
 async def test_get_or_create_asset_new(mock_session):
     # Setup
-    user_id = "user1"
     symbol = "TSLA"
     
     mock_result = MagicMock()

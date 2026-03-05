@@ -4,7 +4,6 @@ from decimal import Decimal
 from src.schemas.portfolio import PortfolioSummary, SectorAllocation, BenchmarkComparison
 from main import app
 from src.database.session import get_db
-from src.database.models import User
 
 @pytest.mark.asyncio
 async def test_get_portfolio_summary(client, mock_session, auth_headers, test_user):

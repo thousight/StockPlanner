@@ -1,18 +1,16 @@
 import hashlib
-from typing import List, Union
+import logging
+from typing import List
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from src.database.models import ChatMessage, ChatThread
-import logging
-
-logger = logging.getLogger(__name__)
-
 from src.database.session import AsyncSessionLocal
-
-from sqlalchemy import func
 from src.graph.persistence import get_checkpointer
 from src.graph.graph import create_graph
+
+logger = logging.getLogger(__name__)
 
 async def backfill_history_if_needed(db: AsyncSession, thread_id: str, user_id: str):
     """
@@ -22,7 +20,7 @@ async def backfill_history_if_needed(db: AsyncSession, thread_id: str, user_id: 
     # 1. Check if any messages exist in relational DB
     stmt = select(func.count()).select_from(ChatMessage).where(
         ChatMessage.thread_id == thread_id,
-        ChatMessage.deleted_at == None
+        ChatMessage.deleted_at.is_(None)
     )
     result = await db.execute(stmt)
     count = result.scalar()
@@ -83,7 +81,7 @@ async def sync_conversation_to_postgres(
             select(ChatThread).where(
                 ChatThread.id == thread_id,
                 ChatThread.user_id == user_id,
-                ChatThread.deleted_at == None
+                ChatThread.deleted_at.is_(None)
             )
         )
         thread = result.scalar_one_or_none()

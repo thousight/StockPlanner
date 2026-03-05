@@ -2,8 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from decimal import Decimal
 from datetime import datetime
-from src.database.models import Asset, Transaction, RecordStatus, User
-from src.schemas.transactions import TransactionAction
+from src.database.models import Asset, Transaction, RecordStatus
 from main import app
 from src.database.session import get_db
 

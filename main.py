@@ -4,8 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from asgi_correlation_id import CorrelationIdMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 import logging
 import redis.asyncio as redis
 import redis.exceptions as redis_exceptions

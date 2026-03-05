@@ -1,12 +1,10 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
 from main import app
 from src.database.session import get_db
-from src.database.models import User, UserStatus, ChatThread, ChatMessage, RecordStatus
+from src.database.models import User, UserStatus, ChatThread, ChatMessage
 from src.services.auth import create_access_token
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone, timedelta
-import uuid
+from datetime import datetime
 
 @pytest.fixture
 def test_user_history():

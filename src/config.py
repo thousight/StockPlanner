@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     
     # Security & Third-party APIs
     OPENAI_API_KEY: Optional[str] = None
+    X_BEARER_TOKEN: Optional[str] = None
+    X_API_KEY: Optional[str] = None
+    X_API_SECRET: Optional[str] = None
+    X_ACCESS_TOKEN: Optional[str] = None
+    X_ACCESS_TOKEN_SECRET: Optional[str] = None
     
     # JWT configuration
     JWT_SECRET_KEY: str = "your-super-secret-key-change-this-in-production"

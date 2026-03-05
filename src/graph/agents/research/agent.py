@@ -6,6 +6,8 @@ from src.graph.state import AgentState
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.tools.news import get_stock_news, get_macro_economic_news, web_search
 from src.graph.tools.research import get_stock_financials
+from src.graph.tools.sec import get_sec_filing_section, get_sec_filing_delta
+from src.graph.tools.sentiment import get_market_sentiment
 from src.graph.agents.research.prompts import RESEARCH_PLANNER_SYSTEM_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
 from src.graph.agents.research.research_plan import ResearchPlan
 from src.graph.agents.research.next_agents import get_research_next_agents_prompt
@@ -15,7 +17,10 @@ TOOLS_LIST = [
     get_stock_financials,
     get_stock_news,
     get_macro_economic_news,
-    web_search
+    web_search,
+    get_sec_filing_section,
+    get_sec_filing_delta,
+    get_market_sentiment
 ]
 
 AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)

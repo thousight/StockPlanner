@@ -1,5 +1,4 @@
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import interrupt
 from src.graph.state import AgentState
 from src.graph.agents.analyst.subgraph import create_debate_graph
 from src.graph.utils.agents import with_logging

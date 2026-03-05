@@ -1,7 +1,7 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from datetime import datetime
-from src.database.models import ChatThread, RecordStatus, User
+from src.database.models import ChatThread, RecordStatus
 from main import app
 from src.database.session import get_db
 

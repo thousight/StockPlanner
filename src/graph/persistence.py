@@ -1,6 +1,4 @@
-import redis.asyncio as redis
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from src.config import settings
 
 def get_checkpointer() -> AsyncRedisSaver:
