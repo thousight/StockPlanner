@@ -3,8 +3,8 @@
   "commit_docs": true,
   "search_gitignored": false,
   "branching_strategy": "milestone",
-  "phase_branch_template": "gsd/phase-{phase}-{slug}",
-  "milestone_branch_template": "gsd/{milestone}-{slug}",
+  "phase_branch_template": "gsd/phase-{phase}",
+  "milestone_branch_template": "gsd/{milestone}",
   "workflow": {
     "research": true,
     "plan_check": true,
