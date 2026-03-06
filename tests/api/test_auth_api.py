@@ -4,7 +4,7 @@ from main import app
 from src.database.session import get_db
 from src.database.models import User, UserStatus, RefreshToken, RiskTolerance
 from src.services.auth import hash_password, create_access_token, create_refresh_token
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 import jwt
 import hashlib
 from src.config import settings

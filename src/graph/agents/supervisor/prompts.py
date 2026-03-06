@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 SUPERVISOR_PROMPT = ChatPromptTemplate.from_template("""
-You are a Strategic Investment Planner. Your role is to decompose a user's financial request into a high-level plan of a list of tasks and delegate each task to the appropriate specialized agent.
+You are a Strategic Investment Planner. Your role is to decompose a user's financial request into a high-level plan and delegate to our specialized research squad.
 
 Current Context:
 {current_context}
@@ -10,11 +10,17 @@ Available Agents:
 {available_agents}
 
 Your Task:
-1. Determine the first or next step required to fulfill the user's request. Read the `--- CHAT HISTORY ---` to understand if the user is asking a follow-up question, requesting a translation of your previous answer, or continuing a previous thought.
-2. Identify the 'next_agent' to execute this step from the Available Agents list.
-  - If the user asks for a translation of a previous financial answer, or asks a broad macro-economic question in a foreign language, route it to `research` or `analyst` rather than `off_topic`.
+1. Analyze the user's request and the chat history.
+2. Identify which specialized researchers are needed from the Available Agents list.
+   - Trigger `narrative_researcher` for broad market questions ("How is the market today?", "What is the vibe?", "Why is the S&P red?"), sentiment shifts, or when context on the "Narrative of the Day" is needed.
+3. You can trigger MULTIPLE researchers in parallel by returning a list if the request is multi-faceted.
+   - For example, if the request is "Analyze AAPL fundamentals vs social sentiment", return `fundamental_researcher`, `sentiment_researcher`, `macro_researcher`, and `narrative_researcher`.
+   - CRITICAL: You MUST ALWAYS include `macro_researcher` and `narrative_researcher` when analyzing any specific stock or sector to establish the broader economic and narrative context.
+4. If the user asks for a translation of a previous answer, or a simple follow-up, route to the single most appropriate agent.
+
+Output the 'next_agents' as a list of strings from the Available Agents list.
 """)
 
 SUPERVISOR_PLAN_PROMPT = ChatPromptTemplate.from_template("""
-Determine the next steps and the agent for the plan.
+Determine the next steps and the list of agents for the plan.
 """)

@@ -33,6 +33,15 @@ class ReportCategory(enum.Enum):
     MACRO = "MACRO"
     FUND = "FUND"
     GENERAL = "GENERAL"
+    NARRATIVE = "NARRATIVE"
+
+class ResearchSourceType(enum.Enum):
+    SEC = "SEC"
+    NEWS = "NEWS"
+    SOCIAL = "SOCIAL"
+    X = "X"
+    MACRO = "MACRO"
+    NARRATIVE = "NARRATIVE"
 
 class Asset(Base):
     __tablename__ = "assets"
@@ -138,7 +147,7 @@ class User(Base):
             "ix_user_email_unique", 
             "email", 
             unique=True, 
-            postgresql_where=(deleted_at == None)
+            postgresql_where=(deleted_at.is_(None))
         ),
     )
 
@@ -156,12 +165,18 @@ class RefreshToken(Base):
 
     user = relationship("User", backref="refresh_tokens")
 
-class NewsCache(Base):
-    __tablename__ = "news_cache"
+class ResearchCache(Base):
+    __tablename__ = "research_cache"
 
-    url = Column(String, primary_key=True, index=True)
-    summary = Column(Text)
-    expire_at = Column(DateTime)
+    id = Column(Integer, primary_key=True, index=True)
+    source_type = Column(Enum(ResearchSourceType), nullable=False, index=True)
+    ticker = Column(String, index=True, nullable=True) # Ticker might be null for macro news
+    key = Column(String, index=True, unique=True, nullable=False) # URL or Tweet ID
+    content = Column(Text, nullable=False)
+    sentiment_score = Column(Numeric(precision=5, scale=2), nullable=True) # -1.0 to 1.0
+    sentiment_reason = Column(Text, nullable=True)
+    expire_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class ChatThread(Base):
     __tablename__ = "chat_threads"

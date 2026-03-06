@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 from main import lifespan
-from src.lifecycle.tasks import cleanup_news_cache
+from src.lifecycle.tasks import cleanup_research_cache
 import time_machine
-from datetime import datetime, timezone
+from datetime import datetime
 
 @pytest.mark.asyncio
 async def test_lifespan_startup_shutdown():
@@ -39,7 +39,7 @@ async def test_lifespan_startup_shutdown():
                     mock_engine.dispose.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_cleanup_news_cache_time():
+async def test_cleanup_research_cache_time():
     mock_conn = MagicMock()
     mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
     mock_conn.__aexit__ = AsyncMock()
@@ -60,10 +60,10 @@ async def test_cleanup_news_cache_time():
     
     with time_machine.travel(fixed_now):
         with patch("psycopg.AsyncConnection.connect", side_effect=mock_connect):
-            await cleanup_news_cache()
+            await cleanup_research_cache()
             
             # Verify it called execute with the fixed time (ignoring microseconds if any)
             mock_cur.execute.assert_called_once()
             args, kwargs = mock_cur.execute.call_args
-            assert "DELETE FROM news_cache" in args[0]
+            assert "DELETE FROM research_cache" in args[0]
             assert args[1][0].replace(microsecond=0) == fixed_now

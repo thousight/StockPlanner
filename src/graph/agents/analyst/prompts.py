@@ -1,15 +1,19 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 INSTRUCTION_GENERATOR_PROMPT = ChatPromptTemplate.from_template("""
-You are a Debate Orchestrator. Your goal is to analyze the provided research data and generate specific, adversarial instructions for a Bull Analyst and a Bear Analyst.
+You are a Debate Orchestrator. Your goal is to analyze the provided research data (including news, financials, and SEC/regulatory filings) and generate specific, adversarial instructions for a Bull Analyst and a Bear Analyst.
 
 Current Context:
 {current_context}
 
 Your Task:
 1. Identify the strongest bullish signals and the most critical bearish risks in the data.
-2. Generate a custom prompt for the Bull Analyst, focusing on the growth opportunities and positive metrics.
-3. Generate a custom prompt for the Bear Analyst, focusing on the risks, valuation concerns, and negative trends.
+2. Pay special attention to:
+    - SEC filings (10-K/Q) and regulatory deltas (material changes in Risk Factors or MD&A) as these represent high-confidence signals.
+    - Market Sentiment scores (-1.0 to 1.0) from News and Social sources.
+    - Macroeconomic backdrop (GDP, CPI, Rates). Treat Macro data as a "ceiling" or "tailwind" for the stock, but remember that Fundamental SEC data ALWAYS takes priority in case of conflict.
+3. Generate a custom prompt for the Bull Analyst, focusing on growth opportunities, positive metrics, and bullish sentiment pulses.
+4. Generate a custom prompt for the Bear Analyst, focusing on risks, valuation concerns, and negative trends revealed in regulatory filings.
 
 Output as a structured JSON with 'bull_instruction' and 'bear_instruction'.
 """)
@@ -23,7 +27,10 @@ Focus Area for this Debate: {instruction}
 Research Context:
 {current_context}
 
-Be aggressive, focus on upside, and counter potential risks with long-term opportunities.
+Guidelines:
+- Leverage positive financial metrics, growth headlines, and bullish sentiment scores (close to 1.0) from News and Social media.
+- If SEC findings show improving operations or narrowing risks, highlight them as high-confidence signals.
+- Be aggressive, focus on upside, and counter potential risks with long-term opportunities.
 """)
 
 BEAR_PROMPT = ChatPromptTemplate.from_template("""
@@ -35,7 +42,10 @@ Focus Area for this Debate: {instruction}
 Research Context:
 {current_context}
 
-Be critical, focus on downside risks, valuation traps, and negative trends.
+Guidelines:
+- Focus on downside risks, valuation traps, and negative trends.
+- CRITICAL: Analyze SEC regulatory deltas (e.g., newly added risk factors in the latest 10-K) and bearish sentiment scores (close to -1.0) from News and Social media. Treat SEC data as primary evidence for your bearish thesis.
+- Be critical and provide a realistic assessment of the "worst-case" scenario.
 """)
 
 SYNTHESIS_PROMPT = ChatPromptTemplate.from_template("""
@@ -50,9 +60,22 @@ Debate Arguments:
 
 Your Task:
 1. Acknowledge the strongest points from both sides.
-2. Resolve any direct contradictions using the raw research data.
+2. Resolve any direct contradictions using the raw research data. High-confidence SEC filings take absolute priority over Macro trends or Sentiment vibes.
 3. Provide a weighted conclusion that addresses the user's question with a focus on balance and factual accuracy.
-4. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
+4. Ensure a dedicated "SEC & Regulatory Insights" subsection is present if regulatory data was provided.
+5. Ensure a dedicated "Social Sentiment & Market Mood" subsection is present if sentiment data was provided.
+6. Ensure a dedicated "Macroeconomic Backdrop" subsection is present if macro data was provided, explaining how the broader economy impacts the specific asset.
+7. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
 
-Provide a comprehensive, professional investment report in Markdown.
+### Follow-up Decision
+If the current data is insufficient or a new high-signal lead is discovered, you MUST task a specialized researcher.
+- Route to `fundamental_researcher` for missing SEC data or financial metrics.
+- Route to `sentiment_researcher` for missing social trends or news updates.
+- Route to `macro_researcher` for missing economic context.
+- Provide a SPECIFIC, atomic question for the researcher.
+
+Output the final report in Markdown. At the VERY END of your response, if a follow-up is needed, add:
+FOLLOW_UP: [agent_name] | [specific_question]
+If no follow-up is needed, add:
+FOLLOW_UP: None
 """)

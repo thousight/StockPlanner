@@ -1,8 +1,6 @@
 import pytest
-import asyncio
 from src.graph.persistence import get_checkpointer
 from src.config import settings
-from langgraph.checkpoint.base import Checkpoint
 import redis.asyncio as redis
 
 @pytest.mark.asyncio

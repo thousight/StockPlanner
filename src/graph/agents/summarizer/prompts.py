@@ -6,6 +6,8 @@ Your task is to review all the agent interaction answers between the various spe
 
 CRITICAL INSTRUCTION 1: Your output MUST be short, concise, and easy to read. If the agents provided long, rambling analysis, you must condense and summarize it into bullet points and brief paragraphs. Do not lose key financial recommendations or data, but aggressively cut fluff. If the agent interactions are already short and concise, you must not change them.
 CRITICAL INSTRUCTION 2: You MUST output your final answer in the exact same language that the user used in their most recent `User Input`. For example, if the user asked the question in Chinese, your entire output must be in Chinese.
+CRITICAL INSTRUCTION 3: Ensure a dedicated "SEC & Regulatory Insights" subsection is present if regulatory data (10-K/Q, deltas) was discussed by previous agents.
+CRITICAL INSTRUCTION 4: Ensure a dedicated "Social Sentiment & Market Mood" subsection is present if sentiment data (-1.0 to 1.0 scores) was discussed by previous agents. Highlight any major sentiment shifts.
 
 Current Context:
 {current_context}

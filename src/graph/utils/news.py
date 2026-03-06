@@ -1,19 +1,20 @@
-from ddgs import DDGS
 from typing import Dict, List, Optional
-import httpx
-from bs4 import BeautifulSoup
-import re
-from readability import Document
+from datetime import datetime, timezone, timedelta
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from ddgs import DDGS
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from src.database.session import AsyncSessionLocal
-from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
-from src.services.market_data import get_valid_cache, save_cache
 
-async def get_summary_result(item: Dict[str, str]) -> Optional[Dict[str, str]]:
+from src.database.session import AsyncSessionLocal
+from src.database.models import ResearchCache, ResearchSourceType
+from src.graph.utils.prompt import ARTICLE_SUMMARY_PROMPT
+from src.graph.utils.scraping import fetch_content, clean_html, DEFAULT_USER_AGENT
+
+async def get_summary_result(item: Dict[str, str], expire_at: Optional[datetime] = None) -> Optional[Dict[str, str]]:
     """Helper to fetch summary and return a structured result."""
     user_agent = item.get("user_agent", "")
-    summary = await get_summary(item['link'], user_agent)
+    summary = await get_summary(item['link'], user_agent, expire_at=expire_at)
     if summary:
         return {
             "title": item["title"],
@@ -39,66 +40,55 @@ def fetch_ddgs_urls(query: str) -> List[Dict[str, str]]:
         print(f"Error for query {query}: {e}")
     return results
 
-async def get_summary(url: str, user_agent: str = "") -> Optional[str]:
+async def get_summary(url: str, user_agent: str = "", expire_at: Optional[datetime] = None) -> Optional[str]:
     """
     Get news summary from cache or fetch and summarize.
-    TTL: 7 days.
+    TTL: Default 7 days if expire_at not provided.
     """
     if not url:
         return None
         
     async with AsyncSessionLocal() as db:
         try:
-            # Check cache
-            cached_summary = await get_valid_cache(db, url)
-            if cached_summary:
-                return cached_summary
+            # 1. Check unified ResearchCache
+            stmt = select(ResearchCache).where(
+                ResearchCache.key == url,
+                ResearchCache.expire_at > datetime.now(timezone.utc).replace(tzinfo=None)
+            )
+            result = await db.execute(stmt)
+            cached = result.scalar_one_or_none()
+            if cached:
+                return cached.content
                 
-            # Cache miss
-            content = await fetch_article_content(url, user_agent)
-            if content:
-                summary = await summarize_content(content, url)
-                if summary and "Error" not in summary:
-                    # Use default TTL from save_cache (168 hours / 7 days)
-                    await save_cache(db, url, summary)
-                    return summary
+            # 2. Cache miss - Fetch and Summarize
+            ua = user_agent if user_agent else DEFAULT_USER_AGENT
+            html = await fetch_content(url, ua)
+            if html:
+                content = clean_html(html)
+                if content:
+                    summary = await summarize_content(content, url)
+                    if summary and "Error" not in summary:
+                        # Save to unified ResearchCache
+                        if expire_at is None:
+                            expire_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7)
+                        
+                        new_cache = ResearchCache(
+                            source_type=ResearchSourceType.NEWS,
+                            key=url,
+                            content=summary,
+                            expire_at=expire_at
+                        )
+                        db.add(new_cache)
+                        try:
+                            await db.commit()
+                        except IntegrityError:
+                            # Concurrent insert occurred, ignore and proceed
+                            await db.rollback()
+                        return summary
         except Exception as e:
             print(f"Error in get_summary: {e}")
             
     return None
-
-async def fetch_article_content(url: str, user_agent: str = "") -> Optional[str]:
-    """Fetch and extract main text content from a URL."""
-    try:
-        final_ua = user_agent if user_agent else "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
-
-        headers = {
-            "User-Agent": final_ua
-        }
-        async with httpx.AsyncClient(headers=headers, timeout=10.0, follow_redirects=True) as client:
-            response = await client.get(url)
-            
-            # Silently skip any failing responses
-            if response.status_code >= 400:
-                return None
-            
-            text_content = response.text
-            clean_html = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text_content)
-            doc = Document(clean_html)
-            html_content = doc.summary()
-            
-            soup = BeautifulSoup(html_content, 'html.parser')
-            text = soup.get_text(separator=' ', strip=True)
-            
-            if text:
-                text = str(text)
-                text = re.sub(r'\s+', ' ', text).strip()
-            else:
-                text = "No readable text found."
-            return text
-    except Exception:
-        # Silently skip any connection errors, parsing errors, etc.
-        return None
 
 async def summarize_content(content: str, url: str) -> Optional[str]:
     """Summarize content using an LLM."""

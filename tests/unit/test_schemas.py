@@ -3,7 +3,6 @@ from decimal import Decimal
 from datetime import datetime
 from src.schemas.transactions import (
     TransactionCreate, 
-    TransactionAction, 
     StockMetadata, 
     RealEstateMetadata, 
     FundMetadata, 

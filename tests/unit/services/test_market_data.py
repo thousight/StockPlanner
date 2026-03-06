@@ -1,7 +1,6 @@
 import pytest
-import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
-from datetime import date, datetime, timedelta
+from unittest.mock import MagicMock, patch, AsyncMock, PropertyMock
+from datetime import date
 from decimal import Decimal
 from src.services.market_data import (
     get_historical_fx_rate,
@@ -10,7 +9,7 @@ from src.services.market_data import (
     fetch_yfinance_news_urls,
     validate_transaction_price
 )
-from src.database.models import FXRate, Asset, AssetType, Transaction
+from src.database.models import FXRate, Asset, AssetType
 import pandas as pd
 
 @pytest.fixture
@@ -116,8 +115,6 @@ async def test_get_current_price_stock_history_fallback(mock_db):
         price = await get_current_price(mock_db, asset)
         assert price == Decimal("155.0")
 
-from unittest.mock import PropertyMock
-
 @pytest.mark.asyncio
 async def test_get_current_price_fallback_to_db(mock_db):
     asset = Asset(id=1, symbol="AAPL", type=AssetType.STOCK)
@@ -135,6 +132,7 @@ async def test_get_current_price_fallback_to_db(mock_db):
         
         price = await get_current_price(mock_db, asset)
         assert price == Decimal("145.0")
+
 
 def test_parse_yf_news_item_new_structure():
     item = {

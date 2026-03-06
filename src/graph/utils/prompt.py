@@ -12,6 +12,23 @@ Article Content:
 {content}
 """)
 
+FINANCIAL_SENTIMENT_PROMPT = ChatPromptTemplate.from_template("""
+You are a Senior Equity Analyst specializing in quantitative sentiment analysis.
+Analyze the provided [FINANCIAL_TEXT] and assign a sentiment score between -1.0 (extremely bearish) and 1.0 (extremely bullish). 0.0 is neutral.
+
+### Instructions
+1. **Reasoning (Rationale)**: Provide a concise 1-2 sentence explanation of why the text carries this specific sentiment.
+2. **Scoring**: Assign a float value from -1.0 to 1.0.
+
+[FINANCIAL_TEXT]: "{text}"
+
+Return your analysis in JSON format:
+{{
+  "sentiment_score": <float>,
+  "rationale": "<string>"
+}}
+""")
+
 def convert_state_to_prompt(state: AgentState) -> str:
     """
     Converts AgentState or a similar dict into a readable string for inclusion in LLM prompts.

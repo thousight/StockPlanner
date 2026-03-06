@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from typing import AsyncGenerator, Optional
 from httpx import AsyncClient, Response, ASGITransport
 from unittest.mock import create_autospec

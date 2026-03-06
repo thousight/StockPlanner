@@ -10,7 +10,7 @@ from src.graph.utils.agents import get_next_interaction_id, with_logging
 @with_logging
 async def supervisor_agent(state: AgentState):
     """
-    Strategic Investment Planner: Decides the initial step and routes to the appropriate agent.
+    Strategic Investment Planner: Decides the initial step and routes to the appropriate agents.
     """
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
     structured_llm = llm.with_structured_output(SupervisorResponse, method="function_calling")
@@ -41,12 +41,16 @@ async def supervisor_agent(state: AgentState):
     
     plan_output = await structured_llm.ainvoke(messages)
     
+    # next_agent is kept for legacy compatibility with routers that expect a single string
+    # We join them with a comma for parallel nodes
+    next_agent_str = ",".join(plan_output.next_agents) if plan_output.next_agents else "summarizer"
+    
     return {
         "session_context": {"revision_count": 1},
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
             "agent": "supervisor",
-            "answer": f"Routed to {plan_output.next_agent}",
-            "next_agent": plan_output.next_agent
+            "answer": f"Routed to {next_agent_str}",
+            "next_agent": next_agent_str
         }]
     }

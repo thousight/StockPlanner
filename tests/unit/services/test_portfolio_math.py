@@ -1,6 +1,5 @@
-import pytest
 from decimal import Decimal
-from hypothesis import given, strategies as st, assume
+from hypothesis import given, strategies as st
 from src.services.portfolio import (
     calculate_new_acb,
     calculate_gain_loss,

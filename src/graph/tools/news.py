@@ -21,7 +21,8 @@ async def get_stock_news(symbol: str, max_results: int = 3, **kwargs) -> str:
                 continue
                 
             parsed["user_agent"] = kwargs.get("user_agent", "")
-            tasks.append(get_summary_result(parsed))
+            expire_at = kwargs.get("expire_at", None)
+            tasks.append(get_summary_result(parsed, expire_at=expire_at))
             
         all_results = await asyncio.gather(*tasks)
         results = [r for r in all_results if r]
@@ -49,13 +50,12 @@ async def get_macro_economic_news(**kwargs) -> str:
     for ticker in tickers:
         title_and_urls.extend(await fetch_yfinance_news_urls(ticker))
     
-    # 2. Collect URLs from DuckDuckGo queries
+    # 2. Collect URLs from DuckDuckGo queries (Focused on narrative/geopolitical context)
     queries = [
-        "Macroeconomics news today",
-        "US economy outlook today",
-        "Federal Reserve interest rates news",
-        "US employment report news",
-        "US inflation cpi report news",
+        "Major global economic shifts news today",
+        "Geopolitical tensions market impact",
+        "Trade policy and tariff news",
+        "US fiscal policy news",
     ]
     for query in queries:
         title_and_urls.extend(fetch_ddgs_urls(query))
@@ -70,7 +70,8 @@ async def get_macro_economic_news(**kwargs) -> str:
             seen_urls.add(item["link"])
             
     # 4. Fetch summaries in parallel
-    tasks = [get_summary_result(item) for item in unique_candidates]
+    expire_at = kwargs.get("expire_at", None)
+    tasks = [get_summary_result(item, expire_at=expire_at) for item in unique_candidates]
     all_results = await asyncio.gather(*tasks)
         
     valid_results = [r for r in all_results if r]
@@ -103,7 +104,8 @@ async def web_search(queries: List[str], **kwargs) -> str:
                 
     # 3. Fetch summaries in parallel for unique candidates
     candidate_list = list(unique_candidates.values())
-    tasks = [get_summary_result(item) for item in candidate_list]
+    expire_at = kwargs.get("expire_at", None)
+    tasks = [get_summary_result(item, expire_at=expire_at) for item in candidate_list]
     summarized_results = await asyncio.gather(*tasks)
         
     # Create a lookup mapping from URL to the summarized result

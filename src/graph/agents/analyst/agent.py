@@ -1,19 +1,23 @@
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import interrupt
 from src.graph.state import AgentState
 from src.graph.agents.analyst.subgraph import create_debate_graph
-from src.graph.utils.agents import with_logging
+from src.graph.utils.agents import with_logging, get_next_interaction_id
 
 @with_logging
 async def analyst_agent(state: AgentState, config: RunnableConfig):
     """
-    Adversarial Analyst: Orchestrates a 'Bull vs. Bear' debate and synthesizes a final investment report.
+    Adversarial Analyst: Orchestrates a 'Bull vs. Bear' debate out of research results, and synthesizes a final report.
     """
     user_input = state.get("user_input", "Analyze the current portfolio and provide recommendations.")
     
-    # Retrieve research data from interactions
-    research_interaction = next((i for i in reversed(state.get("agent_interactions", [])) if i.get("agent") == "research"), None)
-    research_context = research_interaction.get("answer", "") if research_interaction else ""
+    # Retrieve all research data from specialized interactions
+    research_agents = ["fundamental_researcher", "sentiment_researcher", "macro_researcher", "narrative_researcher", "research"]
+    research_data = []
+    for interaction in state.get("agent_interactions", []):
+        if interaction.get("agent") in research_agents:
+            research_data.append(f"--- Data from {interaction['agent']} ---\n{interaction['answer']}")
+    
+    research_context = "\n\n".join(research_data)
 
     # Analysis is now always computed fresh
     debate_graph = create_debate_graph()
@@ -32,12 +36,25 @@ async def analyst_agent(state: AgentState, config: RunnableConfig):
     # Get the newly generated interactions from subgraph
     new_interactions = debate_results.get("agent_interactions", [])[initial_interactions_count:]
     
+    # Parse Follow-up from report
+    next_agent = "summarizer"
+    if "FOLLOW_UP:" in report:
+        follow_up_line = report.split("FOLLOW_UP:")[-1].strip()
+        if "None" not in follow_up_line:
+            # Format is [agent_name] | [specific_question]
+            try:
+                agent_name = follow_up_line.split("|")[0].strip()
+                if agent_name in ["fundamental_researcher", "sentiment_researcher", "macro_researcher", "supervisor"]:
+                    next_agent = agent_name
+            except:
+                pass
+
     # Add the Analyst's own final output interaction
     analyst_interaction = {
-        "id": initial_interactions_count + len(new_interactions) + 1,
+        "id": get_next_interaction_id(state) + len(new_interactions),
         "agent": "analyst",
         "answer": report,
-        "next_agent": "summarizer",
+        "next_agent": next_agent,
         "debate_output": {
             "bull_argument": debate_results.get("bull_argument", ""),
             "bear_argument": debate_results.get("bear_argument", ""),
