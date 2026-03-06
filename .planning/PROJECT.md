@@ -15,20 +15,21 @@ A comprehensive financial planner application that collects user financial infor
 - **Verification**: Pytest
 
 ## Current State
-- **Shipped:** v3.0 (2026-03-03) — Conversation History & Memory.
+- **Shipped:** v4.0 (2026-03-05) — Advanced Agents & Financial Context.
 - **Verification:** 132 tests ensure system stability, protocol compliance, financial logic, and cross-user security.
 
 <details>
 <summary>Previous Shipped Milestones</summary>
 - **Shipped:** v1.0 (2026-03-02) — API Server & Cloud Sync.
 - **Shipped:** v2.0 (2026-03-02) — Basic Authentication & User Management.
+- **Shipped:** v3.0 (2026-03-03) — Conversation History & Memory.
 - **Security:** Argon2id hashing, JWT Access/Refresh tokens with rotation, and strict multi-tenant isolation ("Stealth 404") are fully operational.
 </details>
 
-## Next Milestone Goals (Milestone 4: Advanced Agents & Financial Context)
-- **Specialized Agents:** Create dedicated agents for EDGAR (SEC filings) and social media analysis.
-- **Modularity:** Refactor the supervisor graph for improved routing and stability.
-- **Deep Research:** Implement narrative and sentiment analysis for financial news.
+## Next Milestone Goals (Milestone 5: Daily Proactive Analysis)
+- **Deep Research:** Implement robust news aggregation and clustering from top financial sources.
+- **Proactive Engine:** Automated daily portfolio reviews and performance attribution.
+- **Daily Briefings:** Generate and store personalized daily summaries for all users.
 
 ## Core Principles
 
