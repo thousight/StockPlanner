@@ -33,25 +33,18 @@ async def test_fed_service_api_call():
         mock_get.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_calendar_service_mock_fallback():
-    with patch("src.config.settings.FINNHUB_API_KEY", None):
-        service = EconomicCalendarService()
-        events = await service.get_upcoming_events()
-        assert len(events) > 0
-        assert "event" in events[0]
-
-@pytest.mark.asyncio
-async def test_calendar_service_api_call():
-    with patch("src.config.settings.FINNHUB_API_KEY", "fake_key"), \
+async def test_calendar_service_fred_api_call():
+    with patch("src.config.settings.FRED_API_KEY", "fake_fred_key"), \
          patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
         
         mock_response = MagicMock()
         mock_response.status_code = 200
+        # FRED releases/dates response structure
         mock_response.json.return_value = {
-            "economicCalendar": [
-                {"country": "US", "impact": "high", "event": "NFP", "time": "2024-03-08"},
-                {"country": "EU", "impact": "high", "event": "ECB", "time": "2024-03-09"},
-                {"country": "US", "impact": "low", "event": "Minor Data", "time": "2024-03-10"}
+            "release_dates": [
+                {"release_id": 10, "date": "2024-03-08", "release_name": "Consumer Price Index"},
+                {"release_id": 53, "date": "2024-03-28", "release_name": "Gross Domestic Product"},
+                {"release_id": 999, "date": "2024-03-10", "release_name": "Ignore Me"}
             ]
         }
         mock_get.return_value = mock_response
@@ -59,7 +52,19 @@ async def test_calendar_service_api_call():
         service = EconomicCalendarService()
         events = await service.get_upcoming_events()
         
-        # Should filter for US and high impact only
-        assert len(events) == 1
-        assert events[0]["event"] == "NFP"
+        # Should filter for important release IDs (10 and 53)
+        assert len(events) == 2
+        event_names = [e["event"] for e in events]
+        assert "Consumer Price Index (CPI)" in event_names
+        assert "Gross Domestic Product (GDP)" in event_names
         mock_get.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_calendar_service_fallback_on_error():
+    with patch("src.config.settings.FRED_API_KEY", "fake_key"), \
+         patch("httpx.AsyncClient.get", side_effect=Exception("Network Error")):
+        service = EconomicCalendarService()
+        events = await service.get_upcoming_events()
+        # Should return mock data
+        assert len(events) > 0
+        assert "FOMC" in events[0]["event"]

@@ -14,6 +14,18 @@ FRED_SERIES_MAP = {
     "DXY": "DTWEXBGS"         # Nominal Broad U.S. Dollar Index
 }
 
+# Key FRED Release IDs for the Economic Calendar
+# Reference: https://fred.stlouisfed.org/docs/api/fred/releases.html
+IMPORTANT_RELEASE_IDS = {
+    "10": "Consumer Price Index (CPI)",
+    "53": "Gross Domestic Product (GDP)",
+    "194": "FOMC Minutes/Projections",
+    "50": "Employment Situation (Non-farm Payrolls)",
+    "13": "Retail Sales",
+    "103": "Consumer Sentiment",
+    "94": "Personal Income and Outlays (PCE)",
+}
+
 class FEDService:
     """Service to fetch authoritative macroeconomic data from the FRED API."""
     
@@ -66,17 +78,16 @@ class FEDService:
 
 
 class EconomicCalendarService:
-    """Service to fetch upcoming high-impact economic events from Finnhub."""
+    """Service to fetch upcoming high-impact economic events from FRED (Authoritative Source)."""
     
-    BASE_URL = "https://finnhub.io/api/v1/calendar/economic"
+    BASE_URL = "https://api.stlouisfed.org/fred/releases/dates"
 
     def __init__(self):
-        self.api_key = settings.FINNHUB_API_KEY
+        self.api_key = settings.FRED_API_KEY
 
     async def get_upcoming_events(self, days: int = 7) -> List[Dict[str, Any]]:
         """
-        Fetch High-Impact US events for the next 'days'.
-        If api_key is missing, returns mock data for development.
+        Fetch high-signal US economic releases for the next 'days' using FRED API.
         """
         if not self.api_key:
             return self._get_mock_calendar_data()
@@ -85,9 +96,12 @@ class EconomicCalendarService:
         end_date = start_date + timedelta(days=days)
         
         params = {
-            "from": start_date.strftime("%Y-%m-%d"),
-            "to": end_date.strftime("%Y-%m-%d"),
-            "token": self.api_key
+            "api_key": self.api_key,
+            "file_type": "json",
+            "realtime_start": start_date.strftime("%Y-%m-%d"),
+            "realtime_end": end_date.strftime("%Y-%m-%d"),
+            "limit": 1000,
+            "include_release_dates_with_no_data": "true" # Essential for seeing future dates
         }
 
         try:
@@ -96,20 +110,26 @@ class EconomicCalendarService:
                 response.raise_for_status()
                 data = response.json()
                 
-                events = data.get("economicCalendar", [])
-                us_high_impact = []
-                for event in events:
-                    if event.get("country") == "US" and event.get("impact") == "high":
-                        us_high_impact.append({
-                            "event": event.get("event"),
-                            "time": event.get("time"),
-                            "actual": event.get("actual"),
-                            "estimate": event.get("estimate"),
-                            "previous": event.get("previous")
+                all_releases = data.get("release_dates", [])
+                high_impact_events = []
+                
+                for release in all_releases:
+                    rid = str(release.get("release_id"))
+                    if rid in IMPORTANT_RELEASE_IDS:
+                        high_impact_events.append({
+                            "event": IMPORTANT_RELEASE_IDS[rid],
+                            "time": f"{release.get('date')} (Release ID: {rid})",
+                            "actual": None, # FRED releases/dates endpoint doesn't show values
+                            "estimate": "Check Report",
+                            "previous": "Check Report"
                         })
-                return us_high_impact
+                
+                # Deduplicate by name and date if necessary, sort by date
+                high_impact_events.sort(key=lambda x: x["time"])
+                
+                return high_impact_events
         except Exception as e:
-            print(f"Error fetching Finnhub calendar: {e}")
+            print(f"Error fetching FRED economic calendar: {e}")
             return self._get_mock_calendar_data()
 
     def _get_mock_calendar_data(self) -> List[Dict[str, Any]]:

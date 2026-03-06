@@ -39,6 +39,7 @@ class ResearchSourceType(enum.Enum):
     NEWS = "NEWS"
     SOCIAL = "SOCIAL"
     X = "X"
+    MACRO = "MACRO"
 
 class Asset(Base):
     __tablename__ = "assets"

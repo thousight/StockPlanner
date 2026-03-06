@@ -1,10 +1,13 @@
 import asyncio
-from datetime import datetime
-from typing import Dict, List
+from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Any, Optional
 
+from sqlalchemy import select
+
+from src.database.session import AsyncSessionLocal
+from src.database.models import ResearchCache, ResearchSourceType
 from src.services.macro import fed_service, calendar_service
 from src.graph.tools.sentiment import analyze_sentiment
-from src.database.models import ResearchSourceType
 from src.services.social import x_client
 
 def format_series(name: str, data: List[Dict[str, str]], unit: str) -> str:
@@ -37,7 +40,7 @@ async def get_political_sentiment(**kwargs) -> str:
     sentiment = await analyze_sentiment(
         combined_text, 
         source_type=ResearchSourceType.X,
-        key=f"political_{username}_{datetime.now().strftime('%Y%m%d%H')}"
+        key=f"political_{username}_{datetime.now(timezone.utc).strftime('%Y%m%d%H')}"
     )
     
     output = [f"### Political Sentiment Monitoring (@{username})"]
@@ -53,8 +56,31 @@ async def get_key_macro_indicators(**kwargs) -> str:
     """
     Fetch the latest key US macroeconomic indicators (GDP, CPI, Payrolls, Interest Rates, DXY) 
     and upcoming high-impact economic events.
+    
+    Implements tool-level caching with daily reset (macro_YYYYMMDD).
     """
-    # Fetch all series in parallel
+    # 1. Check Cache
+    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    cache_key = f"macro_{today_str}"
+    
+    # Check if a refresh is forced
+    force_refresh = kwargs.get("refresh_macro", False)
+    
+    if not force_refresh:
+        async with AsyncSessionLocal() as db:
+            try:
+                stmt = select(ResearchCache).where(
+                    ResearchCache.key == cache_key,
+                    ResearchCache.expire_at > datetime.now(timezone.utc).replace(tzinfo=None)
+                )
+                result = await db.execute(stmt)
+                cached = result.scalar_one_or_none()
+                if cached:
+                    return cached.content
+            except Exception as e:
+                print(f"Cache check error in get_key_macro_indicators: {e}")
+
+    # 2. Cache Miss - Fetch all data in parallel
     tasks = [
         fed_service.get_series_data("GDP", limit=4),
         fed_service.get_series_data("CPI", limit=6),
@@ -87,4 +113,24 @@ async def get_key_macro_indicators(**kwargs) -> str:
         for event in events:
             output.append(f"- **{event['time']}**: {event['event']} (Est: {event.get('estimate', 'N/A')}, Prev: {event.get('previous', 'N/A')})")
             
-    return "\n".join(output) + "\n"
+    final_report = "\n".join(output) + "\n"
+
+    # 3. Save to Cache
+    # Expire at the end of the day (23:59:59 UTC)
+    tomorrow_midnight = (datetime.now(timezone.utc) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    expire_at = tomorrow_midnight.replace(tzinfo=None)
+
+    async with AsyncSessionLocal() as db:
+        try:
+            new_cache = ResearchCache(
+                source_type=ResearchSourceType.MACRO,
+                key=cache_key,
+                content=final_report,
+                expire_at=expire_at
+            )
+            db.add(new_cache)
+            await db.commit()
+        except Exception as e:
+            print(f"Cache save error in get_key_macro_indicators: {e}")
+
+    return final_report

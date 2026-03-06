@@ -32,7 +32,7 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 
 ### Phase 19: Free Macro Data & Caching
 **Goal:** Switch to free macro data alternative (remove Finnhub) and implement ResearchCache for all macro services.
-**Status:** Pending
+**Status:** Completed
 
 ## Milestone 5: Daily Proactive Analysis
 **Goal:** Move from reactive chat to proactive financial coaching.
