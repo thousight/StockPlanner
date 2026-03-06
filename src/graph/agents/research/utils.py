@@ -1,6 +1,6 @@
 import inspect
 
-async def execute_tool(step, tools_list, user_agent=""):
+async def execute_tool(step, tools_list, user_agent="", subject=None):
     """
     Executes a tool from a given list of tools based on the step definition.
     """
@@ -11,13 +11,26 @@ async def execute_tool(step, tools_list, user_agent=""):
         try:
             # Check if the tool accepts a user_agent parameter or **kwargs
             sig = inspect.signature(tool)
+            params = sig.parameters
             accepts_kwargs = any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
             )
             
-            if "user_agent" in sig.parameters or accepts_kwargs:
+            if "user_agent" in params or accepts_kwargs:
                 step.tool_params["user_agent"] = user_agent
                 
+            # AUTO-MAPPING for missing symbol/ticker from global subject
+            if subject:
+                # 1. Map to 'symbol' if missing but required
+                if "symbol" in params and "symbol" not in step.tool_params:
+                    step.tool_params["symbol"] = subject
+                # 2. Map to 'ticker' if missing but required
+                if "ticker" in params and "ticker" not in step.tool_params:
+                    step.tool_params["ticker"] = subject
+                # 3. Fallback for mixed naming
+                if step.tool_name == "get_stock_financials" and "symbol" not in step.tool_params:
+                    step.tool_params["symbol"] = subject
+
             # Quick fix for web_search arguments
             if step.tool_name == "web_search":
                 if "query" in step.tool_params and "queries" not in step.tool_params:

@@ -39,7 +39,7 @@ async def sentiment_researcher(state: AgentState):
     client_ua = state.get("session_context", {}).get("user_agent", "")
 
     # Execute tool calls
-    tasks = [execute_tool(step, TOOLS_LIST, client_ua) for step in local_plan.steps]
+    tasks = [execute_tool(step, TOOLS_LIST, client_ua, local_plan.subject) for step in local_plan.steps]
     results = await asyncio.gather(*tasks)
     
     for result_str in results:

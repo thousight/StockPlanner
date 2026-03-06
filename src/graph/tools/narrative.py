@@ -35,7 +35,7 @@ You are a senior market strategist. Synthesize the provided research data into a
 """
 
 @with_logging
-async def get_indices_performance() -> str:
+async def get_indices_performance(**kwargs) -> str:
     """
     Fetches the 5-day performance pulse for major indices (SPY, QQQ, DIA) and volatility (VIX).
     Useful for establishing broad market context.

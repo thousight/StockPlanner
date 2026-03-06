@@ -42,7 +42,7 @@ async def macro_researcher(state: AgentState):
 
     # Execute tool calls
     from src.graph.agents.research.utils import execute_tool
-    tasks = [execute_tool(step, TOOLS_LIST, client_ua) for step in local_plan.steps]
+    tasks = [execute_tool(step, TOOLS_LIST, client_ua, local_plan.subject) for step in local_plan.steps]
     results = await asyncio.gather(*tasks)
     
     for result_str in results:

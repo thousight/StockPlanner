@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from ddgs import DDGS
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -78,7 +79,11 @@ async def get_summary(url: str, user_agent: str = "", expire_at: Optional[dateti
                             expire_at=expire_at
                         )
                         db.add(new_cache)
-                        await db.commit()
+                        try:
+                            await db.commit()
+                        except IntegrityError:
+                            # Concurrent insert occurred, ignore and proceed
+                            await db.rollback()
                         return summary
         except Exception as e:
             print(f"Error in get_summary: {e}")

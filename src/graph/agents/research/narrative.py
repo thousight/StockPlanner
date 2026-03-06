@@ -44,19 +44,10 @@ async def narrative_researcher(state: AgentState):
     local_plan = await structured_llm.ainvoke(messages)
     research_data = ""
     client_ua = state.get("session_context", {}).get("user_agent", "")
-    plan_subject = local_plan.subject
 
     # Execute tool calls
-    tasks = []
-    for step in local_plan.steps:
-        # Inject subject into tool params if the tool supports it and it's missing
-        if plan_subject and "subject" not in step.tool_params:
-            # We check if the tool actually takes 'subject' by name 
-            # (or just pass it and let execute_tool handle/ignore)
-            step.tool_params["subject"] = plan_subject
-            
-        tasks.append(execute_tool(step, TOOLS_LIST, client_ua))
-        
+    # Improved execute_tool now handles the mapping internally if we pass the subject
+    tasks = [execute_tool(step, TOOLS_LIST, client_ua, local_plan.subject) for step in local_plan.steps]
     results = await asyncio.gather(*tasks)
     
     for result_str in results:
