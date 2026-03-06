@@ -1,27 +1,27 @@
-# Roadmap - Milestone 5: Daily Proactive Analysis
+# Roadmap - Milestone 5: Python Code Execution Agent
 
-This roadmap focuses on transforming the StockPlanner backend into a proactive financial assistant through scheduled tasks, deep research agents, and daily personalized reports.
+This roadmap outlines the phases for implementing a secure Python code execution environment for the agent team.
 
-## Phase 21: Deep News Aggregator
-**Goal:** Implement a robust news fetching system beyond standard `yfinance` and `ddgs`.
-- [ ] Integration with additional financial news sources.
-- [ ] Improved article deduplication and clustering.
-- [ ] Implementation of source-weighted sentiment analysis.
+## Phase 21: Secure Runtime Implementation
+**Goal:** Build the isolated execution engine using WebAssembly (Pyodide) or Micro-VM (E2B).
+- [ ] Implement `PythonSandbox` wrapper for the chosen runtime (Pyodide for math-only).
+- [ ] Integration of Python `ast` module for static analysis (Pre-filter for `os`, `subprocess`).
+- [ ] Resource limiting (Memory/Time) and Air-gapping verification.
 
-## Phase 22: Portfolio Performance & Benchmarking
-**Goal:** Implementation of core daily performance metrics for users.
-- [ ] Automated calculation of portfolio Alpha/Beta.
-- [ ] Sector-wise performance attribution.
-- [ ] Historical P/L tracking for proactive alerts.
+## Phase 22: Code Generation & Verification
+**Goal:** Create a specialized agent for writing and auditing Python scripts.
+- [ ] Implementation of `CodeGeneratorAgent` with strict formatting requirements.
+- [ ] `CodeAuditor` component to check for PII leakage and malicious logic (Safeguard).
+- [ ] Integration with LangGraph as a specialized execution node.
 
-## Phase 23: Daily Briefing Generator (MVP)
-**Goal:** Create a unified engine for synthesizing daily reports.
-- [ ] Generation of a multi-section PDF/Markdown report.
-- [ ] Saving reports as "Briefings" in the database.
-- [ ] Personalized section on macro impact on holdings.
+## Phase 23: Execution Tooling & Feedback
+**Goal:** Link the generator to the sandbox and handle errors.
+- [ ] `CodeExecutorTool` implementation.
+- [ ] Self-correction logic in the agent graph (retry on syntax or runtime error).
+- [ ] End-to-end integration tests (e.g. "Calculate my portfolio's sector ratios").
 
-## Phase 24: Scheduled Jobs & Delivery
-**Goal:** Automate the entire process for all users.
-- [ ] Integration with `APScheduler` for multi-timezone triggers.
-- [ ] API endpoint for retrieving the latest briefing (`/reports/latest-briefing`).
-- [ ] Resilience: Handling API rate limits during bulk generation.
+## Phase 24: Monitoring & Auditing
+**Goal:** Finalize security and observability.
+- [ ] Implement audit logging for all generated/executed code.
+- [ ] Refine safeguarding rules based on initial testing.
+- [ ] Stress testing of the sandbox.

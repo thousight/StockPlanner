@@ -26,10 +26,16 @@ A comprehensive financial planner application that collects user financial infor
 - **Security:** Argon2id hashing, JWT Access/Refresh tokens with rotation, and strict multi-tenant isolation ("Stealth 404") are fully operational.
 </details>
 
-## Next Milestone Goals (Milestone 5: Daily Proactive Analysis)
-- **Deep Research:** Implement robust news aggregation and clustering from top financial sources.
-- **Proactive Engine:** Automated daily portfolio reviews and performance attribution.
-- **Daily Briefings:** Generate and store personalized daily summaries for all users.
+## Next Milestone Goals (Milestone 5: Python Code Execution Agent)
+- **Secure Sandbox:** Build an isolated execution runtime (Micro-VM or Wasm) for code execution.
+- **Code Generation:** Specialized agent for writing and auditing Python analysis scripts.
+- **Financial Logic:** Enable agents to perform complex portfolio math and currency translations.
+
+## Upcoming Milestones
+- **Milestone 6: User Long-term Memory**: Persistent user profile and memory using pgvector for personalized advice.
+- **Milestone 7: Evaluation & Observability**: Self-improving agent prompts via automated evaluations and deep tracing.
+- **Milestone 8: Daily Proactive Analysis**: Move from reactive chat to proactive financial coaching.
+- **Milestone 9: OAuth & Google Sign-In**: Integration with Google Identity Services for better onboarding.
 
 ## Core Principles
 

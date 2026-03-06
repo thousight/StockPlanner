@@ -1,7 +1,7 @@
-# Phase 21 Context: Deep News Aggregator
+# Phase 33 Context: Deep News Aggregator
 
 ## Overview
-The current news fetching mechanism relies primarily on `yfinance` for ticker-specific news and DuckDuckGo for general web search. While functional, it is reactive and lacks depth. Phase 21 aims to build a proactive news aggregator that can:
+The current news fetching mechanism relies primarily on `yfinance` for ticker-specific news and DuckDuckGo for general web search. While functional, it is reactive and lacks depth. Phase 33 aims to build a proactive news aggregator that can:
 1. Scan multiple high-authority financial domains.
 2. Group related stories (clustering) to avoid redundant synthesis.
 3. Provide a structured "Narrative Delta" (how has the story changed in the last 24 hours?).

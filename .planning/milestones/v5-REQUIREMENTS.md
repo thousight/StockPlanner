@@ -1,27 +1,28 @@
-# Requirements - Milestone 5: Daily Proactive Analysis
+# Requirements - Milestone 5: Python Code Execution Agent
 
-This milestone shifts the system from a reactive chat-based interface to a proactive financial coach that provides daily insights, portfolio monitoring, and deep research summaries.
+This milestone focuses on providing the agent team with a secure sandbox for executing Python code to perform financial calculations, currency translations, and data manipulations.
 
-## 1. Deep Research & News Aggregation
-
-| ID | Requirement | Priority | Status |
-|---|---|---|---|
-| **REQ-200** | **Comprehensive News Scraping**: Implementation of a robust news aggregator that fetches from multiple financial sources (Reuters, Bloomberg, CNBC, Financial Times) via structured search and direct scraping. | P0 | [ ] |
-| **REQ-201** | **Article Clustering**: Grouping related news articles by topic or ticker to prevent duplicate summaries and identify emerging narratives. | P1 | [ ] |
-| **REQ-202** | **Sentiment Scoring**: Automated sentiment analysis for each news cluster, weighted by source authority and recency. | P1 | [ ] |
-
-## 2. Proactive Portfolio Analysis
+## 1. Execution Engine
 
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
-| **REQ-210** | **Daily Performance Engine**: Background job to calculate daily performance metrics (P/L, Alpha, Beta) for all user portfolios relative to benchmarks (SPY, QQQ). | P0 | [ ] |
-| **REQ-211** | **Portfolio Health Check**: Identifying risks such as over-concentration, high correlation with macro factors, or significant recent volatility in specific holdings. | P1 | [ ] |
-| **REQ-212** | **Personalized Daily Briefing**: Generation of a multi-section summary covering: 1. Portfolio Performance, 2. Top News Impacting Holdings, 3. Relevant Macro Shifts. | P0 | [ ] |
+| **REQ-500** | **Instruction-level Isolation**: Use a WebAssembly (Pyodide/Wasmtime) or Micro-VM (Firecracker/E2B) runtime to prevent kernel-level escapes. | P0 | [ ] |
+| **REQ-501** | **Air-Gapped Execution**: No access to host file system, environment variables, or external network calls (default deny). | P0 | [ ] |
+| **REQ-502** | **AST Pre-filtering**: Use Python's `ast` module to statically analyze code for forbidden imports (`os`, `subprocess`) or patterns before execution. | P1 | [ ] |
+| **REQ-503** | **Pre-execution Verification**: Use an LLM to verify code intent and check for PII leakage (safeguarding). | P1 | [ ] |
 
-## 3. Automation & Delivery
+## 2. Agentic Integration
 
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
-| **REQ-220** | **Scheduled Reporting**: Integration with APScheduler to trigger daily briefings at market close or pre-market open for each user's timezone. | P0 | [ ] |
-| **REQ-221** | **Briefing Storage**: Saving generated briefings as a special category of `Report` in PostgreSQL for historical review. | P0 | [ ] |
-| **REQ-222** | **Notification Readiness**: Endpoint for mobile clients to check for the latest daily briefing or receive "push" triggers (webhook/callback ready). | P1 | [ ] |
+| **REQ-510** | **CodeGenerator Agent**: Specialized agent responsible for writing Python code for a specific user request. | P0 | [ ] |
+| **REQ-511** | **CodeExecutor Tool**: A tool that triggers the sandbox and returns the captured output (stdout) to the calling agent. | P0 | [ ] |
+| **REQ-512** | **Feedback Loop**: Agent can self-correct if the code execution returns an error (Iterative debugging). | P1 | [ ] |
+
+## 3. Security & Safeguarding
+
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| **REQ-520** | **No PII Exposure**: Explicit check to prevent passing personal information into code blocks. | P0 | [ ] |
+| **REQ-521** | **Runtime Monitoring**: Automatic termination of any script exceeding 5 seconds or 50MB of memory. | P0 | [ ] |
+| **REQ-522** | **Audit Logging**: All generated and executed code must be logged for system auditing purposes. | P1 | [ ] |
