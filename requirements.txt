@@ -36,6 +36,7 @@ langchain
 
 # Data Processing
 pandas
+pandas_market_calendars
 beautifulsoup4
 readability-lxml
 textstat
