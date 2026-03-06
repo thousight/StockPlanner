@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.graph.tools.macro import get_key_macro_indicators, get_political_sentiment
 from src.graph.tools.sentiment import SentimentResult
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 @pytest.mark.asyncio
 async def test_get_key_macro_indicators_cache_hit():
@@ -22,21 +22,26 @@ async def test_get_key_macro_indicators_cache_hit():
         
         result = await get_key_macro_indicators()
         assert result == "Cached Macro Report"
-        # Verify no service calls were made
-        assert mock_session.execute.called
 
 @pytest.mark.asyncio
-async def test_get_key_macro_indicators_cache_miss_and_save():
+async def test_get_key_macro_indicators_full_flow():
+    """Test the full macro fetch logic including commodities, sectors, and LLM synthesis."""
     mock_fed_data = [{"date": "2024-02-01", "value": "3.1"}]
-    mock_events = []
+    mock_events = [{"time": "2024-03-05", "event": "FOMC", "estimate": "N/A", "previous": "N/A"}]
+    mock_perf = {"Gold": "2000.00 (+1.00% over 5D)"}
     
+    # Mock LLM response
+    mock_llm_response = MagicMock()
+    mock_llm_response.content = "LLM Market Analysis Summary"
+
     with patch("src.graph.tools.macro.AsyncSessionLocal") as mock_session_factory, \
          patch("src.graph.tools.macro.fed_service.get_series_data", new_callable=AsyncMock) as mock_fed, \
-         patch("src.graph.tools.macro.calendar_service.get_upcoming_events", new_callable=AsyncMock) as mock_cal:
+         patch("src.graph.tools.macro.calendar_service.get_upcoming_events", new_callable=AsyncMock) as mock_cal, \
+         patch("src.graph.tools.macro.get_performance_summary", new_callable=AsyncMock) as mock_summary, \
+         patch("langchain_openai.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_llm:
         
         mock_session = AsyncMock()
-        # db.add is synchronous in SQLAlchemy AsyncSession
-        mock_session.add = MagicMock() 
+        mock_session.add = MagicMock()
         mock_session_factory.return_value.__aenter__.return_value = mock_session
         
         # 1. Cache Miss
@@ -44,15 +49,22 @@ async def test_get_key_macro_indicators_cache_miss_and_save():
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = mock_result
         
-        # 2. Service Calls
+        # 2. Service/Tool Mocks
         mock_fed.return_value = mock_fed_data
         mock_cal.return_value = mock_events
+        mock_summary.return_value = mock_perf
+        mock_llm.return_value = mock_llm_response
         
         result = await get_key_macro_indicators()
         
+        # 3. Assertions
         assert "Key US Macroeconomic Indicators" in result
+        assert "Commodity & Sector Trends" in result
+        assert "LLM Market Analysis Summary" in result
+        assert "FOMC" in result
         assert "3.1" in result
-        # 3. Verify Save to Cache
+        
+        # Verify save to cache was called
         assert mock_session.add.called
         assert mock_session.commit.called
 

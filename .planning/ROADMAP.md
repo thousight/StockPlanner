@@ -34,6 +34,10 @@ This roadmap outlines the evolution of the StockPlanner backend into a robust, c
 **Goal:** Switch to free macro data alternative (remove Finnhub) and implement ResearchCache for all macro services.
 **Status:** Completed
 
+### Phase 20: Market Narrative & Sentiment Change Agent
+**Goal:** Specialized research agent for analyzing the current market narrative and comparing it with the sentiment on the last trading day.
+**Status:** Completed
+
 ## Milestone 5: Daily Proactive Analysis
 **Goal:** Move from reactive chat to proactive financial coaching.
 - Deep research agents for comprehensive news scraping.

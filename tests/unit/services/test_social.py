@@ -3,21 +3,19 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from src.services.social import XClient
 
 @pytest.mark.asyncio
-async def test_x_client_mock_fallback():
-    # Test that it falls back to mock if no client initialized
+async def test_x_client_no_token_fallback():
+    # Test that it returns empty list if no client initialized
     with patch("src.config.settings.X_BEARER_TOKEN", None):
         client = XClient()
         tweets = await client.get_recent_cashtag_tweets("AAPL")
-        assert len(tweets) > 0
-        assert "mock_1" in tweets[0]["id"]
+        assert tweets == []
 
 @pytest.mark.asyncio
-async def test_x_client_user_mock_fallback():
+async def test_x_client_user_no_token_fallback():
     with patch("src.config.settings.X_BEARER_TOKEN", None):
         client = XClient()
         tweets = await client.get_user_tweets("realDonaldTrump")
-        assert len(tweets) > 0
-        assert "mock_u1" in tweets[0]["id"]
+        assert tweets == []
 
 @pytest.mark.asyncio
 async def test_x_client_get_recent_cashtag_tweets_api_call():
@@ -61,10 +59,9 @@ async def test_x_client_get_recent_cashtag_tweets_exception():
          patch("tweepy.asynchronous.AsyncClient.search_recent_tweets", side_effect=Exception("API Error")):
         
         client = XClient()
-        # Should fallback to mock on exception
+        # Should return empty list on exception, no mock data
         tweets = await client.get_recent_cashtag_tweets("AAPL")
-        assert len(tweets) > 0
-        assert "mock_1" in tweets[0]["id"]
+        assert tweets == []
 
 @pytest.mark.asyncio
 async def test_x_client_user_api_call_success():
@@ -128,7 +125,6 @@ async def test_x_client_user_api_call_exception():
          patch("tweepy.asynchronous.AsyncClient.get_user", side_effect=Exception("API Error")):
         
         client = XClient()
-        # Should fallback to mock on exception
+        # Should return empty list on exception, no mock data
         tweets = await client.get_user_tweets("realDonaldTrump")
-        assert len(tweets) > 0
-        assert "mock_u1" in tweets[0]["id"]
+        assert tweets == []

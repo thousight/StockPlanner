@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 import httpx
 
 from src.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Mapping of common names to FRED Series IDs
 FRED_SERIES_MAP = {
@@ -37,12 +40,13 @@ class FEDService:
     async def get_series_data(self, series_name_or_id: str, limit: int = 6) -> List[Dict[str, str]]:
         """
         Fetch the most recent observations for a given series.
-        If api_key is missing, returns mock data for development.
+        Returns empty list if data retrieval fails or API key is missing.
         """
         series_id = FRED_SERIES_MAP.get(series_name_or_id.upper(), series_name_or_id)
         
         if not self.api_key:
-            return self._get_mock_fred_data(series_id, limit)
+            logger.warning(f"FRED API key missing. Cannot fetch data for {series_id}.")
+            return []
 
         params = {
             "series_id": series_id,
@@ -67,14 +71,8 @@ class FEDService:
                     })
                 return results
         except Exception as e:
-            print(f"Error fetching FRED data for {series_id}: {e}")
-            return self._get_mock_fred_data(series_id, limit)
-
-    def _get_mock_fred_data(self, series_id: str, limit: int) -> List[Dict[str, str]]:
-        return [
-            {"date": (datetime.now() - timedelta(days=30 * i)).strftime("%Y-%m-%d"), "value": str(2.0 + (i * 0.1))}
-            for i in range(limit)
-        ]
+            logger.error(f"Error fetching FRED data for {series_id}: {e}")
+            return []
 
 
 class EconomicCalendarService:
@@ -90,7 +88,8 @@ class EconomicCalendarService:
         Fetch high-signal US economic releases for the next 'days' using FRED API.
         """
         if not self.api_key:
-            return self._get_mock_calendar_data()
+            logger.warning("FRED API key missing. Cannot fetch economic calendar.")
+            return []
 
         start_date = datetime.now()
         end_date = start_date + timedelta(days=days)
@@ -129,26 +128,8 @@ class EconomicCalendarService:
                 
                 return high_impact_events
         except Exception as e:
-            print(f"Error fetching FRED economic calendar: {e}")
-            return self._get_mock_calendar_data()
-
-    def _get_mock_calendar_data(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "event": "FOMC Interest Rate Decision",
-                "time": (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"),
-                "actual": None,
-                "estimate": "5.25",
-                "previous": "5.50"
-            },
-            {
-                "event": "Core CPI m/m",
-                "time": (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S"),
-                "actual": None,
-                "estimate": "0.3",
-                "previous": "0.4"
-            }
-        ]
+            logger.error(f"Error fetching FRED economic calendar: {e}")
+            return []
 
 fed_service = FEDService()
 calendar_service = EconomicCalendarService()

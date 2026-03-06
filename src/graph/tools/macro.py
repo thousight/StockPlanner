@@ -1,12 +1,13 @@
 import asyncio
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Any, Optional
-
+from typing import Dict, List
+from langchain_openai import ChatOpenAI
 from sqlalchemy import select
 
 from src.database.session import AsyncSessionLocal
 from src.database.models import ResearchCache, ResearchSourceType
 from src.services.macro import fed_service, calendar_service
+from src.services.market_data import get_historical_prices_async
 from src.graph.tools.sentiment import analyze_sentiment
 from src.services.social import x_client
 
@@ -52,18 +53,52 @@ async def get_political_sentiment(**kwargs) -> str:
         
     return "\n".join(output) + "\n"
 
+COMMODITIES = {
+    "Gold": "GLD",
+    "Crude Oil": "USO",
+    "Natural Gas": "UNG",
+    "Copper": "CPER",
+    "Silver": "SLV"
+}
+
+SECTORS = {
+    "Technology": "XLK",
+    "Healthcare": "XLV",
+    "Financials": "XLF",
+    "Consumer Discretionary": "XLY",
+    "Consumer Staples": "XLP",
+    "Energy": "XLE",
+    "Utilities": "XLU",
+    "Industrials": "XLI",
+    "Materials": "XLB",
+    "Real Estate": "XLRE",
+    "Communication Services": "XLC"
+}
+
+async def get_performance_summary(symbols_map: Dict[str, str]) -> Dict[str, str]:
+    """Helper to fetch 5-day performance for a map of names to symbols."""
+    tasks = [get_historical_prices_async(sym, period="5d") for sym in symbols_map.values()]
+    histories = await asyncio.gather(*tasks)
+    
+    performance = {}
+    for (name, sym), hist in zip(symbols_map.items(), histories):
+        if not hist.empty and len(hist) > 1:
+            latest = hist['Close'].iloc[-1]
+            prev = hist['Close'].iloc[0]
+            change = ((latest - prev) / prev) * 100
+            performance[name] = f"{latest:.2f} ({change:+.2f}% over 5D)"
+        else:
+            performance[name] = "Data unavailable"
+    return performance
+
 async def get_key_macro_indicators(**kwargs) -> str:
     """
-    Fetch the latest key US macroeconomic indicators (GDP, CPI, Payrolls, Interest Rates, DXY) 
-    and upcoming high-impact economic events.
-    
-    Implements tool-level caching with daily reset (macro_YYYYMMDD).
+    Fetch the latest key US macroeconomic indicators (GDP, CPI, Payrolls, Interest Rates, DXY),
+    upcoming high-impact events, and trends in key commodities and market sectors.
     """
     # 1. Check Cache
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     cache_key = f"macro_{today_str}"
-    
-    # Check if a refresh is forced
     force_refresh = kwargs.get("refresh_macro", False)
     
     if not force_refresh:
@@ -80,21 +115,52 @@ async def get_key_macro_indicators(**kwargs) -> str:
             except Exception as e:
                 print(f"Cache check error in get_key_macro_indicators: {e}")
 
-    # 2. Cache Miss - Fetch all data in parallel
+    # 2. Fetch All Data
     tasks = [
         fed_service.get_series_data("GDP", limit=4),
         fed_service.get_series_data("CPI", limit=6),
         fed_service.get_series_data("FEDFUNDS", limit=6),
         fed_service.get_series_data("PAYEMS", limit=6),
         fed_service.get_series_data("DXY", limit=6),
-        calendar_service.get_upcoming_events(days=7)
+        calendar_service.get_upcoming_events(days=7),
+        get_performance_summary(COMMODITIES),
+        get_performance_summary(SECTORS)
     ]
     
     results = await asyncio.gather(*tasks)
-    gdp_data, cpi_data, rates_data, payrolls_data, dxy_data, events = results
+    gdp_data, cpi_data, rates_data, payrolls_data, dxy_data, events, commodity_perf, sector_perf = results
     
+    # 3. Build Raw Data String for LLM Analysis
+    raw_data = [
+        "### Macro Data",
+        format_series("CPI", cpi_data, "Index"),
+        format_series("DXY", dxy_data, "Index"),
+        format_series("Payrolls", payrolls_data, "Thousands"),
+        format_series("Fed Funds", rates_data, "%"),
+        format_series("GDP", gdp_data, "%"),
+        "\n### Commodities (5D)",
+        "\n".join([f"- {k}: {v}" for k, v in commodity_perf.items()]),
+        "\n### Sectors (5D)",
+        "\n".join([f"- {k}: {v}" for k, v in sector_perf.items()])
+    ]
+    
+    # 4. Synthesize Analysis with LLM
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    analysis_prompt = f"""
+    Analyze the following market data and provide:
+    1. A summary of commodity trends and their likely impact on the economy (e.g. inflation, manufacturing).
+    2. A summary of sector performance and what it signals about market leadership or risk appetite.
+    3. How these trends correlate with the macro indicators provided.
+
+    Data:
+    {chr(10).join(raw_data)}
+    """
+    
+    analysis_response = await llm.ainvoke(analysis_prompt)
+    analysis_text = analysis_response.content
+
+    # 5. Format Final Output
     output = ["### Key US Macroeconomic Indicators"]
-    
     output.append("\n#### The Inflation Pulse & Currency")
     output.append(format_series("CPI (Consumer Price Index)", cpi_data, "Index"))
     output.append(format_series("US Dollar Index (DXY)", dxy_data, "Index"))
@@ -106,6 +172,9 @@ async def get_key_macro_indicators(**kwargs) -> str:
     output.append(format_series("Effective Federal Funds Rate", rates_data, "%"))
     output.append(format_series("Real GDP Growth", gdp_data, "% (Quarterly)"))
     
+    output.append("\n### Commodity & Sector Trends")
+    output.append(analysis_text)
+    
     output.append("\n### Upcoming High-Impact US Events (Next 7 Days)")
     if not events:
         output.append("- No high-impact events scheduled.")
@@ -115,8 +184,7 @@ async def get_key_macro_indicators(**kwargs) -> str:
             
     final_report = "\n".join(output) + "\n"
 
-    # 3. Save to Cache
-    # Expire at the end of the day (23:59:59 UTC)
+    # 6. Save to Cache
     tomorrow_midnight = (datetime.now(timezone.utc) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     expire_at = tomorrow_midnight.replace(tzinfo=None)
 

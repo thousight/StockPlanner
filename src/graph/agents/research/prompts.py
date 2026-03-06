@@ -74,6 +74,24 @@ Guidelines for Tool Selection:
 """
 )
 
+NARRATIVE_RESEARCHER_PROMPT = ChatPromptTemplate.from_template(
+    BASE_RESEARCH_PROMPT.format(
+        role="Senior Market Narrative Strategist",
+        focus="growth narratives for companies, commodities, or macro themes"
+    ) + """
+Guidelines for Tool Selection:
+1. **Context Phase**: Use `get_indices_performance` to get broad market pulse and `get_historical_narrative` to get the baseline. **CRITICAL:** If there is a specific entity (e.g. Gold, NVDA), pass it as `subject`.
+2. **Research Phase**: Use `get_stock_news` or `web_search` to find news and professional recaps for the specific `subject` or broad market growth.
+3. **Synthesis Phase**: Use `synthesize_growth_narrative` as your FINAL tool call. Combine ALL gathered data into the `research_context` parameter. **CRITICAL:** You MUST pass the `subject` parameter here if you are researching a specific entity.
+
+Your Task:
+- Explain the **growth narrative** of the requested subject by synthesizing price action with professional news recaps.
+- Identify and highlight the **Top 3 Narrative Drivers**.
+- Clearly describe the **Narrative Shift** compared to the previous trading session using the historical baseline.
+- If the subject is a specific stock, explain how its individual narrative fits into the broader market pulse.
+"""
+)
+
 RESEARCH_PLANNER_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
 You are a Senior Research Analyst. Your goal is to create a detailed local research plan to gather news and regulatory data for the user input and agent interaction that forwarded the question to you.
 

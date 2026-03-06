@@ -3,31 +3,38 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.graph.state import AgentState
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
+from src.graph.tools.narrative import (
+    get_indices_performance, 
+    get_historical_narrative, 
+    synthesize_growth_narrative
+)
 from src.graph.tools.news import get_stock_news, web_search
-from src.graph.tools.sentiment import get_market_sentiment
-from src.graph.agents.research.prompts import SENTIMENT_RESEARCHER_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
+from src.graph.agents.research.prompts import NARRATIVE_RESEARCHER_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
 from src.graph.agents.research.research_plan import ResearchPlan
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 from src.graph.agents.research.utils import execute_tool
 
 TOOLS_LIST = [
+    get_indices_performance,
+    get_historical_narrative,
     get_stock_news,
-    get_market_sentiment,
-    web_search
+    web_search,
+    synthesize_growth_narrative
 ]
 
 AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)
 
 @with_logging
-async def sentiment_researcher(state: AgentState):
+async def narrative_researcher(state: AgentState):
     """
-    Sentiment Research Specialist: Analyzes market mood from news and social media.
+    Narrative Research Specialist: Analyzes growth narratives and narrative shifts.
+    Decides which data points to gather (indices, news, history) before synthesizing.
     """
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
     structured_llm = llm.with_structured_output(ResearchPlan, method="function_calling")
     
     messages = [
-        SystemMessage(content=SENTIMENT_RESEARCHER_PROMPT.format(
+        SystemMessage(content=NARRATIVE_RESEARCHER_PROMPT.format(
             current_context=convert_state_to_prompt(state),
             available_tools=AVAILABLE_TOOLS_PROMPT
         )),
@@ -37,20 +44,32 @@ async def sentiment_researcher(state: AgentState):
     local_plan = await structured_llm.ainvoke(messages)
     research_data = ""
     client_ua = state.get("session_context", {}).get("user_agent", "")
+    plan_subject = local_plan.subject
 
     # Execute tool calls
-    tasks = [execute_tool(step, TOOLS_LIST, client_ua) for step in local_plan.steps]
+    tasks = []
+    for step in local_plan.steps:
+        # Inject subject into tool params if the tool supports it and it's missing
+        if plan_subject and "subject" not in step.tool_params:
+            # We check if the tool actually takes 'subject' by name 
+            # (or just pass it and let execute_tool handle/ignore)
+            step.tool_params["subject"] = plan_subject
+            
+        tasks.append(execute_tool(step, TOOLS_LIST, client_ua))
+        
     results = await asyncio.gather(*tasks)
     
     for result_str in results:
         if result_str:
             research_data += result_str + "\n"
 
+    # Store the final synthesized report or context
     return {
         "agent_interactions": [{
             "id": get_next_interaction_id(state),
-            "agent": "sentiment_researcher",
+            "agent": "narrative_researcher",
             "answer": research_data,
             "next_agent": "analyst"
-        }]
+        }],
+        "market_context": research_data
     }

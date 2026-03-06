@@ -1,9 +1,12 @@
 import asyncio
+import logging
 from typing import List, Dict, Optional
 
 import tweepy
 
 from src.config import settings
+
+logger = logging.getLogger(__name__)
 
 class XClient:
     """
@@ -24,10 +27,11 @@ class XClient:
     async def get_recent_cashtag_tweets(self, ticker: str, max_results: int = 10) -> List[Dict]:
         """
         Fetch recent tweets for a specific cashtag (e.g., $AAPL).
-        Returns a list of simplified tweet objects.
+        Returns a list of simplified tweet objects or empty list if no client/data.
         """
         if not self.client:
-            return self._get_mock_tweets(ticker)
+            logger.warning(f"X client not initialized. Cannot fetch tweets for {ticker}.")
+            return []
 
         try:
             query = f"${ticker} -is:retweet lang:en"
@@ -50,15 +54,16 @@ class XClient:
                 })
             return tweets
         except Exception as e:
-            print(f"Error fetching tweets for {ticker}: {e}")
-            return self._get_mock_tweets(ticker)
+            logger.error(f"Error fetching tweets for {ticker}: {e}")
+            return []
 
     async def get_user_tweets(self, username: str, max_results: int = 10) -> List[Dict]:
         """
         Fetch recent tweets for a specific username (e.g., realDonaldTrump).
         """
         if not self.client:
-            return self._get_mock_user_tweets(username)
+            logger.warning(f"X client not initialized. Cannot fetch tweets for user {username}.")
+            return []
 
         try:
             user = await self.client.get_user(username=username)
@@ -85,45 +90,7 @@ class XClient:
                 })
             return tweets
         except Exception as e:
-            print(f"Error fetching tweets for {username}: {e}")
-            return self._get_mock_user_tweets(username)
-
-    def _get_mock_tweets(self, ticker: str) -> List[Dict]:
-        """
-        Fallback mock data for development.
-        """
-        return [
-            {
-                "id": "mock_1",
-                "text": f"Just bought more ${ticker}! Look at that growth. 🚀",
-                "created_at": "2026-03-04T10:00:00Z",
-                "metrics": {"like_count": 10, "retweet_count": 2}
-            },
-            {
-                "id": "mock_2",
-                "text": f"I'm worried about ${ticker}'s latest margins. Might be time to sell. #stocks",
-                "created_at": "2026-03-04T11:30:00Z",
-                "metrics": {"like_count": 5, "retweet_count": 1}
-            }
-        ]
-
-    def _get_mock_user_tweets(self, username: str) -> List[Dict]:
-        """
-        Fallback mock data for user monitoring.
-        """
-        return [
-            {
-                "id": "mock_u1",
-                "text": f"Markets are doing great! Best numbers ever. #MAGA",
-                "created_at": "2026-03-04T09:00:00Z",
-                "metrics": {"like_count": 50000, "retweet_count": 12000}
-            },
-            {
-                "id": "mock_u2",
-                "text": f"Tariffs are the greatest thing! We will bring back jobs. 🇺🇸",
-                "created_at": "2026-03-04T10:30:00Z",
-                "metrics": {"like_count": 45000, "retweet_count": 11000}
-            }
-        ]
+            logger.error(f"Error fetching tweets for {username}: {e}")
+            return []
 
 x_client = XClient()

@@ -3,13 +3,12 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from src.services.macro import FEDService, EconomicCalendarService
 
 @pytest.mark.asyncio
-async def test_fed_service_mock_fallback():
+async def test_fed_service_no_key_fallback():
     with patch("src.config.settings.FRED_API_KEY", None):
         service = FEDService()
         data = await service.get_series_data("GDP", limit=2)
-        assert len(data) == 2
-        assert "date" in data[0]
-        assert "value" in data[0]
+        # Should return empty list, no mock data
+        assert data == []
 
 @pytest.mark.asyncio
 async def test_fed_service_api_call():
@@ -65,6 +64,5 @@ async def test_calendar_service_fallback_on_error():
          patch("httpx.AsyncClient.get", side_effect=Exception("Network Error")):
         service = EconomicCalendarService()
         events = await service.get_upcoming_events()
-        # Should return mock data
-        assert len(events) > 0
-        assert "FOMC" in events[0]["event"]
+        # Should return empty list on error, no mock data
+        assert events == []

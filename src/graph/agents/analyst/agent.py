@@ -11,7 +11,7 @@ async def analyst_agent(state: AgentState, config: RunnableConfig):
     user_input = state.get("user_input", "Analyze the current portfolio and provide recommendations.")
     
     # Retrieve all research data from specialized interactions
-    research_agents = ["fundamental_researcher", "sentiment_researcher", "macro_researcher", "research"]
+    research_agents = ["fundamental_researcher", "sentiment_researcher", "macro_researcher", "narrative_researcher", "research"]
     research_data = []
     for interaction in state.get("agent_interactions", []):
         if interaction.get("agent") in research_agents:

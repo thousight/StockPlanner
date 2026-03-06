@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, update
@@ -282,7 +282,8 @@ async def stream_run(
     request: ThreadRunStreamRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(set_user_context)
+    current_user: User = Depends(set_user_context),
+    user_agent: Optional[str] = Header(None)
 ):
     """
     Streams events from a graph run.
@@ -314,7 +315,7 @@ async def stream_run(
             "session_context": {
                 "messages": [HumanMessage(content=payload_message, id=human_msg_id)],
                 "current_datetime": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-                "user_agent": "StockPlanner-FastAPI",
+                "user_agent": user_agent or "StockPlanner-FastAPI",
                 "revision_count": 0
             },
             "user_context": {

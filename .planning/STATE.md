@@ -2,9 +2,9 @@
 
 ## Current Position
 - **Milestone:** Milestone 4: Advanced Agents & Financial Context
-- **Phase:** 19
-- **Status:** Completed Phase 19 (Free Macro Data & Caching).
-- **Last Activity:** [2026-03-04] — Replaced Finnhub with Financial Modeling Prep (FMP) for free economic calendar access. Implemented daily tool-level caching for macro reports using ResearchCache.
+- **Phase:** 20
+- **Status:** Completed Phase 20 (Market Narrative & Sentiment Change Agent).
+- **Last Activity:** [2026-03-05] — Implemented NarrativeResearcher agent with daily narrative synthesis, historical comparison (7-day lookback), and top 3 narrative driver extraction.
 
 ## Planning Context
 - **Vision:** Persistent, personalized financial planner with high-speed memory.

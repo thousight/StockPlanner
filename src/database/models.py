@@ -33,6 +33,7 @@ class ReportCategory(enum.Enum):
     MACRO = "MACRO"
     FUND = "FUND"
     GENERAL = "GENERAL"
+    NARRATIVE = "NARRATIVE"
 
 class ResearchSourceType(enum.Enum):
     SEC = "SEC"
@@ -40,6 +41,7 @@ class ResearchSourceType(enum.Enum):
     SOCIAL = "SOCIAL"
     X = "X"
     MACRO = "MACRO"
+    NARRATIVE = "NARRATIVE"
 
 class Asset(Base):
     __tablename__ = "assets"

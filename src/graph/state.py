@@ -60,3 +60,4 @@ class AgentState(TypedDict):
     user_input: str
     agent_interactions: Annotated[List[AgentInteraction], operator.add]
     output: str
+    market_context: NotRequired[str]
