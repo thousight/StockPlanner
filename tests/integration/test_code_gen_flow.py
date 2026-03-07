@@ -26,12 +26,12 @@ print(run(input_data))
 ```
 """
     
-    # We patch ChatOpenAI and the AsyncSandbox (called inside execute_python_code -> PythonSandbox)
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    # We patch get_llm and the AsyncSandbox (called inside execute_python_code -> PythonSandbox)
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.tools.code_executor.AsyncSandbox", new_callable=AsyncMock) as mock_sandbox_cls:
         
         # Setup LLM Mock
-        mock_llm_instance = mock_llm_cls.return_value
+        mock_llm_instance = mock_llm_func.return_value
         mock_llm_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
         
         # Setup E2B Sandbox Mock

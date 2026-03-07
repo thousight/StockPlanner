@@ -26,9 +26,9 @@ async def test_summarizer_agent_success(sample_state):
         tags=["#growth", "#tech"]
     )
     
-    with patch("src.graph.agents.summarizer.agent.ChatOpenAI") as mock_llm_class:
+    with patch("src.graph.agents.summarizer.agent.get_llm") as mock_llm_func:
         mock_llm = MagicMock()
-        mock_llm_class.return_value = mock_llm
+        mock_llm_func.return_value = mock_llm
         
         mock_structured = AsyncMock()
         mock_structured.ainvoke.return_value = mock_output

@@ -24,10 +24,10 @@ print(run(input_data))
 ```
 """
     
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
         
-        mock_instance = mock_llm_cls.return_value
+        mock_instance = mock_llm_func.return_value
         mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
         
         mock_execute.return_value = "Execution Successful:\nResult: 42"
@@ -50,10 +50,10 @@ async def test_code_generator_retry_and_success(mock_state):
     mock_success_response = MagicMock()
     mock_success_response.content = "**Audit**: Fixed.\n```python\n42\n```"
     
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
         
-        mock_instance = mock_llm_cls.return_value
+        mock_instance = mock_llm_func.return_value
         mock_instance.ainvoke = AsyncMock(side_effect=[mock_fail_response, mock_success_response])
         
         # First call fails, second succeeds
@@ -70,10 +70,10 @@ async def test_code_generator_max_retries_failure(mock_state):
     mock_fail_response = MagicMock()
     mock_fail_response.content = "**Audit**: Always fails.\n```python\n1/0\n```"
     
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
         
-        mock_instance = mock_llm_cls.return_value
+        mock_instance = mock_llm_func.return_value
         mock_instance.ainvoke = AsyncMock(return_value=mock_fail_response)
         
         mock_execute.return_value = "Execution Failed (MATH_ERROR): division by zero"
@@ -101,10 +101,10 @@ def run(data):
 print(run(input_data))
 ```
 """
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
         
-        mock_instance = mock_llm_cls.return_value
+        mock_instance = mock_llm_func.return_value
         mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
         mock_execute.return_value = "Execution Successful:\nResult: good"
         
@@ -125,10 +125,10 @@ async def test_code_generator_no_code_block_retry(mock_state):
     mock_with_code = MagicMock()
     mock_with_code.content = "**Audit**: Fixed.\n```python\nprint('fixed')\n```"
     
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
         
-        mock_instance = mock_llm_cls.return_value
+        mock_instance = mock_llm_func.return_value
         mock_instance.ainvoke = AsyncMock(side_effect=[mock_no_code, mock_with_code])
         mock_execute.return_value = "Execution Successful"
         
@@ -145,10 +145,10 @@ async def test_code_generator_context_injection(mock_state):
     mock_llm_response = MagicMock()
     mock_llm_response.content = "**Audit**: Logic.\n```python\nprint('ok')\n```"
     
-    with patch("src.graph.agents.research.code_gen.ChatOpenAI") as mock_llm_cls, \
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
          patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
         
-        mock_instance = mock_llm_cls.return_value
+        mock_instance = mock_llm_func.return_value
         mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
         mock_execute.return_value = "Execution Successful"
         

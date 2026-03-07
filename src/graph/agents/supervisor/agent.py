@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
@@ -9,7 +9,7 @@ from src.graph.agents.supervisor.prompts import SUPERVISOR_PROMPT, SUPERVISOR_PL
 from src.graph.agents.supervisor.response import SupervisorResponse
 from src.graph.utils.prompt import convert_state_to_prompt
 from src.graph.agents.supervisor.next_agents import get_supervisor_next_agents_prompt
-from src.graph.utils.agents import get_next_interaction_id, with_logging
+from src.graph.utils.agents import create_interaction, get_llm, get_session_info, with_logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ async def supervisor_agent(state: AgentState, config: Optional[RunnableConfig] =
     """
     Strategic Investment Planner: Decides the initial step and routes to the appropriate agents.
     """
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = get_llm(temperature=0)
     structured_llm = llm.with_structured_output(SupervisorResponse, method="function_calling")
     
     # Use utility functions for prompt context
@@ -37,12 +37,14 @@ async def supervisor_agent(state: AgentState, config: Optional[RunnableConfig] =
         logger.warning("SUPERVISOR: Loop limit reached! Forcing an end...")
         return {
             "session_context": {"revision_count": 1},
-            "agent_interactions": [{
-                "id": get_next_interaction_id(state),
-                "agent": "supervisor",
-                "answer": "Loop limit reached",
-                "next_agent": "summarizer"
-            }]
+            "agent_interactions": [
+                create_interaction(
+                    state, 
+                    agent="supervisor", 
+                    answer="Loop limit reached", 
+                    next_agent="summarizer"
+                )
+            ]
         }
     
     plan_output = await structured_llm.ainvoke(messages)
@@ -53,10 +55,12 @@ async def supervisor_agent(state: AgentState, config: Optional[RunnableConfig] =
     
     return {
         "session_context": {"revision_count": 1},
-        "agent_interactions": [{
-            "id": get_next_interaction_id(state),
-            "agent": "supervisor",
-            "answer": f"Routed to {next_agent_str}",
-            "next_agent": next_agent_str
-        }]
+        "agent_interactions": [
+            create_interaction(
+                state, 
+                agent="supervisor", 
+                answer=f"Routed to {next_agent_str}", 
+                next_agent=next_agent_str
+            )
+        ]
     }

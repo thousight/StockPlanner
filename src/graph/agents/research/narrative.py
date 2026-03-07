@@ -1,8 +1,9 @@
-from typing import Optional
 import asyncio
-from langchain_openai import ChatOpenAI
+from typing import Optional
+
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
+
 from src.graph.state import AgentState
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.tools.narrative import (
@@ -13,7 +14,7 @@ from src.graph.tools.narrative import (
 from src.graph.tools.news import get_stock_news, web_search
 from src.graph.agents.research.prompts import NARRATIVE_RESEARCHER_PROMPT, RESEARCH_PLANNER_PLAN_PROMPT
 from src.graph.agents.research.research_plan import ResearchPlan
-from src.graph.utils.agents import get_next_interaction_id, with_logging
+from src.graph.utils.agents import get_llm, get_session_info, create_interaction, with_logging
 from src.graph.agents.research.utils import execute_tool
 
 TOOLS_LIST = [
@@ -32,7 +33,8 @@ async def narrative_researcher(state: AgentState, config: Optional[RunnableConfi
     Narrative Research Specialist: Analyzes growth narratives and narrative shifts.
     Decides which data points to gather (indices, news, history) before synthesizing.
     """
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = get_llm(temperature=0)
+    info = get_session_info(state)
     structured_llm = llm.with_structured_output(ResearchPlan, method="function_calling")
     
     messages = [
@@ -45,11 +47,9 @@ async def narrative_researcher(state: AgentState, config: Optional[RunnableConfi
     
     local_plan = await structured_llm.ainvoke(messages)
     research_data = ""
-    client_ua = state.get("session_context", {}).get("user_agent", "")
 
     # Execute tool calls
-    # Improved execute_tool now handles the mapping internally if we pass the subject
-    tasks = [execute_tool(step, TOOLS_LIST, client_ua, local_plan.subject) for step in local_plan.steps]
+    tasks = [execute_tool(step, TOOLS_LIST, info["user_agent"], local_plan.subject) for step in local_plan.steps]
     results = await asyncio.gather(*tasks)
     
     for result_str in results:
@@ -58,11 +58,13 @@ async def narrative_researcher(state: AgentState, config: Optional[RunnableConfi
 
     # Store the final synthesized report or context
     return {
-        "agent_interactions": [{
-            "id": get_next_interaction_id(state),
-            "agent": "narrative_researcher",
-            "answer": research_data,
-            "next_agent": "analyst"
-        }],
+        "agent_interactions": [
+            create_interaction(
+                state, 
+                agent="narrative_researcher", 
+                answer=research_data, 
+                next_agent="analyst"
+            )
+        ],
         "market_context": research_data
     }

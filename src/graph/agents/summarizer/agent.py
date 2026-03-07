@@ -1,12 +1,13 @@
+import uuid
 from typing import List, Optional
-from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
-from src.graph.state import AgentState
-import uuid
+from pydantic import BaseModel, Field
+
 from src.graph.agents.summarizer.prompts import SUMMARIZER_SYSTEM_PROMPT
-from src.graph.utils.agents import get_next_interaction_id, with_logging
+from src.graph.state import AgentState
+from src.graph.utils.agents import create_interaction, get_llm, with_logging
 from src.graph.utils.prompt import convert_state_to_prompt
 
 class SummarizerOutput(BaseModel):
@@ -24,7 +25,7 @@ async def summarizer_agent(state: AgentState, config: Optional[RunnableConfig] =
     """
     Summarizer Agent: Reviews all agent interactions and synthesizes a final answer.
     """
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = get_llm(temperature=0)
     structured_llm = llm.with_structured_output(SummarizerOutput)
         
     system_msg = SystemMessage(content=SUMMARIZER_SYSTEM_PROMPT.format(
@@ -39,10 +40,12 @@ async def summarizer_agent(state: AgentState, config: Optional[RunnableConfig] =
         "session_context": {
             "messages": [AIMessage(content=final_content, id=str(uuid.uuid4()))]
         },
-        "agent_interactions": [{
-            "id": get_next_interaction_id(state),
-            "agent": "summarizer",
-            "answer": final_content,
-            "next_agent": "end"
-        }]
+        "agent_interactions": [
+            create_interaction(
+                state, 
+                agent="summarizer", 
+                answer=final_content, 
+                next_agent="end"
+            )
+        ]
     }
