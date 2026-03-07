@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select

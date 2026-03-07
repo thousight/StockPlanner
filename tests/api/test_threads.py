@@ -55,6 +55,36 @@ async def test_get_threads(client, mock_session, mock_thread, auth_headers, test
     del app.dependency_overrides[get_db]
 
 @pytest.mark.asyncio
+async def test_create_thread(client, mock_session, auth_headers, test_user):
+    """
+    Test POST /threads.
+    Verify thread creation.
+    """
+    # Mock user for auth
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = test_user
+    
+    mock_session.execute.side_effect = [mock_user_result]
+    
+    app.dependency_overrides[get_db] = lambda: mock_session
+    
+    response = await client.post(
+        "/threads",
+        headers=auth_headers,
+        json={"title": "Custom Title"}
+    )
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Custom Title"
+    assert "id" in data
+    
+    mock_session.add.assert_called_once()
+    mock_session.commit.assert_called_once()
+    
+    del app.dependency_overrides[get_db]
+
+@pytest.mark.asyncio
 async def test_delete_thread(client, mock_session, mock_thread, auth_headers, test_user):
     """
     Test DELETE /threads/{id}.

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     
     # Security & Third-party APIs
     OPENAI_API_KEY: Optional[str] = None
+    E2B_API_KEY: Optional[str] = None
     X_BEARER_TOKEN: Optional[str] = None
     X_API_KEY: Optional[str] = None
     X_API_SECRET: Optional[str] = None

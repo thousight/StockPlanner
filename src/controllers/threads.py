@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, update
 from src.database.session import get_db
 from src.database.models import ChatThread, ChatMessage, User
-from src.schemas.threads import ThreadListResponse, ThreadBase, MessageSchema, HistoryResponse, CursorInfo, ThreadRunStreamRequest
+from src.schemas.threads import ThreadListResponse, ThreadBase, MessageSchema, HistoryResponse, CursorInfo, ThreadRunStreamRequest, ThreadCreate
 from src.services.auth import set_user_context
 from src.services.history import backfill_history_if_needed, sync_conversation_background
 from src.services.context_injection import get_user_context_data
@@ -107,6 +107,40 @@ async def langgraph_event_generator(
         logger.error(f"Error in graph stream: {e}", exc_info=True)
         error_payload = json.dumps([{"detail": str(e)}])
         yield f"event: error\ndata: {error_payload}\n\n"
+
+@router.post("/threads", response_model=ThreadBase, status_code=201)
+async def create_thread(
+    request: ThreadCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(set_user_context)
+):
+    """
+    Creates a new chat thread for the current user.
+    """
+    try:
+        thread_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        new_thread = ChatThread(
+            id=thread_id,
+            user_id=current_user.id,
+            title=request.title or "New Conversation",
+            created_at=now,
+            updated_at=now
+        )
+        db.add(new_thread)
+        await db.commit()
+        await db.refresh(new_thread)
+        
+        return ThreadBase(
+            id=new_thread.id,
+            title=new_thread.title,
+            created_at=new_thread.created_at,
+            updated_at=new_thread.updated_at
+        )
+    except Exception as e:
+        logger.error(f"Error creating thread for user {current_user.id}: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/threads", response_model=ThreadListResponse)
 async def get_threads(

@@ -1,5 +1,9 @@
+import logging
+from typing import Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
+
 from src.graph.state import AgentState
 from src.graph.agents.supervisor.prompts import SUPERVISOR_PROMPT, SUPERVISOR_PLAN_PROMPT
 from src.graph.agents.supervisor.response import SupervisorResponse
@@ -7,8 +11,10 @@ from src.graph.utils.prompt import convert_state_to_prompt
 from src.graph.agents.supervisor.next_agents import get_supervisor_next_agents_prompt
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 
+logger = logging.getLogger(__name__)
+
 @with_logging
-async def supervisor_agent(state: AgentState):
+async def supervisor_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Strategic Investment Planner: Decides the initial step and routes to the appropriate agents.
     """
@@ -28,7 +34,7 @@ async def supervisor_agent(state: AgentState):
     # Loop Detection
     revision_count = state.get("session_context", {}).get("revision_count", 0)
     if revision_count > 5:
-        print("--- SUPERVISOR: Loop limit reached! Forcing an end... ---")
+        logger.warning("SUPERVISOR: Loop limit reached! Forcing an end...")
         return {
             "session_context": {"revision_count": 1},
             "agent_interactions": [{

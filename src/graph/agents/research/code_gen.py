@@ -1,17 +1,19 @@
 import re
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Optional
+
 from langchain_openai import ChatOpenAI
-from src.graph.state import AgentState, AgentInteraction
+from langchain_core.runnables import RunnableConfig
+
+from src.graph.state import AgentState
 from src.graph.agents.research.prompts import CODE_GEN_PROMPT
 from src.graph.tools.code_executor import execute_python_code
 from src.graph.utils.agents import get_next_interaction_id, with_logging
-from src.graph.utils.prompt import convert_state_to_prompt
 
 logger = logging.getLogger(__name__)
 
 @with_logging
-async def code_generator_agent(state: AgentState):
+async def code_generator_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Quantitative Research Specialist: Writes and executes Python code for data analysis.
     Implements a hybrid self-correction loop (Self-Debug + Reflexion).
@@ -63,8 +65,11 @@ async def code_generator_agent(state: AgentState):
         audit_match = re.search(r"\*\*Audit\*\*:(.*?)(?:\n|```)", content, re.IGNORECASE | re.DOTALL)
         audit_text = audit_match.group(1).strip() if audit_match else "Self-audit complete."
         
+        # Extract thread_id from state for auditing
+        thread_id = state.get("session_context", {}).get("thread_id", "N/A")
+        
         # 4. Execute Code
-        execution_result = await execute_python_code(code, data=data_context)
+        execution_result = await execute_python_code(code, data=data_context, thread_id=thread_id)
         
         if "Execution Failed" in execution_result:
             # Self-correction trigger

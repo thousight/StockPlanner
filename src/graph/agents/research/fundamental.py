@@ -1,6 +1,9 @@
 import asyncio
+from typing import Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
+
 from src.graph.state import AgentState
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.tools.sec import get_sec_filing_section, get_sec_filing_delta
@@ -20,7 +23,7 @@ TOOLS_LIST = [
 AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)
 
 @with_logging
-async def fundamental_researcher(state: AgentState):
+async def fundamental_researcher(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Fundamental Research Specialist: Analyzes financial statements and SEC filings.
     """

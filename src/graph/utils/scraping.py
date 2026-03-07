@@ -1,6 +1,5 @@
 import httpx
 import re
-from typing import Optional
 from bs4 import BeautifulSoup
 from readability import Document
 

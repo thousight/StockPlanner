@@ -60,18 +60,20 @@ Debate Arguments:
 
 Your Task:
 1. Acknowledge the strongest points from both sides.
-2. Resolve any direct contradictions using the raw research data. High-confidence SEC filings take absolute priority over Macro trends or Sentiment vibes.
+2. Resolve any direct contradictions using the raw research data. High-confidence SEC filings and verified Quantitative Calculations take priority over Macro trends or Sentiment vibes.
 3. Provide a weighted conclusion that addresses the user's question with a focus on balance and factual accuracy.
 4. Ensure a dedicated "SEC & Regulatory Insights" subsection is present if regulatory data was provided.
-5. Ensure a dedicated "Social Sentiment & Market Mood" subsection is present if sentiment data was provided.
-6. Ensure a dedicated "Macroeconomic Backdrop" subsection is present if macro data was provided, explaining how the broader economy impacts the specific asset.
-7. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
+5. Ensure a dedicated "Quantitative Analysis" subsection is present if data wrapped in `<calculation_result>` was provided. Interpret these numbers carefully.
+6. Ensure a dedicated "Social Sentiment & Market Mood" subsection is present if sentiment data was provided.
+7. Ensure a dedicated "Macroeconomic Backdrop" subsection is present if macro data was provided, explaining how the broader economy impacts the specific asset.
+8. Include a Confidence Score (0-100) based on the quality and consistency of the evidence.
 
 ### Follow-up Decision
-If the current data is insufficient or a new high-signal lead is discovered, you MUST task a specialized researcher.
+If the current data is insufficient, logically inconsistent, or a new high-signal lead is discovered, you MUST task a specialized researcher.
 - Route to `fundamental_researcher` for missing SEC data or financial metrics.
 - Route to `sentiment_researcher` for missing social trends or news updates.
 - Route to `macro_researcher` for missing economic context.
+- Route to `code_generator` if quantitative results are logically inconsistent, missing, or require a specific calculation fix. Provide a detailed explanation of the logic error or required fix.
 - Provide a SPECIFIC, atomic question for the researcher.
 
 Output the final report in Markdown. At the VERY END of your response, if a follow-up is needed, add:

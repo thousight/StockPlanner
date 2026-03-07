@@ -1,10 +1,11 @@
+from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from src.graph.state import AgentState
 from src.graph.agents.analyst.subgraph import create_debate_graph
 from src.graph.utils.agents import with_logging, get_next_interaction_id
 
 @with_logging
-async def analyst_agent(state: AgentState, config: RunnableConfig):
+async def analyst_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Adversarial Analyst: Orchestrates a 'Bull vs. Bear' debate out of research results, and synthesizes a final report.
     """
@@ -46,7 +47,7 @@ async def analyst_agent(state: AgentState, config: RunnableConfig):
                 agent_name = follow_up_line.split("|")[0].strip()
                 if agent_name in ["fundamental_researcher", "sentiment_researcher", "macro_researcher", "code_generator", "supervisor"]:
                     next_agent = agent_name
-            except:
+            except Exception:
                 pass
 
     # Add the Analyst's own final output interaction

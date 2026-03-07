@@ -6,6 +6,7 @@ def get_supervisor_next_agents_prompt():
     from src.graph.agents.research.macro import macro_researcher
     from src.graph.agents.research.narrative import narrative_researcher
     from src.graph.agents.research.generic import generic_researcher
+    from src.graph.agents.research.code_gen import code_generator_agent
     from src.graph.agents.analyst.agent import analyst_agent
     from src.graph.agents.off_topic.agent import off_topic_agent
     
@@ -15,6 +16,7 @@ def get_supervisor_next_agents_prompt():
         "macro_researcher": macro_researcher,
         "narrative_researcher": narrative_researcher,
         "generic_researcher": generic_researcher,
+        "code_generator": code_generator_agent,
         "analyst": analyst_agent,
         "off_topic": off_topic_agent
     }

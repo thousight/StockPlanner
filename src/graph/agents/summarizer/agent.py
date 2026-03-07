@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
 from src.graph.state import AgentState
 import uuid
 from src.graph.agents.summarizer.prompts import SUMMARIZER_SYSTEM_PROMPT
@@ -19,7 +20,7 @@ class SummarizerOutput(BaseModel):
     tags: List[str] = Field(description="2-3 hashtags summarizing the content (e.g., #growth, #volatility).")
 
 @with_logging
-async def summarizer_agent(state: AgentState):
+async def summarizer_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Summarizer Agent: Reviews all agent interactions and synthesizes a final answer.
     """

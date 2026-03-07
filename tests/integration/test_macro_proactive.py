@@ -1,7 +1,6 @@
 import pytest
 from src.graph.graph import create_graph
 from unittest.mock import AsyncMock, patch
-from src.graph.agents.supervisor.response import SupervisorResponse
 
 @pytest.mark.asyncio
 async def test_macro_proactive_trigger():

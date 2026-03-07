@@ -1,6 +1,8 @@
+from typing import Optional
 import asyncio
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
 from src.graph.state import AgentState
 from src.graph.utils.prompt import convert_state_to_prompt, convert_tools_to_prompt
 from src.graph.tools.narrative import (
@@ -25,7 +27,7 @@ TOOLS_LIST = [
 AVAILABLE_TOOLS_PROMPT = convert_tools_to_prompt(TOOLS_LIST)
 
 @with_logging
-async def narrative_researcher(state: AgentState):
+async def narrative_researcher(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Narrative Research Specialist: Analyzes growth narratives and narrative shifts.
     Decides which data points to gather (indices, news, history) before synthesizing.

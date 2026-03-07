@@ -1,5 +1,7 @@
+from typing import Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
 from src.graph.state import AgentState
 from src.graph.agents.off_topic.prompts import OFF_TOPIC_SYSTEM_PROMPT
 from src.graph.utils.prompt import convert_state_to_prompt
@@ -8,7 +10,7 @@ from src.graph.agents.off_topic.off_topic_answer import OffTopicAnswer
 from src.graph.utils.agents import get_next_interaction_id, with_logging
 
 @with_logging
-async def off_topic_agent(state: AgentState):
+async def off_topic_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Off-Topic Agent: ONLY handles casual conversation, greetings (like "hi" or "hello"), or queries entirely unrelated to finance. DO NOT route any market, economy, or stock questions here, even if they are broad or in a foreign language.
     """

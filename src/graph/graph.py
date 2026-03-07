@@ -1,3 +1,4 @@
+import logging
 from langgraph.graph import StateGraph, END
 from langgraph.types import Send
 from src.graph.state import AgentState
@@ -12,6 +13,8 @@ from src.graph.agents.analyst.agent import analyst_agent
 from src.graph.agents.off_topic.agent import off_topic_agent
 from src.graph.agents.summarizer.agent import summarizer_agent
 from typing import List, Union
+
+logger = logging.getLogger(__name__)
 
 class MeshRouter:
     """
@@ -44,12 +47,12 @@ class MeshRouter:
             if last_interaction.get("agent") == "analyst" and next_agent_raw == "code_generator":
                 revision_count = state.get("code_revision_count", 0)
                 if revision_count >= 2:
-                    print(f"--- ANALYST LOOP: Max revisions (2) reached. Routing to summarizer. ---")
+                    logger.warning("ANALYST LOOP: Max revisions (2) reached. Routing to summarizer.")
                     return "summarizer"
             
             return next_agent_raw
             
-        print(f"WARNING: Invalid next_agent '{next_agent_raw}'. Falling back.")
+        logger.warning(f"Invalid next_agent '{next_agent_raw}'. Falling back.")
         return "summarizer"
 
 def create_graph(checkpointer=None):

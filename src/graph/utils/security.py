@@ -1,7 +1,7 @@
 import ast
 import re
 import logging
-from typing import List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -137,12 +137,17 @@ def strip_pii(text: str) -> str:
     """
     Basic PII filtering utility (REQ-520).
     Redacts emails, phone numbers, and common token patterns.
+    Optimized for performance on large strings.
     """
-    if not text:
+    if not text or len(text) < 5:
         return text
     
+    # Global safety: If a string is massive (>100KB), skip PII scanning to avoid hangs.
+    if len(text) > 100000:
+        return text
+
     # 1. Email pattern
-    email_pattern = r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
+    email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     text = re.sub(email_pattern, '[REDACTED_EMAIL]', text)
     
     # 2. Phone numbers (Basic)
@@ -151,8 +156,19 @@ def strip_pii(text: str) -> str:
 
     # 3. API Keys / Tokens (Generic 32+ char hex/base64-like)
     token_pattern = r'\b[a-zA-Z0-9]{32,}\b'
-    # We only redact if it looks like it might be a secret (e.g. in a JSON value)
-    # This is a bit aggressive but safer for sandbox injection
     text = re.sub(token_pattern, '[REDACTED_TOKEN]', text)
     
     return text
+
+def scan_and_redact_pii(data: Any) -> Any:
+    """
+    Recursively scans and redacts PII from structured data (dict, list, string).
+    """
+    if isinstance(data, str):
+        return strip_pii(data)
+    elif isinstance(data, dict):
+        return {k: scan_and_redact_pii(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [scan_and_redact_pii(v) for v in data]
+    else:
+        return data

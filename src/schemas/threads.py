@@ -8,6 +8,9 @@ class ThreadBase(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class ThreadCreate(BaseModel):
+    title: Optional[str] = "New Conversation"
+
 class ThreadListResponse(BaseModel):
     threads: List[ThreadBase]
     total: int
