@@ -7,6 +7,7 @@ from src.graph.agents.research.sentiment import sentiment_researcher
 from src.graph.agents.research.macro import macro_researcher
 from src.graph.agents.research.narrative import narrative_researcher
 from src.graph.agents.research.generic import generic_researcher
+from src.graph.agents.research.code_gen import code_generator_agent
 from src.graph.agents.analyst.agent import analyst_agent
 from src.graph.agents.off_topic.agent import off_topic_agent
 from src.graph.agents.summarizer.agent import summarizer_agent
@@ -39,6 +40,13 @@ class MeshRouter:
         
         # Single destination
         if next_agent_raw in self.allowed_destinations:
+            # Special check for Analyst -> CodeGenerator loop
+            if last_interaction.get("agent") == "analyst" and next_agent_raw == "code_generator":
+                revision_count = state.get("code_revision_count", 0)
+                if revision_count >= 2:
+                    print(f"--- ANALYST LOOP: Max revisions (2) reached. Routing to summarizer. ---")
+                    return "summarizer"
+            
             return next_agent_raw
             
         print(f"WARNING: Invalid next_agent '{next_agent_raw}'. Falling back.")
@@ -54,6 +62,7 @@ def create_graph(checkpointer=None):
     workflow.add_node("macro_researcher", macro_researcher)
     workflow.add_node("narrative_researcher", narrative_researcher)
     workflow.add_node("generic_researcher", generic_researcher)
+    workflow.add_node("code_generator", code_generator_agent)
     workflow.add_node("analyst", analyst_agent)
     workflow.add_node("off_topic", off_topic_agent)
     workflow.add_node("summarizer", summarizer_agent)
@@ -70,6 +79,7 @@ def create_graph(checkpointer=None):
             "macro_researcher", 
             "narrative_researcher",
             "generic_researcher",
+            "code_generator",
             "analyst", 
             "off_topic", 
             "summarizer"
@@ -82,16 +92,17 @@ def create_graph(checkpointer=None):
     workflow.add_edge("macro_researcher", "analyst")
     workflow.add_edge("narrative_researcher", "analyst")
     workflow.add_edge("generic_researcher", "analyst")
+    workflow.add_edge("code_generator", "analyst")
     
     # Analyst routes to Supervisor (for follow-ups) or Summarizer
     workflow.add_conditional_edges(
         "analyst",
-        MeshRouter(["supervisor", "fundamental_researcher", "sentiment_researcher", "macro_researcher", "narrative_researcher", "generic_researcher", "summarizer"])
+        MeshRouter(["supervisor", "fundamental_researcher", "sentiment_researcher", "macro_researcher", "narrative_researcher", "generic_researcher", "code_generator", "summarizer"])
     )
     
     workflow.add_conditional_edges(
         "off_topic",
-        MeshRouter(["fundamental_researcher", "sentiment_researcher", "macro_researcher", "narrative_researcher", "generic_researcher", "supervisor", "summarizer"])
+        MeshRouter(["fundamental_researcher", "sentiment_researcher", "macro_researcher", "narrative_researcher", "generic_researcher", "code_generator", "supervisor", "summarizer"])
     )
 
     workflow.add_edge("summarizer", END)

@@ -59,5 +59,6 @@ class AgentState(TypedDict):
     user_context: UserContext
     user_input: str
     agent_interactions: Annotated[List[AgentInteraction], operator.add]
+    code_revision_count: Annotated[int, operator.add]
     output: str
     market_context: NotRequired[str]
