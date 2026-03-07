@@ -7,14 +7,12 @@ async def test_complex_modular_flow_parallel():
     # Test a query that should trigger parallel research
     query = "Analyze AAPL fundamentals and sentiment"
     
-    # We patch the high-level agent functions directly to verify the graph topology
-    # without worrying about LLM structured output mocks leaking into subgraphs.
-    
-    with patch("src.graph.agents.supervisor.agent.supervisor_agent", new_callable=AsyncMock) as mock_sup, \
-         patch("src.graph.agents.research.fundamental.fundamental_researcher", new_callable=AsyncMock) as mock_fund, \
-         patch("src.graph.agents.research.sentiment.sentiment_researcher", new_callable=AsyncMock) as mock_sent, \
-         patch("src.graph.agents.analyst.agent.analyst_agent", new_callable=AsyncMock) as mock_analyst, \
-         patch("src.graph.agents.summarizer.agent.summarizer_agent", new_callable=AsyncMock) as mock_summ:
+    # We patch the agent functions AS THEY ARE IMPORTED in src.graph.graph
+    with patch("src.graph.graph.supervisor_agent", new_callable=AsyncMock) as mock_sup, \
+         patch("src.graph.graph.fundamental_researcher", new_callable=AsyncMock) as mock_fund, \
+         patch("src.graph.graph.sentiment_researcher", new_callable=AsyncMock) as mock_sent, \
+         patch("src.graph.graph.analyst_agent", new_callable=AsyncMock) as mock_analyst, \
+         patch("src.graph.graph.summarizer_agent", new_callable=AsyncMock) as mock_summ:
         
         # 1. Supervisor logic (Parallel)
         mock_sup.return_value = {

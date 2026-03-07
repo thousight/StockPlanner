@@ -7,12 +7,12 @@ async def test_macro_proactive_trigger():
     # A simple stock analysis query
     query = "Analyze TSLA"
     
-    # We patch the high-level agent functions to verify routing without LLM execution
-    with patch("src.graph.agents.supervisor.agent.supervisor_agent", new_callable=AsyncMock) as mock_sup, \
-         patch("src.graph.agents.research.fundamental.fundamental_researcher", new_callable=AsyncMock) as mock_fund, \
-         patch("src.graph.agents.research.macro.macro_researcher", new_callable=AsyncMock) as mock_macro, \
-         patch("src.graph.agents.analyst.agent.analyst_agent", new_callable=AsyncMock) as mock_analyst, \
-         patch("src.graph.agents.summarizer.agent.summarizer_agent", new_callable=AsyncMock) as mock_summ:
+    # We patch the agent functions AS THEY ARE IMPORTED in src.graph.graph
+    with patch("src.graph.graph.supervisor_agent", new_callable=AsyncMock) as mock_sup, \
+         patch("src.graph.graph.fundamental_researcher", new_callable=AsyncMock) as mock_fund, \
+         patch("src.graph.graph.macro_researcher", new_callable=AsyncMock) as mock_macro, \
+         patch("src.graph.graph.analyst_agent", new_callable=AsyncMock) as mock_analyst, \
+         patch("src.graph.graph.summarizer_agent", new_callable=AsyncMock) as mock_summ:
         
         # 1. Supervisor logic (must include fundamental and macro)
         mock_sup.return_value = {
