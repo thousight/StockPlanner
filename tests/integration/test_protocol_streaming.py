@@ -29,6 +29,7 @@ async def test_stream_protocol_subgraph_propagation(client, mock_session, test_u
         mock_user_result,     # get_current_user
         mock_thread_result,   # stream_run ownership check
         mock_holdings_result, # get_portfolio_summary
+        mock_holdings_result, # get_user_context_data raw holdings
         mock_user_result,     # get_current_user
     ]
     app.dependency_overrides[get_db] = lambda: mock_session

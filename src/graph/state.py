@@ -24,7 +24,6 @@ class SessionContext(TypedDict):
     current_datetime: str
     user_agent: str
     messages: Annotated[List[BaseMessage], add_messages]
-    revision_count: Annotated[int, operator.add]
 
 class UserContext(TypedDict):
     portfolio: List[Dict[str, Any]]
@@ -34,7 +33,7 @@ class UserContext(TypedDict):
 def merge_session_context(left: SessionContext, right: SessionContext) -> SessionContext:
     """
     Custom merger for SessionContext.
-    Ensures that messages are appended using add_messages and revision_count is summed,
+    Ensures that messages are appended using add_messages,
     while other fields (current_datetime, user_agent) are updated if present in right.
     """
     if not left:
@@ -47,18 +46,27 @@ def merge_session_context(left: SessionContext, right: SessionContext) -> Sessio
     # Explicitly merge messages using LangGraph's add_messages logic
     res["messages"] = add_messages(left.get("messages", []), right.get("messages", []))
     
-    # Explicitly sum revision_count
-    left_rev = left.get("revision_count", 0) or 0
-    right_rev = right.get("revision_count", 0) or 0
-    res["revision_count"] = left_rev + right_rev
-    
+    return res
+
+def merge_user_context(left: UserContext, right: UserContext) -> UserContext:
+    """
+    Custom merger for UserContext.
+    Ensures that portfolio and other fields are merged.
+    """
+    if not left:
+        return right
+    if not right:
+        return left
+        
+    res = {**left, **right}
     return res
 
 class AgentState(TypedDict):
     session_context: Annotated[SessionContext, merge_session_context]
-    user_context: UserContext
+    user_context: Annotated[UserContext, merge_user_context]
     user_input: str
     agent_interactions: Annotated[List[AgentInteraction], operator.add]
-    code_revision_count: Annotated[int, operator.add]
+    revision_count: int
+    code_revision_count: int
     output: str
     market_context: NotRequired[str]

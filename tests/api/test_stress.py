@@ -27,6 +27,7 @@ async def test_input_stress_long_message(client, mock_session, test_user, auth_h
         mock_user_result,     # get_current_user
         mock_thread_result,   # stream_run ownership check
         mock_holdings_result, # get_portfolio_summary
+        mock_holdings_result, # get_user_context_data raw holdings
         mock_user_result,     # get_current_user
     ]
 
@@ -67,10 +68,11 @@ async def test_llm_timeout_resilience(client, mock_session, test_user, auth_head
     mock_holdings_result.scalars.return_value.all.return_value = []
 
     mock_session.execute.side_effect = [
-        mock_user_result, 
-        mock_thread_result,
-        mock_holdings_result,
-        mock_user_result
+        mock_user_result,     # get_current_user (Initial auth)
+        mock_thread_result,   # stream_run ownership check
+        mock_holdings_result, # get_portfolio_summary
+        mock_holdings_result, # get_user_context_data raw holdings
+        mock_user_result,     # get_current_user (Last call before return)
     ]
 
     with patch("src.controllers.threads.get_checkpointer") as mock_cp_ctx:

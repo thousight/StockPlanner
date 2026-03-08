@@ -77,20 +77,24 @@ class PythonSandbox:
                 sandbox = await self._create_sandbox()
                 
                 # Prepare injection code
-                injection = ""
+                # We define null, true, and false to make json.dumps output valid Python
+                injection = "null = None; true = True; false = False\n"
                 if data is not None:
-                    injection = f"input_data = {json.dumps(data)}\n\n"
-                
+                    injection += f"input_data = {json.dumps(data)}\n\n"
+
                 full_code = injection + code
-                
                 # Run code with timeout
                 execution = await sandbox.run_code(full_code, timeout=timeout)
                 
                 duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
+                # Capture output (stdout is a list of strings)
+                stdout_text = "".join(execution.logs.stdout)
+                stderr_text = "".join(execution.logs.stderr)
+
                 if execution.error:
                     # Execution-level error (e.g. Runtime Error)
-                    sanitized_stderr = redact_paths(execution.logs.stderr)
+                    sanitized_stderr = redact_paths(stderr_text)
                     sanitized_error = redact_paths(str(execution.error))
                     
                     self._log_audit(code, data, "RUNTIME_ERROR", duration_ms, thread_id, correlation_id_val, error=sanitized_error)
@@ -100,7 +104,7 @@ class PythonSandbox:
                         "error_code": "RUNTIME_ERROR",
                         "error_message": sanitized_error,
                         "stderr": sanitized_stderr,
-                        "stdout": execution.logs.stdout
+                        "stdout": stdout_text
                     }
 
                 # Success
@@ -108,7 +112,7 @@ class PythonSandbox:
                 
                 return {
                     "success": True,
-                    "stdout": execution.logs.stdout,
+                    "stdout": stdout_text,
                     "results": [res.to_dict() for res in execution.results],
                     "error_code": None
                 }

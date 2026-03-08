@@ -337,33 +337,49 @@ async def stream_run(
     initial_input = request.input or {}
     payload_message = None
     
+    # Try to extract the user's message for titling and background tasks
     if "message" in initial_input:
-        payload_message = initial_input.pop("message")
-        user_context_data = await get_user_context_data(db, current_user.id)
-        
-        # We need a stable ID for the human message for idempotency in PostgreSQL
-        human_msg_id = str(uuid.uuid4())
-        
-        # Build standard initial state
-        initial_input = {
-            "session_context": {
-                "messages": [HumanMessage(content=payload_message, id=human_msg_id)],
-                "current_datetime": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-                "user_agent": user_agent or "StockPlanner-FastAPI",
-                "revision_count": 0
-            },
-            "user_context": {
-                "user_id": current_user.id,
-                "first_name": current_user.first_name,
-                "risk_tolerance": current_user.risk_tolerance.value if hasattr(current_user.risk_tolerance, "value") else str(current_user.risk_tolerance),
-                "base_currency": current_user.base_currency,
-                "portfolio_summary": user_context_data.get("portfolio_summary", "N/A"),
-                "portfolio": []
-            },
-            "user_input": payload_message,
-            "agent_interactions": [],
-            "output": ""
-        }
+        payload_message = initial_input.get("message")
+    elif "session_context" in initial_input and "messages" in initial_input["session_context"]:
+        msgs = initial_input["session_context"]["messages"]
+        if msgs and isinstance(msgs, list):
+            last_msg = msgs[-1]
+            if isinstance(last_msg, dict):
+                payload_message = last_msg.get("content") or last_msg.get("message")
+            else:
+                payload_message = getattr(last_msg, "content", None)
+
+    # Always fetch fresh user context (portfolio, etc.)
+    user_context_data = await get_user_context_data(db, current_user.id)
+    human_msg_id = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+    # Build the required system updates for this turn
+    system_updates = {
+        "session_context": {
+            "current_datetime": now_iso,
+            "user_agent": user_agent or "StockPlanner-FastAPI"
+        },
+        "user_context": {
+            "user_id": current_user.id,
+            "first_name": current_user.first_name,
+            "risk_tolerance": current_user.risk_tolerance.value if hasattr(current_user.risk_tolerance, "value") else str(current_user.risk_tolerance),
+            "base_currency": current_user.base_currency,
+            "portfolio_summary": user_context_data.get("portfolio_summary", "N/A"),
+            "portfolio": user_context_data.get("portfolio", [])
+        },
+        "revision_count": 0,
+        "code_revision_count": 0
+    }
+
+    # If a raw message was provided, wrap it in the proper LangGraph structure
+    if "message" in initial_input:
+        initial_input.pop("message")
+        system_updates["session_context"]["messages"] = [HumanMessage(content=payload_message, id=human_msg_id)]
+        system_updates["user_input"] = payload_message
+
+    # Merge system updates into initial_input (system_updates take priority)
+    initial_input.update(system_updates)
 
     return StreamingResponse(
         langgraph_event_generator(

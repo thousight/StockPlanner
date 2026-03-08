@@ -32,11 +32,11 @@ async def supervisor_agent(state: AgentState, config: Optional[RunnableConfig] =
     messages = [system_msg, human_msg]
     
     # Loop Detection
-    revision_count = state.get("session_context", {}).get("revision_count", 0)
+    revision_count = state.get("revision_count", 0)
     if revision_count > 5:
         logger.warning("SUPERVISOR: Loop limit reached! Forcing an end...")
         return {
-            "session_context": {"revision_count": 1},
+            "revision_count": revision_count + 1,
             "agent_interactions": [
                 create_interaction(
                     state, 
@@ -54,7 +54,7 @@ async def supervisor_agent(state: AgentState, config: Optional[RunnableConfig] =
     next_agent_str = ",".join(plan_output.next_agents) if plan_output.next_agents else "summarizer"
     
     return {
-        "session_context": {"revision_count": 1},
+        "revision_count": revision_count + 1,
         "agent_interactions": [
             create_interaction(
                 state, 

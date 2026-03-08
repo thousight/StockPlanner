@@ -123,8 +123,18 @@ async def test_analyst_loop_limit():
         # Analyst ALWAYS requests correction
         mock_analyst.return_value = {
             "agent_interactions": [{"agent": "analyst", "answer": "STILL WRONG", "next_agent": "code_generator"}],
-            "code_revision_count": 1 # This will be added to state each time
+            "code_revision_count": 1 # This will be added to state each time (accumulating if reducer existed, but now it overwrites)
         }
+        
+        # NOTE: Since we removed the reducer, to test the loop limit, 
+        # we actually need the mock to return an INCREMENTED value or 
+        # use a side_effect that simulates the increment.
+        def analyst_side_effect(state, config=None):
+            return {
+                "agent_interactions": [{"agent": "analyst", "answer": "STILL WRONG", "next_agent": "code_generator"}],
+                "code_revision_count": state.get("code_revision_count", 0) + 1
+            }
+        mock_analyst.side_effect = analyst_side_effect
         
         mock_summ.return_value = {"agent_interactions": [{"agent": "summarizer", "answer": "FORCE END", "next_agent": "end"}]}
         

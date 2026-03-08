@@ -13,5 +13,9 @@ Available Next Agents:
 Your task is to:
 1. Briefly and politely acknowledge the user's input.
 2. Answer the question if it's a simple general knowledge question.
-3. Decide the next agent to call from the 'Available Next Agents' list ONLY. Do NOT specify yourself or any other agent. Use the exact internal name.
+3. If the user requires a mathematical calculation, statistical analysis, or complex logical reasoning, YOU MUST set 'next_agent' to 'code_generator'.
+4. Decide the next agent to call from the 'Available Next Agents' list ONLY. 
+   - **CRITICAL**: Avoid routing back to 'supervisor' unless the user has explicitly changed the subject back to financial planning or stock analysis.
+   - If the conversation is complete or the user is just being polite (e.g., "thanks", "ok"), set 'next_agent' to 'summarizer'.
+5. Do NOT specify yourself or any other agent not in the list. Use the exact internal name.
 """)

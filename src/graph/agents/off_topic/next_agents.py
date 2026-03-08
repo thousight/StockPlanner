@@ -6,12 +6,14 @@ def get_off_topic_next_agents_prompt():
     from src.graph.agents.research.fundamental import fundamental_researcher
     from src.graph.agents.research.sentiment import sentiment_researcher
     from src.graph.agents.research.macro import macro_researcher
+    from src.graph.agents.research.code_gen import code_generator_agent
 
     AVAILABLE_AGENTS = {
         "supervisor": supervisor_agent,
         "fundamental_researcher": fundamental_researcher,
         "sentiment_researcher": sentiment_researcher,
         "macro_researcher": macro_researcher,
+        "code_generator": code_generator_agent,
         "summarizer": summarizer_agent
     }
 

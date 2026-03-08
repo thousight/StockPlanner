@@ -2,7 +2,7 @@ from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from src.graph.state import AgentState
 from src.graph.agents.analyst.subgraph import create_debate_graph
-from src.graph.utils.agents import with_logging, get_next_interaction_id
+from src.graph.utils.agents import with_logging, get_next_interaction_id, create_interaction
 
 @with_logging
 async def analyst_agent(state: AgentState, config: Optional[RunnableConfig] = None):
@@ -50,20 +50,28 @@ async def analyst_agent(state: AgentState, config: Optional[RunnableConfig] = No
             except Exception:
                 pass
 
+    # Increment code_revision_count if routing to code_generator
+    code_revision_count = state.get("code_revision_count", 0)
+    if next_agent == "code_generator":
+        code_revision_count += 1
+
     # Add the Analyst's own final output interaction
-    analyst_interaction = {
-        "id": get_next_interaction_id(state) + len(new_interactions),
-        "agent": "analyst",
-        "answer": report,
-        "next_agent": next_agent,
-        "debate_output": {
+    analyst_interaction = create_interaction(
+        state,
+        agent="analyst",
+        answer=report,
+        next_agent=next_agent,
+        debate_output={
             "bull_argument": debate_results.get("bull_argument", ""),
             "bear_argument": debate_results.get("bear_argument", ""),
             "confidence_score": debate_results.get("confidence_score", 0)
         }
-    }
+    )
+    # Adjustment for multiple interactions from subgraph
+    analyst_interaction["id"] += len(new_interactions)
     new_interactions.append(analyst_interaction)
     
     return {
-        "agent_interactions": new_interactions
+        "agent_interactions": new_interactions,
+        "code_revision_count": code_revision_count
     }

@@ -15,14 +15,17 @@ logger = logging.getLogger(__name__)
 async def code_generator_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
     Quantitative Research Specialist: Writes and executes Python code for data analysis.
+    Use this agent for ANY mathematical calculation (e.g., square roots, averages, complex formulas), 
+    statistical analysis, simulations, data manipulation, or calculating financial ratios.
     Implements a hybrid self-correction loop (Self-Debug + Reflexion).
     """
     llm = get_llm(temperature=0)
     info = get_session_info(state)
     
     # 1. Prepare Context
+    user_ctx = state.get("user_context", {})
     data_context = {
-        "portfolio": state["user_context"].get("portfolio", []),
+        "portfolio": user_ctx.get("portfolio", []),
         "market_context": state.get("market_context", "")
     }
     
@@ -33,7 +36,7 @@ async def code_generator_agent(state: AgentState, config: Optional[RunnableConfi
     
     while retries <= max_retries:
         prompt_input = {
-            "task_description": state["user_input"],
+            "task_description": state.get("user_input", "Perform quantitative analysis."),
             "data_context": str(data_context),
             "error_context": f"\n### Previous Attempt Error:\n{error_context}\n\n### Previous Code:\n```python\n{last_code}\n```\nAnalyze the error, reflect on the fix, and provide the corrected code." if error_context else ""
         }

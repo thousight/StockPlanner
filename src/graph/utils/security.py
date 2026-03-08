@@ -31,14 +31,28 @@ class ASTValidator(ast.NodeVisitor):
         ast.Tuple, ast.Set, ast.Slice,
         ast.FunctionDef, ast.Return, ast.arguments, ast.arg,
         ast.If, ast.For, ast.While, ast.Break, ast.Continue, ast.Pass,
-        ast.AugAssign, ast.Starred
+        ast.AugAssign, ast.Starred,
+        ast.Import, ast.ImportFrom, ast.alias,
+        ast.USub, ast.UAdd
     }
 
-    # Specifically forbidden modules
+    # Specifically forbidden modules (if not whitelisted)
     FORBIDDEN_MODULES = {
         'os', 'subprocess', 'sys', 'shutil', 'platform', 'inspect',
         'importlib', 'pickle', 'marshal', 'shelve', 'socket',
         'requests', 'urllib', 'http', 'gc', 'builtins'
+    }
+
+    # Whitelisted libraries (Sync with CODE_GEN_PROMPT)
+    WHITELISTED_LIBRARIES = {
+        'pandas', 'numpy', 'math', 'scipy', 'statistics', 'datetime'
+    }
+
+    # Safe built-in functions
+    SAFE_BUILTINS = {
+        'sum', 'len', 'abs', 'round', 'min', 'max', 'range', 'enumerate',
+        'zip', 'sorted', 'reversed', 'list', 'dict', 'set', 'tuple',
+        'int', 'float', 'str', 'bool', 'any', 'all', 'print'
     }
 
     # Specifically forbidden built-in functions
@@ -85,11 +99,16 @@ class ASTValidator(ast.NodeVisitor):
             if node.id in self.FORBIDDEN_FUNCTIONS:
                  self.errors.append(f"Forbidden function usage: {node.id}")
 
-        # 3. Check for forbidden imports
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            # While Import nodes aren't in ALLOWED_NODES by default, 
-            # we explicitly handle them if someone tries to add them
-            self.errors.append("Direct imports are forbidden. Use pre-installed libraries only.")
+        # 3. Check for forbidden imports (Whitelisting)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split('.')[0] not in self.WHITELISTED_LIBRARIES:
+                    self.errors.append(f"Import of library '{alias.name}' is forbidden.")
+        
+        if isinstance(node, ast.ImportFrom):
+            if node.module:
+                if node.module.split('.')[0] not in self.WHITELISTED_LIBRARIES:
+                    self.errors.append(f"Import from library '{node.module}' is forbidden.")
 
         # 4. Check for forbidden calls
         if isinstance(node, ast.Call):

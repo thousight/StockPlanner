@@ -158,3 +158,20 @@ async def test_code_generator_context_injection(mock_state):
         prompt = mock_instance.ainvoke.call_args[0][0]
         assert "Bullish trend." in prompt
         assert "'symbol': 'AAPL'" in prompt
+
+@pytest.mark.asyncio
+async def test_code_generator_missing_user_input(mock_state):
+    # Test that it doesn't crash if user_input is missing
+    del mock_state["user_input"]
+    mock_llm_response = MagicMock()
+    mock_llm_response.content = "**Audit**: Logic.\n```python\nprint('ok')\n```"
+    
+    with patch("src.graph.agents.research.code_gen.get_llm") as mock_llm_func, \
+         patch("src.graph.agents.research.code_gen.execute_python_code") as mock_execute:
+        
+        mock_instance = mock_llm_func.return_value
+        mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
+        mock_execute.return_value = "Execution Successful"
+        
+        # Should not raise KeyError
+        await code_generator_agent(mock_state)

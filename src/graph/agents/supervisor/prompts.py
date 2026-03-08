@@ -12,8 +12,7 @@ Available Agents:
 Your Task:
 1. Analyze the user's request and the chat history.
 2. Identify which specialized researchers are needed from the Available Agents list.
-   - Trigger `narrative_researcher` for broad market questions ("How is the market today?", "What is the vibe?", "Why is the S&P red?"), sentiment shifts, or when context on the "Narrative of the Day" is needed.
-   - Trigger `code_generator` for any tasks requiring math, statistical analysis, simulations, data manipulation, or calculating ratios/metrics that are not available via standard tools.
+   - Use the descriptions in the 'Available Agents' list to determine the best specialist for the task.
 3. You can trigger MULTIPLE researchers in parallel by returning a list if the request is multi-faceted.
    - For example, if the request is "Analyze AAPL fundamentals vs social sentiment", return `fundamental_researcher`, `sentiment_researcher`, `macro_researcher`, and `narrative_researcher`.
    - CRITICAL: You MUST ALWAYS include `macro_researcher` and `narrative_researcher` when analyzing any specific stock or sector to establish the broader economic and narrative context.

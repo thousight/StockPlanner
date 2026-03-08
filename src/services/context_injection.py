@@ -1,7 +1,10 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select
+from src.database.models import Holding
 from src.schemas.portfolio import PortfolioSummary
-from src.services.portfolio import get_portfolio_summary
+from src.services.portfolio import get_portfolio_summary, get_current_price
 
 def format_portfolio_for_llm(summary: PortfolioSummary) -> str:
     """
@@ -22,13 +25,39 @@ def format_portfolio_for_llm(summary: PortfolioSummary) -> str:
 
 async def get_user_context_data(db: AsyncSession, user_id: str) -> Dict[str, Any]:
     """
-    Fetches the portfolio summary for a user and returns a dictionary 
-    suitable for updating the AgentState.user_context.
+    Fetches the portfolio summary and raw holdings for a user.
+    Returns a dictionary suitable for updating the AgentState.user_context.
     """
     summary = await get_portfolio_summary(db, user_id)
     formatted_summary = format_portfolio_for_llm(summary)
     
+    # Fetch raw holdings with asset details
+    stmt = (
+        select(Holding)
+        .options(selectinload(Holding.asset))
+        .where(Holding.user_id == user_id, Holding.quantity_held > 0)
+    )
+    result = await db.execute(stmt)
+    holdings_records = result.scalars().all()
+    
+    portfolio_data = []
+    for h in holdings_records:
+        asset = h.asset
+        current_price = await get_current_price(db, asset)
+        portfolio_data.append({
+            "symbol": asset.symbol,
+            "name": asset.name,
+            "type": asset.type.value if hasattr(asset.type, "value") else str(asset.type),
+            "sector": asset.sector or "Unknown",
+            "quantity": float(h.quantity_held),
+            "avg_cost_basis": float(h.avg_cost_basis),
+            "current_price": float(current_price),
+            "value": float(h.quantity_held * current_price),
+            "return_pct": float(((current_price / h.avg_cost_basis) - 1) * 100) if h.avg_cost_basis > 0 else 0.0
+        })
+    
     return {
         "user_id": user_id,
-        "portfolio_summary": formatted_summary
+        "portfolio_summary": formatted_summary,
+        "portfolio": portfolio_data
     }

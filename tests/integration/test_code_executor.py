@@ -11,7 +11,7 @@ async def test_python_sandbox_validation_failure():
     
     assert result["success"] is False
     assert result["error_code"] == "SECURITY_VIOLATION"
-    assert "Forbidden syntax: Import" in result["error_message"]
+    assert "Import of library 'os' is forbidden" in result["error_message"]
 
 @pytest.mark.asyncio
 async def test_python_sandbox_pii_redaction():

@@ -13,7 +13,8 @@ from src.graph.utils.agents import create_interaction, get_llm, with_logging
 @with_logging
 async def off_topic_agent(state: AgentState, config: Optional[RunnableConfig] = None):
     """
-    Off-Topic Agent: ONLY handles casual conversation, greetings (like "hi" or "hello"), or queries entirely unrelated to finance.
+    Off-Topic Agent: Handles casual conversation, greetings, and queries unrelated to finance.
+    Can also identify when a general query requires a mathematical calculation and hand it off to the code_generator.
     """
     # Off-topic uses higher temperature for natural greetings
     llm = get_llm(temperature=0.7)

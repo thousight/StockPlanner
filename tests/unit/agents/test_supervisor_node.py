@@ -8,16 +8,20 @@ async def test_supervisor_parallel_routing():
     state = {
         "user_input": "Analyze AAPL fundamentals and sentiment",
         "agent_interactions": [],
+        "revision_count": 0,
         "session_context": {"revision_count": 0}
     }
     
     # Mock LLM response with multiple agents
     mock_res = SupervisorResponse(next_agents=["fundamental_researcher", "sentiment_researcher"])
     
-    with patch("langchain_openai.ChatOpenAI.with_structured_output") as mock_struct:
+    with patch("src.graph.agents.supervisor.agent.get_llm") as mock_llm_func:
+        mock_llm = MagicMock()
+        mock_llm_func.return_value = mock_llm
+        
         mock_chain = AsyncMock()
         mock_chain.ainvoke.return_value = mock_res
-        mock_struct.return_value = mock_chain
+        mock_llm.with_structured_output.return_value = mock_chain
         
         result = await supervisor_agent(state)
         
@@ -32,7 +36,7 @@ async def test_supervisor_loop_limit():
     state = {
         "user_input": "...",
         "agent_interactions": [],
-        "session_context": {"revision_count": 6} # Over limit
+        "revision_count": 6 # Over limit
     }
     
     result = await supervisor_agent(state)

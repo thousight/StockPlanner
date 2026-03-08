@@ -19,7 +19,20 @@ async def test_thread_concurrency_409(client, mock_session, test_user, auth_head
     mock_thread_result = MagicMock()
     mock_thread_result.scalar_one_or_none.return_value = MagicMock(id=thread_id, user_id=test_user.id)
     
-    mock_session.execute.side_effect = [mock_user_result, mock_thread_result, mock_user_result, mock_thread_result]
+    # Mock holdings lookup (two queries now: summary count and raw holdings)
+    mock_holdings_result = MagicMock()
+    mock_holdings_result.scalars.return_value.all.return_value = []
+    
+    mock_session.execute.side_effect = [
+        mock_user_result,     # get_current_user (Request 1)
+        mock_thread_result,   # stream_run ownership check (Request 1)
+        mock_holdings_result, # get_portfolio_summary (Request 1)
+        mock_holdings_result, # get_user_context_data raw holdings (Request 1)
+        mock_user_result,     # get_current_user (Request 2)
+        mock_thread_result,   # stream_run ownership check (Request 2)
+        mock_holdings_result, # get_portfolio_summary (Request 2)
+        mock_holdings_result, # get_user_context_data raw holdings (Request 2)
+    ]
 
     # Mock the underlying event generator's graph call to add delay
     with patch("src.controllers.threads.get_checkpointer") as mock_cp_ctx:

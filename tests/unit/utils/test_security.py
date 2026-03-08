@@ -26,12 +26,12 @@ def test_ast_validator_forbidden_import():
     # Direct import
     with pytest.raises(SecurityError) as exc:
         validator.validate("import os")
-    assert "Forbidden syntax: Import" in str(exc.value)
+    assert "Import of library 'os' is forbidden" in str(exc.value)
     
     # ImportFrom
     with pytest.raises(SecurityError) as exc:
         validator.validate("from subprocess import Popen")
-    assert "Forbidden syntax: ImportFrom" in str(exc.value)
+    assert "Import from library 'subprocess' is forbidden" in str(exc.value)
 
 def test_ast_validator_private_attribute_access():
     validator = ASTValidator()
